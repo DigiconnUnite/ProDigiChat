@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { TemplateSyncStatus, Template } from '@/components/whatsapp/TemplateSyncStatus';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Loader2, Plus, FileText } from 'lucide-react';
 import Link from 'next/link';
 
-export default function TemplateSyncPage() {
+function TemplateSyncContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const organizationId = searchParams.get('orgId') || 'default';
@@ -159,5 +159,23 @@ export default function TemplateSyncPage() {
         />
       )}
     </div>
+  );
+}
+
+function TemplateSyncLoading() {
+  return (
+    <div className="container mx-auto py-8 max-w-4xl">
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      </div>
+    </div>
+  );
+}
+
+export default function TemplateSyncPage() {
+  return (
+    <Suspense fallback={<TemplateSyncLoading />}>
+      <TemplateSyncContent />
+    </Suspense>
   );
 }

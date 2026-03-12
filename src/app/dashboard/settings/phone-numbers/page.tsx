@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PhoneNumberCard, PhoneNumberData } from '@/components/whatsapp/PhoneNumberCard';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Plus, RefreshCw, Loader2, Phone } from 'lucide-react';
 import Link from 'next/link';
 
-export default function PhoneNumbersPage() {
+function PhoneNumbersContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const organizationId = searchParams.get('orgId') || 'default';
@@ -205,5 +205,23 @@ export default function PhoneNumbersPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function PhoneNumbersLoading() {
+  return (
+    <div className="container mx-auto py-8 max-w-4xl">
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      </div>
+    </div>
+  );
+}
+
+export default function PhoneNumbersPage() {
+  return (
+    <Suspense fallback={<PhoneNumbersLoading />}>
+      <PhoneNumbersContent />
+    </Suspense>
   );
 }
