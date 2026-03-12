@@ -87,11 +87,12 @@ export function Header({ variant = "public", className }: HeaderProps) {
       {/* Desktop Header - Hidden on mobile */}
       <header
         className={cn(
-          "hidden md:flex py-4  mx-auto items-center justify-between rounded-b-4xl px-8",
+          "hidden md:flex py-4 items-center justify-between rounded-b-4xl",
           isDashboard ? "bg-green-950" : "bg-green-950",
           className,
         )}
       >
+        <div className="container mx-auto flex items-center justify-between w-full ">
         {/* Logo and Nav Links */}
         <div className="flex items-center gap-8">
           {/* Logo */}
@@ -338,6 +339,7 @@ export function Header({ variant = "public", className }: HeaderProps) {
               )}
             </>
           )}
+        </div>
         </div>
       </header>
 

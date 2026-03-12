@@ -37,7 +37,7 @@ export default function PrivacyPage() {
                 </h2>
                 <p className="text-gray-600 leading-relaxed">
                   Welcome to WhatsApp Marketing Tool ("we," "our," or "us"). We
-                  are committed to protecting your privacy. This Privacy Policy
+                  are fully committed to protecting your privacy and safeguarding your personal information. This Privacy Policy
                   explains how your personal information is collected, used, and
                   disclosed by WhatsApp Marketing Tool when you use our website
                   and services.
@@ -145,11 +145,11 @@ export default function PrivacyPage() {
                 </h2>
                 <p className="text-gray-600 leading-relaxed">
                   We implement appropriate technical and organizational measures
-                  to protect your personal information, including encryption of
+                  to protect your personal information, including industry-standard encryption of
                   data in transit and at rest, regular security assessments, and
-                  access controls. However, no method of transmission over the
+                  strict access controls. However, no method of transmission over the
                   Internet or electronic storage is 100% secure, and we cannot
-                  guarantee absolute security.
+                  guarantee absolute security. We continuously work to improve our security practices.
                 </p>
               </section>
 

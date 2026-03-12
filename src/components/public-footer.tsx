@@ -23,13 +23,13 @@ export function PublicFooter() {
               <div className="relative">
                 <div className="flex">
                   <div className="relative flex-1">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/80" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-green-950" />
                     <input
                       type="email"
                       placeholder="Enter your email for updates"
-                      className="w-full pl-10 pr-40 py-3 bg-white/10 border border-white/20 text-white/80 hover:text-white hover:bg-white/10  rounded-full placeholder-white-80 focus:outline-none focus:border-green-300  focus:ring-green-500 transition-colors"
+                      className="w-full pl-10 pr-40 py-1.5 bg-background border border-white/20 text-black hover:text-white hover:bg-background/90  rounded-full placeholder-white-80 focus:outline-none focus:border-green-300  focus:ring-green-500 transition-colors"
                     />
-                    <button className="absolute right-1 top-1/2 cursor-pointer -translate-y-1/2 px-4 py-2 bg-white text-green-950 hover:bg-green-500 hover:text-white font-semibold rounded-full transition-colors whitespace-nowrap">
+                    <button className="absolute right-1 top-1/2 cursor-pointer -translate-y-1/2 px-4 py-1 bg-orange-500 text-white hover:bg-green-500 hover:text-white font-semibold rounded-full transition-colors whitespace-nowrap">
                       Subscribe
                     </button>
                   </div>
@@ -213,7 +213,7 @@ export function PublicFooter() {
         <div className="pt-8 ">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <p className="text-sm text-green-200">
-              © {currentYear} WhatsApp Marketing Tool. All rights reserved.
+              © {currentYear} <span className="text-orange-400 font-bold">ProDigi Chat</span>. All rights reserved.
             </p>
 
             <div className="flex items-center gap-4">
