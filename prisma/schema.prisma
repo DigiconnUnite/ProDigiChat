@@ -1,0 +1,478 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("MONGODB_URI")
+}
+
+// User model with RBAC
+model User {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String   @unique
+  password  String
+  name      String?
+  role      String   @default("user") // "admin", "managser", "user"
+  isActive  Boolean  @default(true)
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  createdCampaigns Campaign[]
+  createdContacts Contact[]
+  createdWorkflows AutomationWorkflow[]
+  sentMessages   Message[] @relation("MessageSender")
+  createdSegments Segment[]
+  organizationMemberships OrganizationMember[]
+  settings UserSettings?
+
+  @@map("users")
+}
+
+// Team model (simplified - no complex relations)
+model Team {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  members OrganizationMember[]
+  settings OrganizationSettings?
+
+  @@map("teams")
+}
+
+// Contact model
+model Contact {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  phoneNumber   String
+  firstName     String?
+  lastName      String?
+  email         String?
+  optInStatus   String   @default("pending") // "opted_in", "opted_out", "pending"
+  whatsappNumberId String?
+  lastContacted DateTime?
+  tags          String   // JSON array of tags
+  attributes    String   // JSON object for custom attributes
+  userId        String   // @db.ObjectId
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  user              User?              @relation(fields: [userId], references: [id])
+  messages          Message[]
+  segmentMemberships SegmentMember[]
+  queueMessages     WhatsAppMessageQueue[]
+
+  // Composite unique constraint - phoneNumber must be unique per user
+  @@unique([phoneNumber, userId])
+  @@map("contacts")
+}
+
+// Segment model for audience segmentation
+model Segment {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  rules     String   // JSON object defining segment rules
+  createdBy String   @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  creator    User              @relation(fields: [createdBy], references: [id])
+  members    SegmentMember[]
+  campaigns  Campaign[]
+
+  @@map("segments")
+}
+
+// Segment membership (many-to-many relation)
+model SegmentMember {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  segmentId  String   @db.ObjectId
+  contactId  String   @db.ObjectId
+  addedAt    DateTime @default(now())
+
+  // Relations
+  segment    Segment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  contact    Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([segmentId, contactId])
+  @@map("segmentMembers")
+}
+
+// Campaign model
+model Campaign {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  name              String
+  description       String?
+  type              String   // "broadcast", "recurring", "ab_test"
+  status            String   @default("draft") // "draft", "scheduled", "running", "paused", "completed", "failed"
+  createdBy         String?  @db.ObjectId
+  audienceSegmentId String?  @db.ObjectId
+  whatsappNumberId  String?  // WhatsApp phone number ID used to send messages
+  whatsappAccountId String?  // WhatsApp account/credential ID used to send messages
+  messageContent    String   // JSON object with templateId, variables, mediaId
+  schedule          String?  // JSON object with sendAt, timezone, throttleRate
+  stats             String   // JSON object with totalSent, delivered, read, failed, clicked
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  creator       User?      @relation(fields: [createdBy], references: [id])
+  audience      Segment?   @relation(fields: [audienceSegmentId], references: [id])
+  messages      Message[]
+  queueMessages WhatsAppMessageQueue[]
+
+  @@map("campaigns")
+}
+
+// Automation Workflow model
+model AutomationWorkflow {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  status    String   @default("draft") // "active", "paused", "draft"
+  trigger   String   // JSON object defining trigger
+  nodes     String   // JSON array of nodes
+  createdBy String   @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  creator  User?     @relation(fields: [createdBy], references: [id])
+
+  @@map("automationWorkflows")
+}
+
+// Message Template model
+model MessageTemplate {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  name             String   @unique
+  category         String   // "marketing", "utility", "authentication"
+  content          String
+  variables        String   // JSON array of variable names
+  language         String   @default("en_US") // WhatsApp template language (e.g., en_US, hi, en)
+  status           String   @default("pending") // "pending", "approved", "rejected"
+  whatsappTemplateId String?
+  userId           String?  @db.ObjectId
+  organizationId   String?  @db.ObjectId
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("messageTemplates")
+}
+
+// WhatsApp Number model
+model WhatsappNumber {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  phoneNumber    String   @unique
+  status         String   @default("pending_verification") // "pending_verification", "verified", "flagged", "disabled"
+  apiCredentials String   // JSON object with apiKey, apiSecret
+  qualityRating  String?
+  messageLimit   String   // JSON object with current, max
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("whatsappNumbers")
+}
+
+// WhatsApp OAuth Credential model (for OAuth-based connections)
+// Supports multiple accounts per organization
+model WhatsAppCredential {
+  id                        String   @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId            String   @db.ObjectId
+  accountName               String?  // User-friendly name for the account (e.g., "Marketing Team", "Support")
+  accessToken               String
+  businessAccountId         String
+  businessAccountName       String?
+  messageTemplateNamespace String?
+  
+  // Additional WABA account details from Meta API
+  currency                  String?  // WABA currency (e.g., "USD")
+  timezoneId               String?  // WABA timezone (e.g., "America/Los_Angeles")
+  accountReviewStatus      String?  // Account review status (e.g., "approved", "pending")
+  businessType             String?  // Business type from Meta
+  businessLocation         String?  // Primary business location
+  
+  // Owner Business Info (Meta Business Manager)
+  ownerBusinessId          String?  // Business Manager ID
+  ownerBusinessName        String?  // Business Manager name
+  ownerBusinessPhone       String?  // Primary phone number
+  ownerBusinessEmail       String?  // Primary email address
+  ownerBusinessAddress     String?  // Business address
+  
+  phoneNumberId             String?  // Default phone number ID for this account
+  
+  // Connection type - identifies how the account was connected
+  // "oauth" - regular OAuth flow (user already has WABA)
+  // "embedded_signup" - Embedded Signup flow (automatic WABA creation)
+  // "manual" - manually entered credentials
+  connectionType            String   @default("embedded_signup")
+  
+  // System User credentials (for Embedded Signup)
+  systemUserId             String?  // System User ID from Meta
+  systemUserToken          String?  // System User access token (encrypted)
+  
+  // Webhook subscription status
+  isWebhookSubscribed      Boolean  @default(false)
+  webhookVerifyToken        String?
+  webhookUrl                String?
+  
+  // Token expiration and refresh tracking
+  tokenExpiresAt            DateTime?
+  webhookSecret            String?  // Webhook verification secret
+  
+  // Account status
+  isActive                  Boolean  @default(true)
+  isDefault                 Boolean  @default(false)  // Default account for sending messages
+  connectedAt               DateTime @default(now()) // When the account was connected
+  connectedDevice           String?  // Device/browser info when connected
+  lastVerifiedAt            DateTime? // Last time connection was verified
+  lastRefreshedAt           DateTime? // Last time token was automatically refreshed
+  lastRefreshStatus         String?   // Status of last refresh: 'success', 'failed', 'skipped'
+  lastRefreshError          String?   // Error message from last failed refresh
+  
+  // Facebook App credentials for manual setup
+  facebookAppId             String?  // Facebook App ID from Meta Developer Portal
+  facebookAppSecret         String?  // Facebook App Secret from Meta Developer Portal
+  
+  // Health check fields
+  healthCheckStatus         String   @default("unknown") // 'healthy', 'degraded', 'unhealthy', 'unknown'
+  healthCheckLastRun        DateTime? // Last time health check was run
+  healthCheckError          String?  // Last health check error message
+  healthCheckDetails       String   @default("{}") // JSON object with detailed health check results
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  // Relations
+  phoneNumbers WhatsAppPhoneNumber[]
+
+  @@index([organizationId])
+  @@index([organizationId, isDefault])
+  @@map("whatsAppCredentials")
+}
+
+// WhatsApp Phone Number model (for OAuth-connected numbers)
+model WhatsAppPhoneNumber {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  credentialId       String   @db.ObjectId  // Link to WhatsAppCredential instead of organizationId
+  displayName        String
+  phoneNumber        String
+  
+  // Verification status
+  verificationStatus String   @default("PENDING") // "PENDING", "IN_PROGRESS", "VERIFIED", "FLAGGED"
+  codeVerificationStatus String?  // Status of code verification process
+  
+  // The certified WhatsApp phone number (E.164 format)
+  verifiedWaPhoneNumber String?
+  
+  // Quality metrics
+  qualityScore       String?
+  qualityRating      String?
+  
+  // Messaging tier (e.g., "Tiers: Tier 1", "Tiers: Tier 2", etc.)
+  messagingLimitTier String?
+  
+  // Phone number status
+  phoneNumberStatus  String?  // Current status of the phone number
+  nameStatus         String?  // Name verification status
+  
+  // Status
+  isDefault          Boolean  @default(false)
+  isVerified        Boolean  @default(false)
+  
+  // Verification details
+  verificationId    String?  // From registration API
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Relations
+  credential WhatsAppCredential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+
+  @@index([credentialId])
+  @@map("whatsAppPhoneNumbers")
+}
+
+// Message model for logging
+model Message {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  contactId        String   @db.ObjectId
+  campaignId       String?  @db.ObjectId
+  direction        String   // "incoming", "outgoing"
+  status           String   @default("sent") // "sent", "delivered", "read", "failed"
+  content          String   // JSON object with text, mediaUrl
+  whatsappMessageId String?
+  sentBy           String?  @db.ObjectId
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  contact   Contact   @relation(fields: [contactId], references: [id])
+  campaign  Campaign? @relation(fields: [campaignId], references: [id])
+  sender    User?     @relation("MessageSender", fields: [sentBy], references: [id])
+
+  @@map("messages")
+}
+
+// Activity Log for audit trail
+model ActivityLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String?  @db.ObjectId
+  action    String
+  details   String   // JSON object with additional details
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@map("activityLogs")
+}
+
+// Notification model
+model Notification {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  type      String   // "info", "warning", "error", "success"
+  title     String
+  message   String
+  actionUrl String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+// Organization Settings model
+model OrganizationSettings {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String   @unique @db.ObjectId
+  general        String   @default("{}") // JSON object for general settings
+  notifications  String   @default("{}") // JSON object for notification settings
+  security       String   @default("{}") // JSON object for security settings
+  messaging      String   @default("{}") // JSON object for messaging settings
+  integrations   String   @default("{}") // JSON object for integration settings
+  whatsapp       String   @default("{}") // JSON object for WhatsApp settings
+  compliance     String   @default("{}") // JSON object for compliance settings
+  branding       String   @default("{}") // JSON object for branding settings
+  updatedBy      String?  @db.ObjectId
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organization Team @relation(fields: [organizationId], references: [id])
+
+  @@map("organizationSettings")
+}
+
+// Organization Member model (for team management)
+model OrganizationMember {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String   @db.ObjectId
+  userId         String   @db.ObjectId
+  role           String   @default("member") // "owner", "admin", "manager", "member", "viewer"
+  invitedBy      String?  @db.ObjectId
+  invitedAt      DateTime @default(now())
+  acceptedAt     DateTime?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user           User     @relation(fields: [userId], references: [id])
+  organization   Team     @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, userId])
+  @@map("organizationMembers")
+}
+
+// API Key model
+model ApiKey {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String    @db.ObjectId
+  name           String
+  prefix         String    // First 12 characters of the key for identification
+  hashedKey      String    @unique // SHA-256 hash of the full key
+  scopes         String    @default("[]") // JSON array of permission scopes
+  rateLimit      Int       @default(1000) // Requests per hour
+  maxRequests    Int?      // Maximum total requests (null = unlimited)
+  requestCount   Int       @default(0) // Current request count
+  expiresAt      DateTime?
+  lastUsedAt     DateTime?
+  isActive       Boolean   @default(true)
+  createdBy      String?   @db.ObjectId
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("apiKeys")
+}
+
+// User Settings model (for individual user preferences)
+model UserSettings {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String   @unique @db.ObjectId
+  notifications  String   @default("{}") // JSON object for notification preferences
+  appearance     String   @default("{}") // JSON object for appearance settings
+  language       String   @default("en")
+  timezone       String   @default("UTC")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("userSettings")
+}
+
+// WhatsApp Message Queue model for reliable message sending with retry logic
+model WhatsAppMessageQueue {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId   String    @db.ObjectId
+  campaignId       String?   @db.ObjectId
+  contactId        String?   @db.ObjectId
+  whatsappAccountId String?  @db.ObjectId  // Which WhatsApp account to use
+  
+  // Message content
+  recipientPhone   String
+  messageContent   String    // JSON object with text, templateId, variables, mediaUrl
+  messageType      String    @default("text") // "text", "template", "media"
+  
+  // Status tracking
+  status           String    @default("pending") // "pending", "queued", "sending", "sent", "failed", "delivered"
+  
+  // Retry tracking
+  attempts         Int       @default(0)
+  maxAttempts      Int       @default(3)
+  nextRetryAt      DateTime?
+  lastAttemptAt    DateTime?
+  
+  // Scheduling
+  scheduledAt      DateTime?
+  
+  // Response tracking
+  whatsappMessageId String?
+  errorMessage     String?
+  errorCode        String?
+  
+  // Timestamps
+  sentAt           DateTime?
+  deliveredAt      DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Relations
+  campaign Campaign? @relation(fields: [campaignId], references: [id])
+  contact  Contact?  @relation(fields: [contactId], references: [id])
+  
+  @@index([organizationId, status])
+  @@index([campaignId, status])
+  @@index([nextRetryAt])
+  @@index([scheduledAt])
+  @@map("whatsappMessageQueue")
+}
