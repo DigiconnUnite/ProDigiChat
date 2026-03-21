@@ -78,9 +78,6 @@ export default function LandingPage() {
                 </Button>
               </Link>
             </div>
-            <p className="mt-4 text-sm text-muted-foreground">
-              No credit card required · 14-day free trial · Cancel anytime
-            </p>
           </div>
         </section>
 

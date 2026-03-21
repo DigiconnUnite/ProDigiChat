@@ -1,10 +1,12 @@
 // Cloud storage integration
-import AWS from "aws-sdk";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 
-const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION,
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION || "ap-south-1",
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
 });
 
 export async function uploadToS3(file: Express.Multer.File) {
@@ -15,8 +17,11 @@ export async function uploadToS3(file: Express.Multer.File) {
     Bucket: process.env.AWS_S3_BUCKET_NAME,
     Key: file.originalname,
     Body: file.buffer,
+    ContentType: file.mimetype,
   };
-  return s3.upload(params).promise();
+  const command = new PutObjectCommand(params);
+  await s3Client.send(command);
+  return `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${file.originalname}`;
 }
 
 export async function getFileFromS3(fileId: string) {
@@ -27,5 +32,7 @@ export async function getFileFromS3(fileId: string) {
     Bucket: process.env.AWS_S3_BUCKET_NAME,
     Key: fileId,
   };
-  return s3.getObject(params).promise();
+  const command = new GetObjectCommand(params);
+  const response = await s3Client.send(command);
+  return response.Body;
 }

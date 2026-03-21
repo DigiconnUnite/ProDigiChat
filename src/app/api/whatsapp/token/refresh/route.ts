@@ -17,13 +17,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { decryptWhatsAppCredential, encryptField } from '@/lib/encryption';
+import { META_API_BASE } from '@/lib/meta-config';
 
 // Token expiration thresholds
 const REFRESH_THRESHOLD_DAYS = 7; // Refresh tokens expiring within 7 days
 const REFRESH_THRESHOLD_MS = REFRESH_THRESHOLD_DAYS * 24 * 60 * 60 * 1000;
 
 // Meta token refresh endpoint
-const META_REFRESH_TOKEN_URL = 'https://graph.facebook.com/v18.0';
+const META_REFRESH_TOKEN_URL = META_API_BASE;
 
 /**
  * Refresh the access token using Meta's refresh_token endpoint

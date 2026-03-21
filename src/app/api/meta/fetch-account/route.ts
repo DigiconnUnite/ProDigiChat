@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { META_API_BASE } from '@/lib/meta-config';
 
 /**
  * Meta Fetch Account API Route
@@ -10,9 +11,7 @@ import { NextResponse } from 'next/server';
  * @see https://developers.facebook.com/docs/graph-api
  */
 
-// API Version constant
-const API_VERSION = 'v19.0';
-const GRAPH_BASE_URL = `https://graph.facebook.com/${API_VERSION}`;
+const GRAPH_BASE_URL = META_API_BASE;
 
 interface RequestBody {
   accessToken: string;

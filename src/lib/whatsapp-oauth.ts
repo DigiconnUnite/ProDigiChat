@@ -10,6 +10,7 @@
  */
 
 import axios, { AxiosInstance } from 'axios';
+import { META_API_VERSION, META_API_BASE, META_OAUTH_CONFIG } from './meta-config';
 
 export interface WhatsAppOAuthConfig {
   appId: string;
@@ -62,9 +63,9 @@ export class WhatsAppOAuthService {
   private config: WhatsAppOAuthConfig;
   private apiClient: AxiosInstance;
 
-  private static readonly META_AUTH_URL = 'https://www.facebook.com/v18.0/dialog/oauth';
-  private static readonly META_TOKEN_URL = 'https://graph.facebook.com/v18.0/oauth/access_token';
-  private static readonly META_API_URL = 'https://graph.facebook.com/v18.0';
+  private static readonly META_AUTH_URL = META_OAUTH_CONFIG.authUrl;
+  private static readonly META_TOKEN_URL = META_OAUTH_CONFIG.tokenUrl;
+  private static readonly META_API_URL = META_API_BASE;
 
   constructor(config: WhatsAppOAuthConfig) {
     this.config = config;

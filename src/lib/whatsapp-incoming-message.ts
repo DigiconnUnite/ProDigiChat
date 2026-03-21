@@ -1,6 +1,7 @@
 import axios from "axios";
 import { getDefaultOrgId } from "@/lib/settings-storage";
 import { prisma } from "@/lib/prisma";
+import { META_API_BASE } from "./meta-config";
 
 // Import auth functions - adjust path based on file location
 let getWhatsAppCredentials: any = null;
@@ -125,7 +126,7 @@ export async function downloadMedia(mediaId: string): Promise<{ url: string; mim
 
     // Step 1: Get the media URL from Meta
     const mediaInfoResponse = await axios.get(
-      `https://graph.facebook.com/v18.0/${mediaId}`,
+      `${META_API_BASE}/${mediaId}`,
       {
         headers: {
           Authorization: `Bearer ${credentials.apiKey}`,
@@ -456,7 +457,7 @@ export async function sendMessageAck(
     }
 
     await axios.post(
-      `https://graph.facebook.com/v18.0/${credentials.phoneNumberId}/messages`,
+      `${META_API_BASE}/${credentials.phoneNumberId}/messages`,
       {
         messaging_product: "whatsapp",
         status: status,

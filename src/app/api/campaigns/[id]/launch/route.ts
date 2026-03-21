@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
-import { sendTextMessage, sendTemplateMessage } from '@/app/api/whatsapp/messages'
+import { addBulkToQueue } from '@/lib/queue'
 
 async function validateSession(request: NextRequest) {
   const token = await getToken({ req: request })
@@ -23,8 +23,8 @@ async function getOrganizationId(request: NextRequest): Promise<string | null> {
     return orgId
   }
   // Also check if it's stored as a token property
-  if (orgId && typeof orgId === 'object' && 'toString' in orgId) {
-    return orgId.toString()
+  if (orgId && typeof orgId !== 'string') {
+    return String(orgId)
   }
   return null
 }
@@ -53,8 +53,8 @@ export async function POST(
     if (token?.organizationId) {
       if (typeof token.organizationId === 'string') {
         orgId = token.organizationId
-      } else if (typeof token.organizationId === 'object' && 'toString' in token.organizationId) {
-        orgId = token.organizationId.toString()
+      } else if (token.organizationId && typeof token.organizationId !== 'string') {
+        orgId = String(token.organizationId)
       }
     }
     console.log('[CampaignLaunch] Organization ID from token:', orgId)
@@ -211,163 +211,137 @@ export async function POST(
       }
     }
 
-    // Launch the campaign - update status to running
-    const updatedCampaign = await prisma.campaign.update({
+    // Prepare message content for queue
+    let messageContentForQueue: any = {}
+    
+    if (messageContent.type === 'template' && messageContent.templateId) {
+      // Get template details
+      const template = await prisma.messageTemplate.findUnique({
+        where: { id: messageContent.templateId }
+      })
+      
+      if (!template) {
+        return NextResponse.json(
+          { success: false, error: 'Template not found' },
+          { status: 400 }
+        )
+      }
+      
+      // Check if template has been submitted to Meta
+      if (!template.whatsappTemplateId) {
+        return NextResponse.json(
+          { success: false, error: `Template "${template.name}" has not been submitted to WhatsApp Meta. Please sync or resubmit the template.` },
+          { status: 400 }
+        )
+      }
+      
+      // Build template components with variables (use default values for now)
+      const components: any[] = []
+      
+      // Add header if there's a media attachment
+      if (messageContent.mediaAttachments && messageContent.mediaAttachments.length > 0) {
+        const media = messageContent.mediaAttachments[0]
+        const headerParams: Record<string, { url: string }> = {}
+        headerParams[media.type] = { url: media.url }
+        components.push({
+          type: 'header',
+          parameters: [{
+            type: 'media',
+            ...headerParams
+          }] as any
+        })
+      }
+      
+      // Add body with template variables (will be personalized by worker)
+      if (messageContent.templateVariables) {
+        const variableValues = Object.values(messageContent.templateVariables)
+        components.push({
+          type: 'body',
+          parameters: variableValues.map((value) => ({
+            type: 'text',
+            text: String(value ?? '')
+          }))
+        })
+      }
+      
+      const templateLanguage = (template.language as string) || 'en_US'
+      
+      messageContentForQueue = {
+        type: 'template',
+        templateId: messageContent.templateId,
+        templateName: template.name,
+        templateLanguage,
+        components,
+        mediaAttachments: messageContent.mediaAttachments
+      }
+    } else if (messageContent.freeformMessage) {
+      messageContentForQueue = {
+        type: 'text',
+        freeformMessage: messageContent.freeformMessage
+      }
+    }
+
+    // Build queue messages for all contacts
+    const queueMessages = contacts.map((contact: any) => {
+      let finalMessageContent = { ...messageContentForQueue }
+      
+      // Personalize message for text messages
+      if (messageContent.freeformMessage) {
+        let personalizedMessage = messageContent.freeformMessage
+        personalizedMessage = personalizedMessage.replace(/\{\{contact\.name\}\}/g, contact.firstName || 'there')
+        personalizedMessage = personalizedMessage.replace(/\{\{contact\.firstName\}\}/g, contact.firstName || 'there')
+        personalizedMessage = personalizedMessage.replace(/\{\{contact\.lastName\}\}/g, contact.lastName || '')
+        finalMessageContent = {
+          type: 'text',
+          text: personalizedMessage
+        }
+      }
+      
+      return {
+        recipientPhone: contact.phoneNumber,
+        messageContent: JSON.stringify(finalMessageContent),
+        campaignId: campaign.id,
+        contactId: contact.id,
+        messageType: messageContent.type === 'template' ? 'template' : 'text'
+      }
+    })
+
+    // Enqueue all messages (async - returns immediately)
+    if (queueMessages.length > 0 && orgId) {
+      await addBulkToQueue(orgId, queueMessages)
+    }
+
+    // Update campaign status to running
+    await prisma.campaign.update({
       where: { id },
       data: { status: 'running' }
     })
 
-    // Create message records for each contact AND send via WhatsApp API (Issue 2 fix)
-    const messageResults = await Promise.allSettled(
-      contacts.map(async (contact: any) => {
-        try {
-          let whatsappResult = null
-          
-          // Send message via WhatsApp API based on message type
-          if (messageContent.type === 'template' && messageContent.templateId) {
-            // Get template details
-            const template = await prisma.messageTemplate.findUnique({
-              where: { id: messageContent.templateId }
-            })
-            
-            if (template) {
-              // Check if template has been submitted to Meta
-              if (!template.whatsappTemplateId) {
-                console.error('[CampaignLaunch] Template has not been submitted to Meta:', template.name);
-                throw new Error(`Template "${template.name}" has not been submitted to WhatsApp Meta. Please sync or resubmit the template.`);
-              }
-              
-              // Build template components with variables
-              const components: any[] = []
-              
-              // Add header if there's a media attachment
-              if (messageContent.mediaAttachments && messageContent.mediaAttachments.length > 0) {
-                const media = messageContent.mediaAttachments[0]
-                const headerParams: Record<string, { url: string }> = {}
-                headerParams[media.type] = { url: media.url }
-                components.push({
-                  type: 'header',
-                  parameters: [{
-                    type: 'media',
-                    ...headerParams
-                  }] as any
-                })
-              }
-              
-              // Add body with template variables
-              if (messageContent.templateVariables) {
-                const variableValues = Object.values(messageContent.templateVariables)
-                components.push({
-                  type: 'body',
-                  parameters: variableValues.map((value) => ({
-                    type: 'text',
-                    text: String(value ?? '')
-                  }))
-                })
-              }
-              
-              // Get template language from database, default to en_US
-              const templateLanguage = (template.language as string) || 'en_US'
-              
-              console.log('[CampaignLaunch] Using template:', template.name, 'with language:', templateLanguage, 'whatsappTemplateId:', template.whatsappTemplateId)
-              
-              whatsappResult = await sendTemplateMessage(
-                contact.phoneNumber,
-                template.name,
-                components,
-                orgId || undefined,
-                templateLanguage
-              )
-            }
-          } else if (messageContent.freeformMessage) {
-            // Personalize the message
-            let personalizedMessage = messageContent.freeformMessage
-            personalizedMessage = personalizedMessage.replace(/\{\{contact\.name\}\}/g, contact.firstName || 'there')
-            personalizedMessage = personalizedMessage.replace(/\{\{contact\.firstName\}\}/g, contact.firstName || 'there')
-            personalizedMessage = personalizedMessage.replace(/\{\{contact\.lastName\}\}/g, contact.lastName || '')
-            
-            whatsappResult = await sendTextMessage(contact.phoneNumber, personalizedMessage, orgId || undefined)
-          }
-          
-          // Create message record in database
-          const message = await prisma.message.create({
-            data: {
-              contactId: contact.id,
-              campaignId: campaign.id,
-              direction: 'outgoing',
-              status: whatsappResult ? 'sent' : 'failed',
-              content: JSON.stringify({
-                type: messageContent.type,
-                templateId: messageContent.templateId,
-                templateVariables: messageContent.templateVariables,
-                freeformMessage: messageContent.freeformMessage,
-                mediaAttachments: messageContent.mediaAttachments
-              }),
-              whatsappMessageId: whatsappResult && 'messages' in whatsappResult ? (whatsappResult as any).messages?.[0]?.id || null : null
-            }
-          })
-          
-          return { success: true, message, contactId: contact.id }
-        } catch (error) {
-          console.error(`Failed to send message to contact ${contact.id}:`, error)
-          
-          // Create failed message record
-          const message = await prisma.message.create({
-            data: {
-              contactId: contact.id,
-              campaignId: campaign.id,
-              direction: 'outgoing',
-              status: 'failed',
-              content: JSON.stringify({
-                type: messageContent.type,
-                templateId: messageContent.templateId,
-                templateVariables: messageContent.templateVariables,
-                freeformMessage: messageContent.freeformMessage,
-                mediaAttachments: messageContent.mediaAttachments
-              }),
-              whatsappMessageId: null
-            }
-          })
-          
-          return { success: false, message, contactId: contact.id, error: String(error) }
-        }
-      })
-    )
-
-    // Calculate stats from results
-    const sentCount = messageResults.filter(r => r.status === 'fulfilled' && r.value.success).length
-    const failedCount = messageResults.length - sentCount
-
-    // Update campaign stats
+    // Initialize campaign stats
     await prisma.campaign.update({
       where: { id },
       data: {
         stats: JSON.stringify({
-          totalSent: sentCount,
+          totalSent: 0,
           delivered: 0,
           read: 0,
-          failed: failedCount,
+          failed: 0,
           clicked: 0
         })
       }
     })
 
-    // In a background job, you would:
-    // 1. Update message status as delivery/read receipts come in
-    // 2. Update campaign stats periodically
-
+    // Return immediately - workers will process queue asynchronously
     return NextResponse.json({
       success: true,
       message: phoneNotVerifiedWarning 
-        ? 'Campaign launched with warnings: Your phone number is not verified. Some messages may fail.' 
-        : 'Campaign launched successfully',
+        ? 'Campaign queued with warnings: Your phone number is not verified. Some messages may fail.' 
+        : 'Campaign queued successfully - messages will be sent asynchronously',
       warning: phoneNotVerifiedWarning,
       data: {
         campaignId: id,
         status: 'running',
-        recipientsCount: contacts.length,
-        sentCount,
-        failedCount
+        recipientsCount: contacts.length
       }
     })
   } catch (error) {

@@ -5,9 +5,10 @@ import { getToken } from "next-auth/jwt";
 import crypto from "crypto";
 import axios from "axios";
 import { encryptWhatsAppCredential } from "@/lib/encryption";
+import { META_API_BASE } from "@/lib/meta-config";
 
 // Meta API base URL
-const META_API_BASE_URL = "https://graph.facebook.com/v18.0";
+const META_API_BASE_URL = META_API_BASE;
 
 // Validate credentials against Meta API
 async function validateCredentials(

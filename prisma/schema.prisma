@@ -44,6 +44,10 @@ model Team {
   // Relations
   members OrganizationMember[]
   settings OrganizationSettings?
+  contacts Contact[]
+  segments Segment[]
+  campaigns Campaign[]
+  messages Message[]
 
   @@map("teams")
 }

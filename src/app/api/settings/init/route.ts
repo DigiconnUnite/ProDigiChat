@@ -11,7 +11,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
   
-  const orgId = (session.user as any).organizationId
+  const orgId = session.user.organizationId
   
   if (!orgId) {
     return NextResponse.json({ error: "No organization found. Please log in again." }, { status: 401 })
@@ -40,7 +40,7 @@ export async function POST() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
   
-  const orgId = (session.user as any).organizationId
+  const orgId = session.user.organizationId
   
   if (!orgId) {
     return NextResponse.json({ error: "No organization found. Please log in again." }, { status: 401 })

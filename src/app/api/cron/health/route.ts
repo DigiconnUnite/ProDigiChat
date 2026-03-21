@@ -4,7 +4,7 @@
  * Periodically runs health checks for all WhatsApp-connected organizations.
  * This endpoint should be called via cron job (e.g., every 15 minutes).
  * 
- * Cron URL: /api/cron/health?key=YOUR_CRON_KEY
+ * Cron URL: /api/cron/health (requires Bearer token auth)
  * 
  * Recommended cron schedule: Every 15 minutes
  */
@@ -12,9 +12,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import axios from 'axios';
+import { META_API_BASE } from '@/lib/meta-config';
 
-const META_API_BASE_URL = 'https://graph.facebook.com/v18.0';
-const CRON_KEY = process.env.CRON_SECRET_KEY || 'development-cron-key';
+const META_API_BASE_URL = META_API_BASE;
 
 // Health check interval - minimum time between checks (10 minutes)
 const HEALTH_CHECK_MIN_INTERVAL = 10 * 60 * 1000;
@@ -282,11 +282,13 @@ async function updateHealthCheckStatus(
  */
 export async function GET(request: NextRequest) {
   try {
-    // Verify cron key
-    const cronKey = request.nextUrl.searchParams.get('key');
-    if (cronKey !== CRON_KEY) {
+    // Verify cron secret via Bearer token for security
+    const authHeader = request.headers.get('Authorization');
+    const cronSecret = process.env.CRON_SECRET;
+
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
       console.warn('[HealthCron] Unauthorized cron attempt');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const startTime = Date.now();

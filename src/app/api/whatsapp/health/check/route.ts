@@ -18,8 +18,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getToken } from 'next-auth/jwt';
 import axios from 'axios';
+import { META_API_BASE } from '@/lib/meta-config';
 
-const META_API_BASE_URL = 'https://graph.facebook.com/v18.0';
+const META_API_BASE_URL = META_API_BASE;
 
 // Health check interval - minimum time between checks (5 minutes)
 const HEALTH_CHECK_MIN_INTERVAL = 5 * 60 * 1000;

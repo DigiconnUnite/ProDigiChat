@@ -8,20 +8,20 @@ import { prisma } from '@/lib/prisma';
  * This endpoint should be called periodically (e.g., every minute) via cron job
  * to process queued messages and handle retries with exponential backoff.
  * 
- * Cron URL: /api/cron/queue?key=YOUR_CRON_KEY
+ * Cron URL: /api/cron/queue (requires Bearer token auth)
  * 
  * Recommended cron schedule: Every 1-5 minutes
  */
 
-const CRON_KEY = process.env.CRON_SECRET_KEY || 'development-cron-key';
-
 export async function GET(request: NextRequest) {
   try {
-    // Verify cron key for security
-    const cronKey = request.nextUrl.searchParams.get('key');
-    if (cronKey !== CRON_KEY) {
+    // Verify cron secret via Bearer token for security
+    const authHeader = request.headers.get('Authorization');
+    const cronSecret = process.env.CRON_SECRET;
+
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
       console.warn('[Cron Queue] Unauthorized cron attempt');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const startTime = Date.now();

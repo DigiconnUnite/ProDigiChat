@@ -2,6 +2,7 @@ import { WhatsAppClient } from "./client";
 import { getSettings, getDefaultOrgId } from "@/lib/settings-storage";
 import { prisma } from "@/lib/prisma";
 import { decryptWhatsAppCredential, encryptField } from "@/lib/encryption";
+import { META_API_BASE } from "@/lib/meta-config";
 
 // Cache for the WhatsApp client
 let whatsappClientInstance: WhatsAppClient | null = null;
@@ -112,7 +113,7 @@ async function refreshAccessToken(organizationId: string, currentAccessToken: st
     console.log('[WhatsAppAuth] Attempting to refresh access token...');
     
     // Meta provides a token refresh endpoint
-    const response = await fetch(`https://graph.facebook.com/v18.0/${businessAccountId}/refresh_token`, {
+    const response = await fetch(`${META_API_BASE}/${businessAccountId}/refresh_token`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${currentAccessToken}`,

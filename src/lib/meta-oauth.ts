@@ -101,6 +101,8 @@ export interface MetaUser {
 // Configuration
 // =============================================================================
 
+import { META_API_VERSION, META_API_BASE, META_OAUTH_CONFIG as META_OAUTH, META_WHATSAPP_SCOPES } from './meta-config';
+
 /**
  * Meta OAuth Configuration
  */
@@ -108,8 +110,8 @@ export const META_CONFIG = {
   appId: process.env.NEXT_PUBLIC_META_APP_ID || 'YOUR_FACEBOOK_APP_ID',
   appSecret: process.env.META_APP_SECRET || 'YOUR_APP_SECRET',
   redirectUri: process.env.NEXT_PUBLIC_OAUTH_REDIRECT_URI || 'http://localhost:3000/api/meta/callback',
-  scopes: ['whatsapp_business_management', 'whatsapp_business_messaging', 'business_management'],
-  apiVersion: 'v19.0',
+  scopes: META_WHATSAPP_SCOPES,
+  apiVersion: META_API_VERSION,
   configurationId: process.env.NEXT_PUBLIC_META_CONFIG_ID || 'YOUR_CONFIG_ID',
 };
 
@@ -155,7 +157,7 @@ export function buildOAuthUrl(state: string): string {
     }),
   });
 
-  return `https://www.facebook.com/${META_CONFIG.apiVersion}/dialog/oauth?${params.toString()}`;
+  return `${META_OAUTH.authUrl}?${params.toString()}`;
 }
 
 /**
@@ -176,7 +178,7 @@ export function buildEmbeddedSignupUrl(state: string): string {
     }),
   });
 
-  return `https://www.facebook.com/${META_CONFIG.apiVersion}/dialog/oauth?${params.toString()}`;
+  return `${META_OAUTH.authUrl}?${params.toString()}`;
 }
 
 // =============================================================================
@@ -198,7 +200,7 @@ export async function exchangeCodeForToken(code: string): Promise<MetaAuthRespon
     });
 
     const response = await fetch(
-      `https://graph.facebook.com/${META_CONFIG.apiVersion}/oauth/access_token?${params.toString()}`,
+      `${META_API_BASE}/oauth/access_token?${params.toString()}`,
       {
         method: 'GET',
         headers: {
@@ -241,7 +243,7 @@ export async function getLongLivedToken(shortLivedToken: string): Promise<MetaAu
     });
 
     const response = await fetch(
-      `https://graph.facebook.com/${META_CONFIG.apiVersion}/oauth/access_token?${params.toString()}`,
+      `${META_API_BASE}/oauth/access_token?${params.toString()}`,
       {
         method: 'GET',
         headers: {
@@ -282,7 +284,7 @@ export async function debugAccessToken(accessToken: string): Promise<MetaDebugTo
     });
 
     const response = await fetch(
-      `https://graph.facebook.com/${META_CONFIG.apiVersion}/debug_token?${params.toString()}`
+      `${META_API_BASE}/debug_token?${params.toString()}`
     );
 
     if (!response.ok) {
@@ -325,7 +327,7 @@ export async function getWABAAccounts(accessToken: string): Promise<WhatsAppBusi
 
     // Try to fetch WABA directly - this is the correct endpoint for WhatsApp Business Accounts
     const response = await fetch(
-      `https://graph.facebook.com/${META_CONFIG.apiVersion}/me/wa_businesses?${params.toString()}`
+      `${META_API_BASE}/me/wa_businesses?${params.toString()}`
     );
 
     if (!response.ok) {
@@ -339,7 +341,7 @@ export async function getWABAAccounts(accessToken: string): Promise<WhatsAppBusi
       });
 
       const businessResponse = await fetch(
-        `https://graph.facebook.com/${META_CONFIG.apiVersion}/me/businesses?${businessParams.toString()}`
+        `${META_API_BASE}/me/businesses?${businessParams.toString()}`
       );
 
       if (!businessResponse.ok) {
@@ -410,7 +412,7 @@ export async function getPhoneNumbers(wabaId: string, accessToken: string): Prom
     console.log(`Fetching phone numbers for WABA ID: ${wabaId}`);
     
     const response = await fetch(
-      `https://graph.facebook.com/${META_CONFIG.apiVersion}/${wabaId}/phone_numbers?${params.toString()}`
+      `${META_API_BASE}/${wabaId}/phone_numbers?${params.toString()}`
     );
 
     if (!response.ok) {
@@ -443,7 +445,7 @@ export async function getMetaUserInfo(accessToken: string): Promise<MetaUser> {
     });
 
     const response = await fetch(
-      `https://graph.facebook.com/${META_CONFIG.apiVersion}/me?${params.toString()}`
+      `${META_API_BASE}/me?${params.toString()}`
     );
 
     if (!response.ok) {
@@ -477,7 +479,7 @@ export async function getMetaUserInfo(accessToken: string): Promise<MetaUser> {
  */
 export function getGraphApiUrl(endpoint: string): string {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-  return `https://graph.facebook.com/${META_CONFIG.apiVersion}/${cleanEndpoint}`;
+  return `${META_API_BASE}/${cleanEndpoint}`;
 }
 
 /**
@@ -537,7 +539,7 @@ export async function getLinkedBusinessAccount(wabaId: string, accessToken: stri
     });
 
     const response = await fetch(
-      `https://graph.facebook.com/${META_CONFIG.apiVersion}/${wabaId}?${params.toString()}`
+      `${META_API_BASE}/${wabaId}?${params.toString()}`
     );
 
     if (!response.ok) {

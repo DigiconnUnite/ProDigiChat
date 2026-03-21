@@ -12,7 +12,6 @@ const PBKDF2_ITERATIONS = 100000;
 const ENCRYPTION_KEY_ENV = "ENCRYPTION_KEY";
 
 // In-memory key cache (derived from env var)
-let derivedKey: Buffer | null = null;
 let encryptionKeyWarningLogged = false;
 
 /**
@@ -24,15 +23,12 @@ export function isEncryptionConfigured(): boolean {
 }
 
 /**
- * Derive encryption key from environment variable using PBKDF2
+ * Derive encryption key from plaintext key using PBKDF2 with the provided salt
  * @param encryptionKey - The raw encryption key from environment variable
+ * @param salt - Salt for PBKDF2 (must be provided for security)
  * @returns Derived key buffer
  */
-function deriveKey(encryptionKey: string): Buffer {
-  // Use a static salt for consistent key derivation
-  // In production, you might want to store this salt securely
-  const salt = Buffer.from("whatsapp-credential-encryption-salt-v1", "utf-8");
-  
+function deriveKey(encryptionKey: string, salt: Buffer): Buffer {
   return crypto.pbkdf2Sync(
     encryptionKey,
     salt,
@@ -59,7 +55,6 @@ export function initializeEncryption(): void {
       );
       encryptionKeyWarningLogged = true;
     }
-    derivedKey = null;
     return;
   }
   
@@ -73,8 +68,19 @@ export function initializeEncryption(): void {
     );
   }
   
-  derivedKey = deriveKey(encryptionKey);
   console.log("[Encryption] Encryption key initialized successfully");
+}
+
+/**
+ * Get the encryption key from environment
+ * @throws Error if encryption key is not configured
+ */
+function getEncryptionKey(): string {
+  const encryptionKey = process.env[ENCRYPTION_KEY_ENV];
+  if (!encryptionKey) {
+    throw new Error("ENCRYPTION_KEY environment variable is not configured");
+  }
+  return encryptionKey;
 }
 
 /**
@@ -91,6 +97,7 @@ export function isEncrypted(value: string | null | undefined): boolean {
 
 /**
  * Encrypt a sensitive field value
+ * Uses random salt per encryption operation for security
  * @param plaintext - The plain text value to encrypt
  * @returns Encrypted value with prefix, or original value if encryption not configured
  */
@@ -101,7 +108,7 @@ export function encryptField(plaintext: string | null | undefined): string | nul
   }
   
   // If encryption is not configured, return plaintext (with warning)
-  if (!derivedKey) {
+  if (!isEncryptionConfigured()) {
     if (!encryptionKeyWarningLogged) {
       console.warn(
         "[Encryption] WARNING: Encryption not configured. " +
@@ -113,8 +120,16 @@ export function encryptField(plaintext: string | null | undefined): string | nul
   }
   
   try {
+    const encryptionKey = getEncryptionKey();
+    
+    // Generate random salt for this encryption operation
+    const salt = crypto.randomBytes(SALT_LENGTH);
+    
     // Generate random IV
     const iv = crypto.randomBytes(IV_LENGTH);
+    
+    // Derive key using the random salt
+    const derivedKey = deriveKey(encryptionKey, salt);
     
     // Create cipher
     const cipher = crypto.createCipheriv(ALGORITHM, derivedKey, iv, {
@@ -122,15 +137,16 @@ export function encryptField(plaintext: string | null | undefined): string | nul
     });
     
     // Encrypt the plaintext
-    let encrypted = cipher.update(plaintext, "utf8", "base64");
-    encrypted += cipher.final("base64");
+    let encrypted = cipher.update(plaintext, "utf8", "hex");
+    encrypted += cipher.final("hex");
     
     // Get authentication tag
     const authTag = cipher.getAuthTag();
     
-    // Combine IV + AuthTag + Encrypted data
-    // Format: enc:iv:authTag:encryptedData (all base64)
-    const combined = `${iv.toString("base64")}:${authTag.toString("base64")}:${encrypted}`;
+    // Combine salt + IV + AuthTag + Encrypted data
+    // Format: enc:salt:iv:authTag:encryptedData (salt, iv, authTag in hex, encrypted in hex)
+    // Using hex for all to ensure consistent encoding
+    const combined = `${salt.toString("hex")}:${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted}`;
     
     return `enc:${combined}`;
   } catch (error) {
@@ -156,7 +172,7 @@ export function decryptField(encryptedValue: string | null | undefined): string 
   }
   
   // If encryption is not configured but value is marked as encrypted, throw error
-  if (!derivedKey) {
+  if (!isEncryptionConfigured()) {
     console.error(
       "[Encryption] ERROR: Cannot decrypt - encryption key not configured. " +
       "Value is marked as encrypted but no key available."
@@ -167,17 +183,23 @@ export function decryptField(encryptedValue: string | null | undefined): string 
   }
   
   try {
+    const encryptionKey = getEncryptionKey();
+    
     // Remove prefix and split components
     const encryptedPart = encryptedValue.substring(4); // Remove "enc:"
     const parts = encryptedPart.split(":");
     
-    if (parts.length !== 3) {
+    if (parts.length !== 4) {
       throw new Error("Invalid encrypted value format");
     }
     
-    const iv = Buffer.from(parts[0], "base64");
-    const authTag = Buffer.from(parts[1], "base64");
-    const encrypted = parts[2];
+    const salt = Buffer.from(parts[0], "hex");
+    const iv = Buffer.from(parts[1], "hex");
+    const authTag = Buffer.from(parts[2], "hex");
+    const encrypted = parts[3];
+    
+    // Derive key using the stored salt
+    const derivedKey = deriveKey(encryptionKey, salt);
     
     // Create decipher
     const decipher = crypto.createDecipheriv(ALGORITHM, derivedKey, iv, {
@@ -188,7 +210,7 @@ export function decryptField(encryptedValue: string | null | undefined): string 
     decipher.setAuthTag(authTag);
     
     // Decrypt
-    let decrypted = decipher.update(encrypted, "base64", "utf8");
+    let decrypted = decipher.update(encrypted, "hex", "utf8");
     decrypted += decipher.final("utf8");
     
     return decrypted;

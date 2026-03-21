@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 
 export const authOptions = {
@@ -52,7 +53,7 @@ export const authOptions = {
         
         // If user doesn't exist, create them
         if (!user) {
-          const hashedPassword = await bcrypt.hash('google-oauth-' + Date.now(), 12)
+          const hashedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12)
           user = await prisma.user.create({
             data: {
               email: profile.email,
@@ -111,13 +112,13 @@ export const authOptions = {
       
       // Read from token only - no DB queries
       if (token.organizationId) {
-        (session.user as any).organizationId = token.organizationId as string;
+        session.user.organizationId = token.organizationId as string;
       }
       if (token.organizationName) {
-        (session.user as any).organizationName = token.organizationName as string;
+        session.user.organizationName = token.organizationName as string;
       }
       if (token.role) {
-        (session.user as any).role = token.role as string;
+        session.user.role = token.role as string;
       }
       
       return session;

@@ -11,9 +11,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getToken } from 'next-auth/jwt';
 import axios from 'axios';
+import { META_API_BASE } from '@/lib/meta-config';
 
-const META_API_VERSION = 'v18.0';
-const GRAPH_BASE_URL = `https://graph.facebook.com/${META_API_VERSION}`;
+const GRAPH_BASE_URL = META_API_BASE;
 
 export async function POST(request: NextRequest) {
   try {

@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
+import { META_API_BASE } from "@/lib/meta-config";
 
 interface WhatsAppClientConfig {
   apiKey: string;
@@ -68,7 +69,7 @@ export class WhatsAppClient {
     this.apiKey = config.apiKey;
 
     this.client = axios.create({
-      baseURL: config.baseUrl || "https://graph.facebook.com/v18.0",
+      baseURL: config.baseUrl || META_API_BASE,
       headers: {
         "Authorization": `Bearer ${config.apiKey}`,
         "Content-Type": "application/json",

@@ -17,8 +17,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { prisma } from '@/lib/prisma';
 import axios from 'axios';
+import { META_API_BASE } from '@/lib/meta-config';
 
-const META_API_BASE_URL = 'https://graph.facebook.com/v18.0';
+const META_API_BASE_URL = META_API_BASE;
 
 interface BusinessReport {
   businessAccount: {

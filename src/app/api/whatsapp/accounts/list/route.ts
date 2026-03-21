@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createWhatsAppOAuthService } from '@/lib/whatsapp-oauth';
 import { prisma } from '@/lib/prisma';
 import { getToken } from 'next-auth/jwt';
+import { META_API_BASE } from '@/lib/meta-config';
 
 export async function GET(request: NextRequest) {
   try {
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
       // Fetch owned WhatsApp Business Accounts
       // Using the business account ID to query
       const ownedResponse = await fetch(
-        `https://graph.facebook.com/v18.0/me?fields=whatsapp_business_accounts{id,name,message_template_namespace}`,
+        `${META_API_BASE}/me?fields=whatsapp_business_accounts{id,name,message_template_namespace}`,
         {
           headers: { 
             Authorization: `Bearer ${credential.accessToken}` 
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
           let phoneNumbers: any[] = [];
           try {
             const phonesResponse = await fetch(
-              `https://graph.facebook.com/v18.0/${waba.id}/phone_numbers?fields=id,verified_name,display_phone_number,code_verification_status,quality_rating`,
+              `${META_API_BASE}/${waba.id}/phone_numbers?fields=id,verified_name,display_phone_number,code_verification_status,quality_rating`,
               {
                 headers: { 
                   Authorization: `Bearer ${credential.accessToken}` 
@@ -105,7 +106,7 @@ export async function GET(request: NextRequest) {
     try {
       // Fetch client-shared accounts
       const clientResponse = await fetch(
-        `https://graph.facebook.com/v18.0/me/businesses?fields=whatsapp_business_accounts{id,name,message_template_namespace}`,
+        `${META_API_BASE}/me/businesses?fields=whatsapp_business_accounts{id,name,message_template_namespace}`,
         {
           headers: { 
             Authorization: `Bearer ${credential.accessToken}` 

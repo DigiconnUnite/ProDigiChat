@@ -10,8 +10,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getToken } from 'next-auth/jwt';
+import { META_API_BASE } from '@/lib/meta-config';
 
-const META_GRAPH_API_BASE = 'https://graph.facebook.com/v18.0';
+const META_GRAPH_API_BASE = META_API_BASE;
 
 async function getUserId(request: NextRequest): Promise<string | null> {
   const token = await getToken({ req: request });

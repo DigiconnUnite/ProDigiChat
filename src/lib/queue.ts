@@ -83,6 +83,7 @@ export async function addToQueue(
 
 /**
  * Add multiple messages to the queue (bulk operation)
+ * Uses createMany for efficient bulk insert - much faster than sequential inserts
  */
 export async function addBulkToQueue(
   organizationId: string,
@@ -95,27 +96,42 @@ export async function addBulkToQueue(
     scheduledAt?: Date;
   }>
 ): Promise<WhatsAppMessageQueue[]> {
-  // MongoDB doesn't have createManyAndReturn, so we need to create them individually
-  const queueItems: WhatsAppMessageQueue[] = [];
-  
-  for (const msg of messages) {
-    const queueItem = await prisma.whatsAppMessageQueue.create({
-      data: {
-        organizationId,
-        recipientPhone: msg.recipientPhone,
-        messageContent: msg.messageContent,
-        messageType: msg.messageType || MessageType.TEXT,
-        campaignId: msg.campaignId,
-        contactId: msg.contactId,
-        scheduledAt: msg.scheduledAt,
-        maxAttempts: RetryConfig.MAX_ATTEMPTS,
-        status: msg.scheduledAt && msg.scheduledAt > new Date()
-          ? QueueStatus.PENDING
-          : QueueStatus.QUEUED,
-      },
-    });
-    queueItems.push(queueItem);
+  if (messages.length === 0) {
+    return [];
   }
+
+  const now = new Date();
+  
+  // Use createMany for bulk insert - much faster than sequential inserts
+  await prisma.whatsAppMessageQueue.createMany({
+    data: messages.map(msg => ({
+      organizationId,
+      recipientPhone: msg.recipientPhone,
+      messageContent: msg.messageContent,
+      messageType: msg.messageType || MessageType.TEXT,
+      campaignId: msg.campaignId,
+      contactId: msg.contactId,
+      scheduledAt: msg.scheduledAt,
+      maxAttempts: RetryConfig.MAX_ATTEMPTS,
+      status: msg.scheduledAt && msg.scheduledAt > now
+        ? QueueStatus.PENDING
+        : QueueStatus.QUEUED,
+    })),
+  });
+
+  // Fetch the created records to return
+  // Use campaignId if available, otherwise use a time-based filter
+  const campaignId = messages[0]?.campaignId;
+  const queueItems = await prisma.whatsAppMessageQueue.findMany({
+    where: campaignId
+      ? { campaignId, organizationId }
+      : {
+          organizationId,
+          createdAt: { gte: new Date(now.getTime() - 60000) }, // Last minute
+        },
+    orderBy: { createdAt: 'asc' },
+    take: messages.length,
+  });
 
   console.log(`[Queue] Added ${queueItems.length} messages to queue`);
   return queueItems;
