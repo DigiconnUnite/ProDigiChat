@@ -182,6 +182,7 @@ export async function POST(request: NextRequest) {
         status: "sent",
         content: JSON.stringify({ text: content, type }),
         sentBy: userId || undefined,
+        organizationId: contact.organizationId,
       },
       include: {
         contact: {

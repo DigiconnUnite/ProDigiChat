@@ -371,6 +371,7 @@ export async function findOrCreateContact(phoneNumber: string): Promise<any> {
       data: {
         phoneNumber: normalizedPhone,
         userId: userId,
+        organizationId: orgId,
         tags: "[]",
         attributes: "{}",
       },
@@ -389,6 +390,16 @@ export async function storeIncomingMessage(
   content: ParsedMessageContent,
   timestamp: string
 ): Promise<any> {
+  // Get contact to get organizationId
+  const contact = await prisma.contact.findUnique({
+    where: { id: contactId },
+    select: { organizationId: true }
+  });
+
+  if (!contact) {
+    throw new Error("Contact not found");
+  }
+
   // Create content object with all relevant fields
   const contentObj: any = {
     type: content.type,
@@ -412,6 +423,7 @@ export async function storeIncomingMessage(
       direction: "incoming",
       status: "delivered", // Incoming messages are considered delivered
       content: JSON.stringify(contentObj),
+      organizationId: contact.organizationId,
     },
     include: {
       contact: {

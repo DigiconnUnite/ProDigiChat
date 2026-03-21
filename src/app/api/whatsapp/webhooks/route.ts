@@ -186,19 +186,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid timestamp" }, { status: 400 });
     }
 
-    // Find or create contact
-    let contact = await prisma.contact.findFirst({
+    // Find contact - don't create if not exists
+    const contact = await prisma.contact.findFirst({
       where: { phoneNumber: recipient }
     });
 
     if (!contact) {
-      contact = await prisma.contact.create({
-        data: {
-          phoneNumber: recipient,
-          tags: '[]',
-          attributes: '{}'
-        }
-      });
+      console.log(`Contact not found for status update: ${recipient}`);
+      return NextResponse.json({ success: true, message: "Contact not found, ignoring status update" });
     }
 
     // Update or create message
@@ -218,7 +213,8 @@ export async function POST(request: Request) {
           content: JSON.stringify({ text: "Status update" }),
           direction: "outgoing",
           contactId: contact.id,
-          campaignId: campaignId || undefined
+          campaignId: campaignId || undefined,
+          organizationId: contact.organizationId
         }
       });
     }

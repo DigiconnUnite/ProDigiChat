@@ -83,8 +83,9 @@ export async function POST(request: NextRequest) {
   try {
     const token = await getToken({ req: request })
     const userId = token?.sub as string
+    const organizationId = (token?.organizationId || token?.orgId) as string
 
-    if (!userId) {
+    if (!userId || !organizationId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    
+
     const { name, rules } = body
 
     if (!name) {
@@ -107,7 +108,8 @@ export async function POST(request: NextRequest) {
       data: {
         name,
         rules: JSON.stringify(rules || []),
-        createdBy: userId
+        createdBy: userId,
+        organizationId
       }
     })
 
