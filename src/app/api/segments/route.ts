@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
 
 async function validateSession(request: NextRequest) {
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     const includeCount = searchParams.get('includeCount') === 'true'
 
     // Always filter by authenticated user
-    const segments = await db.segment.findMany({
+    const segments = await prisma.segment.findMany({
       where: {
         createdBy: userId
       },
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create segment with authenticated user as owner
-    const segment = await db.segment.create({
+    const segment = await prisma.segment.create({
       data: {
         name,
         rules: JSON.stringify(rules || []),

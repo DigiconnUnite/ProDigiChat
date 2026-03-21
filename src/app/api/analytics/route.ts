@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
 
 export async function GET(request: NextRequest) {
@@ -59,12 +59,12 @@ export async function GET(request: NextRequest) {
       messageStatsCurrent
     ] = await Promise.all([
       // Total contacts count
-      db.contact.count({
+      prisma.contact.count({
         where: contactFilter
       }),
       
       // Messages sent in date range
-      db.message.count({
+      prisma.message.count({
         where: {
           direction: 'outgoing',
           createdAt: {
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
       }),
       
       // Campaigns summary
-      db.campaign.groupBy({
+      prisma.campaign.groupBy({
         by: ['status'],
         _count: true,
         where: {
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
       }),
       
       // Automation workflow stats
-      db.automationWorkflow.findMany({
+      prisma.automationWorkflow.findMany({
         where: automationFilter,
         select: {
           id: true,
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
       }),
 
       // Recent activity logs (latest 10)
-      db.activityLog.findMany({
+      prisma.activityLog.findMany({
         where: activityFilter,
         orderBy: {
           createdAt: 'desc'
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
       }),
 
       // New contacts in current period
-      db.contact.count({
+      prisma.contact.count({
         where: {
           ...contactFilter,
           createdAt: {
@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
       }),
 
       // Message stats for current period
-      db.message.groupBy({
+      prisma.message.groupBy({
         by: ['status', 'direction'],
         _count: true,
         where: {
@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
       newContactsPrevious
     ] = await Promise.all([
       // Messages sent in previous period
-      db.message.count({
+      prisma.message.count({
         where: {
           direction: 'outgoing',
           createdAt: {
@@ -162,7 +162,7 @@ export async function GET(request: NextRequest) {
       }),
 
       // Message stats for previous period
-      db.message.groupBy({
+      prisma.message.groupBy({
         by: ['status', 'direction'],
         _count: true,
         where: {
@@ -176,7 +176,7 @@ export async function GET(request: NextRequest) {
       }),
 
       // New contacts in previous period
-      db.contact.count({
+      prisma.contact.count({
         where: {
           ...contactFilter,
           createdAt: {
@@ -211,7 +211,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch time series data - message volume by day
-    const allMessagesInRange = await db.message.findMany({
+    const allMessagesInRange = await prisma.message.findMany({
       where: {
         direction: 'outgoing',
         createdAt: {
@@ -255,7 +255,7 @@ export async function GET(request: NextRequest) {
     }))
 
     // Fetch all campaigns with their stats
-    const campaignsWithStats = await db.campaign.findMany({
+    const campaignsWithStats = await prisma.campaign.findMany({
       where: {
         createdAt: {
           gte: startDate

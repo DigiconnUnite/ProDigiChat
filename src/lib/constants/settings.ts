@@ -108,7 +108,10 @@ export const NOTIFICATION_FREQUENCY_OPTIONS = [
   { value: 'weekly', label: 'Weekly Digest' },
 ] as const
 
-// Default organization ID (for demo/development)
+// Default organization ID (DEPRECATED - for demo/development only)
+// WARNING: Using this as a fallback is a security risk - it allows unauthenticated
+// access to a single hardcoded organization's data. This should never be used as
+// a fallback when a valid organizationId is required.
 export const DEFAULT_ORG_ID = '000000000000000000000001'
 
 // Billing plans

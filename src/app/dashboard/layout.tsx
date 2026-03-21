@@ -13,7 +13,7 @@ export default function DashboardLayout({
         <DashboardBreadcrumb />
         {children}
       </main>
-      <footer className="bg-green-950 h-[50vh] flex items-end justify-center text-white text-center text-sm py-3 px-4 fixed bottom-0 left-0 right-0">
+      <footer className="bg-green-950 h-auto min-h-[60px] flex items-center justify-center text-white text-center text-sm py-3 px-4">
         <p>© 2025 WhatsApp Marketing Tool. Developed by Digiconn Unite Pvt. Ltd.</p>
       </footer>
     </div>

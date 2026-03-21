@@ -35,7 +35,6 @@ import { Progress } from "@/components/ui/progress"
 // Constants
 import {
   SETTINGS_TABS,
-  DEFAULT_ORG_ID,
   TIMEZONE_OPTIONS,
   LANGUAGE_OPTIONS,
   DATE_FORMAT_OPTIONS,
@@ -101,8 +100,22 @@ function SettingsPageContent() {
   const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState<string>(SETTINGS_TABS.GENERAL)
   
-  // Get organization ID from session or use default
-  const organizationId = (session?.user as any)?.organizationId || DEFAULT_ORG_ID
+  // Get organization ID from session - REQUIRED for security
+  // If no valid orgId exists, the user should not have access to settings
+  const organizationId = (session?.user as any)?.organizationId
+  
+  // Redirect or show error if no organization ID
+  if (!organizationId) {
+    return (
+      <div className="container mx-auto py-6">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-destructive">No organization found. Please log in again.</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   // Handle tab from URL query parameter
   useEffect(() => {
@@ -193,7 +206,7 @@ function SettingsPageContent() {
 
   const fetchNotificationSettings = async () => {
     try {
-      const response = await fetch(`/api/settings/notifications?organizationId=${DEFAULT_ORG_ID}`)
+      const response = await fetch(`/api/settings/notifications?organizationId=${organizationId}`)
       if (response.ok) {
         const data = await response.json()
         if (data.settings) {
@@ -207,7 +220,7 @@ function SettingsPageContent() {
 
   const fetchBillingInfo = async () => {
     try {
-      const response = await fetch(`/api/settings/billing?organizationId=${DEFAULT_ORG_ID}`)
+      const response = await fetch(`/api/settings/billing?organizationId=${organizationId}`)
       if (response.ok) {
         const data = await response.json()
         setBillingInfo({
@@ -251,11 +264,11 @@ function SettingsPageContent() {
 
     setIsSaving(true)
     try {
-      const response = await fetch(`/api/settings/general?organizationId=${DEFAULT_ORG_ID}`, {
+      const response = await fetch(`/api/settings/general?organizationId=${organizationId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          organizationId: DEFAULT_ORG_ID,
+          organizationId: organizationId,
           name: generalSettings.companyName,
           email: generalSettings.companyEmail,
           timezone: generalSettings.timezone,
@@ -292,7 +305,7 @@ function SettingsPageContent() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          organizationId: DEFAULT_ORG_ID,
+          organizationId: organizationId,
           settings: notificationSettings,
         }),
       })

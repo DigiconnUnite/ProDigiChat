@@ -2,7 +2,6 @@
 // Uses Prisma as primary storage with fallback to in-memory for development
 
 import { prisma } from '@/lib/prisma'
-import { DEFAULT_ORG_ID } from '@/lib/constants/settings'
 
 // Types matching the UI expectations
 export interface GeneralSettings {
@@ -187,7 +186,9 @@ async function saveSettingsToDb(orgId: string, settings: SettingsStorage): Promi
 }
 
 // Public API - get settings with database-first (Prisma primary storage)
-export async function getSettings(orgId: string = DEFAULT_ORG_ID): Promise<SettingsStorage> {
+// NOTE: orgId is now REQUIRED - callers must provide a valid organizationId.
+// If no valid orgId is provided, the caller should return 401 Unauthorized.
+export async function getSettings(orgId: string): Promise<SettingsStorage> {
   // Always try database first for production safety
   const useDb = await checkDatabase()
   
@@ -214,8 +215,10 @@ export async function getSettings(orgId: string = DEFAULT_ORG_ID): Promise<Setti
 }
 
 // Public API - update settings with database-first (Prisma primary)
+// NOTE: orgId is now REQUIRED - callers must provide a valid organizationId.
+// If no valid orgId is provided, the caller should return 401 Unauthorized.
 export async function updateSettings(
-  orgId: string = DEFAULT_ORG_ID, 
+  orgId: string, 
   updates: Partial<SettingsStorage>
 ): Promise<SettingsStorage> {
   // Always try database first
@@ -241,14 +244,19 @@ export async function updateSettings(
   return updated
 }
 
-// Public API - get default organization ID
+// DEPRECATED: Get default organization ID
+// WARNING: This function exists for backward compatibility only.
+// Using a hardcoded default orgId is a security risk - it allows
+// unauthenticated access to a single organization's data.
+// Callers should instead get orgId from the authenticated session.
 export function getDefaultOrgId(): string {
-  return DEFAULT_ORG_ID
+  console.warn('WARNING: getDefaultOrgId() is deprecated. Use session organizationId instead.')
+  return '000000000000000000000001' // Kept for backward compatibility only
 }
 
 // For backward compatibility - sync version that only uses memory
 // Deprecated: Use async version above
-export function getSettingsSync(orgId: string = DEFAULT_ORG_ID): SettingsStorage {
+export function getSettingsSync(orgId: string): SettingsStorage {
   if (!memoryStorage.has(orgId)) {
     memoryStorage.set(orgId, getDefaultSettings())
   }
@@ -256,7 +264,7 @@ export function getSettingsSync(orgId: string = DEFAULT_ORG_ID): SettingsStorage
 }
 
 export function updateSettingsSync(
-  orgId: string = DEFAULT_ORG_ID, 
+  orgId: string, 
   updates: Partial<SettingsStorage>
 ): SettingsStorage {
   const current = getSettingsSync(orgId)

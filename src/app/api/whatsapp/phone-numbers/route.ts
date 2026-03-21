@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
 import { getDefaultOrgId } from '@/lib/settings-storage'
 import { rateLimit } from '@/lib/rate-limit'
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     // 1. Get WhatsApp credentials to find related phone numbers
     // Use findMany since organizationId is not unique
-    const creds = await db.whatsAppCredential.findMany({
+    const creds = await prisma.whatsAppCredential.findMany({
       where: orgId ? { organizationId: orgId, isActive: true } : { isActive: true },
       include: {
         phoneNumbers: true
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
     const credIds = creds.map(c => c.id)
     
     // Get all phone numbers from WhatsAppPhoneNumber model
-    const phoneNumbers = await db.whatsAppPhoneNumber.findMany({
+    const phoneNumbers = await prisma.whatsAppPhoneNumber.findMany({
       where: credIds.length > 0 ? { credentialId: { in: credIds } } : undefined,
       orderBy: {
         createdAt: 'desc'
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
     })))
 
     // 2. Get from legacy WhatsAppNumber model
-    const legacyNumbers = await db.whatsappNumber.findMany({})
+    const legacyNumbers = await prisma.whatsappNumber.findMany({})
     
     allNumbers.push(...legacyNumbers.map(n => ({
       id: n.id,

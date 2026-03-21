@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
 
 async function validateSession(request: NextRequest) {
@@ -27,7 +27,7 @@ export async function POST(
     const { id } = await params
 
     // Get the campaign to duplicate
-    const campaign = await db.campaign.findUnique({
+    const campaign = await prisma.campaign.findUnique({
       where: { id }
     })
 
@@ -39,7 +39,7 @@ export async function POST(
     }
 
     // Create a duplicate campaign
-    const duplicateCampaign = await db.campaign.create({
+    const duplicateCampaign = await prisma.campaign.create({
       data: {
         name: `${campaign.name} (Copy)`,
         type: campaign.type,

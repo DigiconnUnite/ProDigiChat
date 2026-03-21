@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
 
 async function getUserId(request: NextRequest): Promise<string | null> {
@@ -71,16 +71,16 @@ export async function GET(request: NextRequest) {
 
     // Query contacts from database with sorting - filter by userId
     const [contacts, total, optedInCount, optedOutCount, pendingCount] = await Promise.all([
-      db.contact.findMany({
+      prisma.contact.findMany({
         where: conditions,
         orderBy,
         skip,
         take: limit
       }),
-      db.contact.count({ where: conditions }),
-      db.contact.count({ where: { ...conditions, optInStatus: 'opted_in' } }),
-      db.contact.count({ where: { ...conditions, optInStatus: 'opted_out' } }),
-      db.contact.count({ where: { ...conditions, optInStatus: 'pending' } }),
+      prisma.contact.count({ where: conditions }),
+      prisma.contact.count({ where: { ...conditions, optInStatus: 'opted_in' } }),
+      prisma.contact.count({ where: { ...conditions, optInStatus: 'opted_out' } }),
+      prisma.contact.count({ where: { ...conditions, optInStatus: 'pending' } }),
     ])
 
     return NextResponse.json({
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
     const { firstName, lastName, phoneNumber, email, tags, attributes, optInStatus } = body
 
     // Check if contact already exists for this user
-    const existingContact = await db.contact.findFirst({
+    const existingContact = await prisma.contact.findFirst({
       where: {
         phoneNumber: phoneNumber,
         userId: userId
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new contact - associate with authenticated user
-    const contact = await db.contact.create({
+    const contact = await prisma.contact.create({
       data: {
         firstName: firstName || '',
         lastName: lastName || '',
@@ -187,7 +187,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Verify contact belongs to the authenticated user
-    const existingContact = await db.contact.findFirst({
+    const existingContact = await prisma.contact.findFirst({
       where: {
         id,
         userId: userId
@@ -202,7 +202,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update contact
-    const contact = await db.contact.update({
+    const contact = await prisma.contact.update({
       where: { id },
       data: {
         firstName,
@@ -257,7 +257,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Verify contact belongs to the authenticated user
-    const existingContact = await db.contact.findFirst({
+    const existingContact = await prisma.contact.findFirst({
       where: {
         id,
         userId: userId
@@ -272,7 +272,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete contact
-    await db.contact.delete({
+    await prisma.contact.delete({
       where: { id }
     })
 

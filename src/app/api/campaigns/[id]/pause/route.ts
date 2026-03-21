@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
 
 async function validateSession(request: NextRequest) {
@@ -27,7 +27,7 @@ export async function POST(
     const { id } = await params
 
     // Get the campaign
-    const campaign = await db.campaign.findUnique({
+    const campaign = await prisma.campaign.findUnique({
       where: { id }
     })
 
@@ -47,7 +47,7 @@ export async function POST(
     }
 
     // Pause the campaign
-    const updatedCampaign = await db.campaign.update({
+    const updatedCampaign = await prisma.campaign.update({
       where: { id },
       data: { status: 'paused' }
     })

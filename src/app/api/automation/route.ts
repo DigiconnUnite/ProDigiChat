@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
 
 async function validateSession(request: NextRequest) {
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     if (status) conditions.status = status
 
     // Query automation workflows from database
-    const workflows = await db.automationWorkflow.findMany({
+    const workflows = await prisma.automationWorkflow.findMany({
       where: conditions,
       orderBy: {
         createdAt: 'desc'
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     } = body
 
     // Create new automation workflow with authenticated user as owner
-    const workflow = await db.automationWorkflow.create({
+    const workflow = await prisma.automationWorkflow.create({
       data: {
         name,
         trigger: trigger || {},

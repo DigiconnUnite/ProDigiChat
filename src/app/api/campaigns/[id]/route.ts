@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
 import { JWT } from 'next-auth/jwt'
 
@@ -29,7 +29,7 @@ export async function GET(
     const { id } = await params
     
     // Get campaign only if it belongs to the authenticated user
-    const campaign = await db.campaign.findFirst({
+    const campaign = await prisma.campaign.findFirst({
       where: { 
         id,
         createdBy: userId
@@ -114,7 +114,7 @@ export async function PUT(
     } = body
 
     // Check if campaign exists AND belongs to the authenticated user
-    const existingCampaign = await db.campaign.findFirst({
+    const existingCampaign = await prisma.campaign.findFirst({
       where: { 
         id,
         createdBy: userId
@@ -139,7 +139,7 @@ export async function PUT(
       updateData.audienceSegmentId = audienceSegmentId || null
     }
 
-    const campaign = await db.campaign.update({
+    const campaign = await prisma.campaign.update({
       where: { id },
       data: updateData
     })
@@ -175,7 +175,7 @@ export async function DELETE(
     const { id } = await params
 
     // Check if campaign exists AND belongs to the authenticated user
-    const existingCampaign = await db.campaign.findFirst({
+    const existingCampaign = await prisma.campaign.findFirst({
       where: { 
         id,
         createdBy: userId
@@ -197,7 +197,7 @@ export async function DELETE(
       )
     }
 
-    await db.campaign.delete({
+    await prisma.campaign.delete({
       where: { id }
     })
 

@@ -1,6 +1,6 @@
+import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 // Import validatePhoneNumber - it's async so we need to handle it differently
-import { db } from "../../../../lib/db";
 import { prisma } from "@/lib/prisma";
 import {
   WhatsAppIncomingMessage,
@@ -12,6 +12,40 @@ import {
 } from "@/lib/whatsapp-incoming-message";
 
 const WEBHOOK_SECRET = process.env.WHATSAPP_WEBHOOK_SECRET || "default_secret";
+
+/**
+ * Verify Meta webhook HMAC-SHA256 signature
+ * Uses timingSafeEqual to prevent timing attacks
+ */
+function verifyMetaSignature(payload: string, signature: string | null): boolean {
+  if (!signature) {
+    console.log("[Webhook Security] No signature header provided");
+    return false;
+  }
+
+  const appSecret = process.env.META_APP_SECRET;
+  if (!appSecret) {
+    console.error("[Webhook Security] META_APP_SECRET environment variable is not set!");
+    return false;
+  }
+
+  const expected = "sha256=" + crypto
+    .createHmac("sha256", appSecret)
+    .update(payload)
+    .digest("hex");
+
+  // Use timingSafeEqual to prevent timing attacks
+  // Both buffers must be the same length for timingSafeEqual to work
+  if (signature.length !== expected.length) {
+    console.log("[Webhook Security] Signature length mismatch");
+    return false;
+  }
+
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expected)
+  );
+}
 
 // Simple phone validation for legacy support
 function isValidPhoneNumber(phone: string): boolean {
@@ -36,9 +70,8 @@ export async function GET(request: NextRequest) {
     console.log("[Webhook Verification] Received:", { mode, token, challenge });
     console.log("[Webhook Verification] Expected token:", verifyToken);
 
-    // For development/local, accept any token if not properly configured
-    const isDevelopment = process.env.NODE_ENV !== "production";
-    const tokenMatches = token === verifyToken || (isDevelopment && token && token.length > 0);
+    // Security fix: Only allow exact token match - no development bypass
+    const tokenMatches = token === verifyToken;
 
     if (mode === "subscribe" && tokenMatches) {
       console.log("Webhook verified successfully");
@@ -61,14 +94,23 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: Request) {
   try {
-    const authHeader = request.headers.get("Authorization");
-    if (authHeader !== `Bearer ${WEBHOOK_SECRET}`) {
-      // For Meta webhooks, we need to also handle the case where there's no auth header
-      // Meta sends webhooks without Bearer token, so we'll allow requests without auth for now
-      // but validate the payload structure
+    // SECURITY: Read raw body as text BEFORE parsing JSON for signature verification
+    const rawBody = await request.text();
+    
+    // SECURITY: Get Meta's HMAC-SHA256 signature header
+    const signature = request.headers.get("x-hub-signature-256");
+    
+    // SECURITY: Verify the webhook signature before processing any data
+    if (!verifyMetaSignature(rawBody, signature)) {
+      console.log("[Webhook Security] Invalid signature - rejecting request");
+      return NextResponse.json(
+        { error: "Invalid webhook signature" },
+        { status: 403 }
+      );
     }
 
-    const payload = await request.json();
+    // Now parse the JSON after signature verification
+    const payload = JSON.parse(rawBody);
     
     // Log the full payload for debugging
     console.log("[WhatsApp Webhook] Received payload:", JSON.stringify(payload, null, 2));
@@ -116,7 +158,7 @@ export async function POST(request: Request) {
     }
 
     // Find existing message by whatsappMessageId using findFirst
-    const existingMessage = await db.message.findFirst({
+    const existingMessage = await prisma.message.findFirst({
       where: { whatsappMessageId: messageId }
     });
 
@@ -145,12 +187,12 @@ export async function POST(request: Request) {
     }
 
     // Find or create contact
-    let contact = await db.contact.findFirst({
+    let contact = await prisma.contact.findFirst({
       where: { phoneNumber: recipient }
     });
 
     if (!contact) {
-      contact = await db.contact.create({
+      contact = await prisma.contact.create({
         data: {
           phoneNumber: recipient,
           tags: '[]',
@@ -161,7 +203,7 @@ export async function POST(request: Request) {
 
     // Update or create message
     if (existingMessage) {
-      await db.message.update({
+      await prisma.message.update({
         where: { id: existingMessage.id },
         data: {
           status: status,
@@ -169,7 +211,7 @@ export async function POST(request: Request) {
         }
       });
     } else {
-      await db.message.create({
+      await prisma.message.create({
         data: {
           whatsappMessageId: messageId,
           status: status,
@@ -182,7 +224,7 @@ export async function POST(request: Request) {
     }
 
     if (campaignId) {
-      const campaignMessages = await db.message.findMany({
+      const campaignMessages = await prisma.message.findMany({
         where: { campaignId: campaignId }
       });
 
@@ -196,7 +238,7 @@ export async function POST(request: Request) {
         campaignStatus = "failed";
       }
 
-      await db.campaign.update({
+      await prisma.campaign.update({
         where: { id: campaignId },
         data: { status: campaignStatus }
       });

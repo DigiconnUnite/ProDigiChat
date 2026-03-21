@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
 import { sendTextMessage, sendTemplateMessage } from '@/app/api/whatsapp/messages'
 
@@ -64,7 +64,7 @@ export async function POST(
     }
 
     // Get the campaign (filter by userId for security)
-    const campaign = await db.campaign.findUnique({
+    const campaign = await prisma.campaign.findUnique({
       where: { id },
       include: {
         audience: {
@@ -106,7 +106,7 @@ export async function POST(
     console.log('[CampaignLaunch] Campaign has whatsappNumberId:', campaign.whatsappNumberId)
 
     // Check WhatsApp verification status before sending messages
-    const creds = await db.whatsAppCredential.findFirst({
+    const creds = await prisma.whatsAppCredential.findFirst({
       where: { 
         OR: [
           { id: campaign.whatsappNumberId },
@@ -170,7 +170,7 @@ export async function POST(
         .filter((c: any) => c && c.phoneNumber)
     } else {
       // Get all opted-in contacts for this user
-      contacts = await db.contact.findMany({
+      contacts = await prisma.contact.findMany({
         where: { 
           optInStatus: 'opted_in',
           userId: userId
@@ -199,7 +199,7 @@ export async function POST(
     if (schedule.scheduledAt && !schedule.sendNow) {
       const scheduledDate = new Date(schedule.scheduledAt)
       if (scheduledDate > new Date()) {
-        await db.campaign.update({
+        await prisma.campaign.update({
           where: { id },
           data: { status: 'scheduled' }
         })
@@ -212,7 +212,7 @@ export async function POST(
     }
 
     // Launch the campaign - update status to running
-    const updatedCampaign = await db.campaign.update({
+    const updatedCampaign = await prisma.campaign.update({
       where: { id },
       data: { status: 'running' }
     })
@@ -226,7 +226,7 @@ export async function POST(
           // Send message via WhatsApp API based on message type
           if (messageContent.type === 'template' && messageContent.templateId) {
             // Get template details
-            const template = await db.messageTemplate.findUnique({
+            const template = await prisma.messageTemplate.findUnique({
               where: { id: messageContent.templateId }
             })
             
@@ -290,7 +290,7 @@ export async function POST(
           }
           
           // Create message record in database
-          const message = await db.message.create({
+          const message = await prisma.message.create({
             data: {
               contactId: contact.id,
               campaignId: campaign.id,
@@ -312,7 +312,7 @@ export async function POST(
           console.error(`Failed to send message to contact ${contact.id}:`, error)
           
           // Create failed message record
-          const message = await db.message.create({
+          const message = await prisma.message.create({
             data: {
               contactId: contact.id,
               campaignId: campaign.id,
@@ -339,7 +339,7 @@ export async function POST(
     const failedCount = messageResults.length - sentCount
 
     // Update campaign stats
-    await db.campaign.update({
+    await prisma.campaign.update({
       where: { id },
       data: {
         stats: JSON.stringify({

@@ -3,7 +3,7 @@ import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { randomUUID } from "crypto";
 import { getToken } from 'next-auth/jwt'
-import { db } from '@/lib/db'
+import { prisma } from '@/lib/prisma'
 
 // Allowed file types
 const ALLOWED_FILE_TYPES = {
@@ -170,7 +170,7 @@ async function processCSVContacts(csvContent: string, fileId: string) {
     }
 
     try {
-      const contact = await db.contact.create({
+      const contact = await prisma.contact.create({
         data: contactData
       });
       contacts.push(contact);

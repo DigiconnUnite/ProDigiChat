@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
 
 async function getUserId(request: NextRequest): Promise<string | null> {
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
           : defaultTags
 
         // Check if contact already exists for this user
-        const existingContact = await db.contact.findFirst({
+        const existingContact = await prisma.contact.findFirst({
           where: { 
             phoneNumber,
             userId: userId as string
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Create contact - associate with authenticated user
-        await db.contact.create({
+        await prisma.contact.create({
           data: {
             firstName,
             lastName,

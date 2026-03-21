@@ -61,17 +61,20 @@ model Contact {
   tags          String   // JSON array of tags
   attributes    String   // JSON object for custom attributes
   userId        String   // @db.ObjectId
+  organizationId String  @db.ObjectId
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   // Relations
   user              User?              @relation(fields: [userId], references: [id])
+  organization      Team?              @relation(fields: [organizationId], references: [id])
   messages          Message[]
   segmentMemberships SegmentMember[]
   queueMessages     WhatsAppMessageQueue[]
 
   // Composite unique constraint - phoneNumber must be unique per user
   @@unique([phoneNumber, userId])
+  @@index([organizationId])
   @@map("contacts")
 }
 
@@ -81,14 +84,17 @@ model Segment {
   name      String
   rules     String   // JSON object defining segment rules
   createdBy String   @db.ObjectId
+  organizationId String  @db.ObjectId
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
   creator    User              @relation(fields: [createdBy], references: [id])
+  organization Team            @relation(fields: [organizationId], references: [id])
   members    SegmentMember[]
   campaigns  Campaign[]
 
+  @@index([organizationId])
   @@map("segments")
 }
 
@@ -115,6 +121,7 @@ model Campaign {
   type              String   // "broadcast", "recurring", "ab_test"
   status            String   @default("draft") // "draft", "scheduled", "running", "paused", "completed", "failed"
   createdBy         String?  @db.ObjectId
+  organizationId    String   @db.ObjectId
   audienceSegmentId String?  @db.ObjectId
   whatsappNumberId  String?  // WhatsApp phone number ID used to send messages
   whatsappAccountId String?  // WhatsApp account/credential ID used to send messages
@@ -126,10 +133,12 @@ model Campaign {
 
   // Relations
   creator       User?      @relation(fields: [createdBy], references: [id])
+  organization  Team?      @relation(fields: [organizationId], references: [id])
   audience      Segment?   @relation(fields: [audienceSegmentId], references: [id])
   messages      Message[]
   queueMessages WhatsAppMessageQueue[]
 
+  @@index([organizationId])
   @@map("campaigns")
 }
 
@@ -310,6 +319,7 @@ model Message {
   content          String   // JSON object with text, mediaUrl
   whatsappMessageId String?
   sentBy           String?  @db.ObjectId
+  organizationId   String   @db.ObjectId
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -317,7 +327,9 @@ model Message {
   contact   Contact   @relation(fields: [contactId], references: [id])
   campaign  Campaign? @relation(fields: [campaignId], references: [id])
   sender    User?     @relation("MessageSender", fields: [sentBy], references: [id])
+  organization Team?  @relation(fields: [organizationId], references: [id])
 
+  @@index([organizationId])
   @@map("messages")
 }
 

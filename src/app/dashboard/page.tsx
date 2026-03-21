@@ -10,7 +10,6 @@ import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useSession } from "next-auth/react"
 import { WhatsAppConnectionStatus } from "@/components/whatsapp"
-import { DEFAULT_ORG_ID } from "@/lib/constants/settings"
 import {
   MessageSquare,
   Send,
@@ -213,8 +212,32 @@ export default function DashboardPage() {
   const userName = session?.user?.name || session?.user?.email?.split('@')[0] || 'User'
   const firstName = userName.split(' ')[0]
   
-  // Use session orgId or fallback to default for demo
-  const organizationId = (session?.user as Record<string, unknown>)?.organizationId as string || DEFAULT_ORG_ID
+  // Use session orgId - REQUIRED for security
+  // If no valid orgId exists, the user should not have access to the dashboard
+  const organizationId = (session?.user as Record<string, unknown>)?.organizationId as string
+  
+  // Show loading if session is being fetched, or error if no orgId
+  if (!session) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+  
+  if (!organizationId) {
+    return (
+      <div className="container mx-auto py-6">
+        <Card className="border-destructive/50 bg-destructive/10">
+          <CardContent className="pt-6">
+            <p className="text-destructive">No organization found. Please log in again.</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   // Fetch analytics data
   useEffect(() => {

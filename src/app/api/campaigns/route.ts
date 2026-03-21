@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
 
 export async function GET(request: NextRequest) {
@@ -24,11 +24,11 @@ export async function GET(request: NextRequest) {
     console.log('[DEBUG] GET /api/campaigns - User authenticated:', userId)
 
     // DEBUG: Check total campaigns in database (without filter)
-    const totalCampaignsInDb = await db.campaign.count()
+    const totalCampaignsInDb = await prisma.campaign.count()
     console.log('[DEBUG] GET /api/campaigns - Total campaigns in DB:', totalCampaignsInDb)
 
     // DEBUG: Check campaigns without createdBy
-    const campaignsWithoutCreator = await db.campaign.count({
+    const campaignsWithoutCreator = await prisma.campaign.count({
       where: { createdBy: null }
     })
     console.log('[DEBUG] GET /api/campaigns - Campaigns without createdBy:', campaignsWithoutCreator)
@@ -74,10 +74,10 @@ export async function GET(request: NextRequest) {
     console.log('[DEBUG] GET /api/campaigns - Final query conditions:', JSON.stringify(conditions))
 
     // Get total count
-    const total = await db.campaign.count({ where: conditions })
+    const total = await prisma.campaign.count({ where: conditions })
 
     // Query campaigns from database
-    const campaigns = await db.campaign.findMany({
+    const campaigns = await prisma.campaign.findMany({
       where: conditions,
       orderBy: {
         createdAt: 'desc'
@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new campaign
-    const campaign = await db.campaign.create({
+    const campaign = await prisma.campaign.create({
       data: campaignData
     })
 

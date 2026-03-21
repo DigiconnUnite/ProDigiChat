@@ -45,9 +45,6 @@ export const authOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       async profile(profile) {
-        // DEBUG: Log Google profile info
-        console.log('[DEBUG] Google OAuth profile:', profile)
-        
         // Check if user already exists in our database
         let user = await prisma.user.findUnique({
           where: { email: profile.email }
@@ -64,9 +61,6 @@ export const authOptions = {
               role: 'user',
             }
           })
-          console.log('[DEBUG] Created new user from Google OAuth:', user.id)
-        } else {
-          console.log('[DEBUG] Found existing user from Google OAuth:', user.id)
         }
         
         // Return the database user ID, not the Google ID
@@ -84,35 +78,27 @@ export const authOptions = {
   },
   callbacks: {
     async jwt({ token, user }) {
-      // DEBUG: Log JWT callback
-      console.log('[DEBUG] NextAuth jwt callback:', {
-        hasUser: !!user,
-        userId: user?.id,
-        existingTokenSub: token.sub
-      })
-      
+      // Only fetch organization when user first logs in
       if (user) {
         token.sub = user.id;
         token.name = user.name;
         token.email = user.email;
-        console.log('[DEBUG] NextAuth jwt callback - Set token.sub to:', user.id)
-      }
-      // Fetch user's primary organization and add to token
-      if (token.sub) {
-        const membership = await prisma.organizationMember.findFirst({
-          where: { userId: token.sub, isActive: true },
-          include: { organization: true }
-        });
         
+        // Fetch org ONLY when user first logs in
+        const membership = await prisma.organizationMember.findFirst({
+          where: { userId: user.id, isActive: true },
+          select: { organizationId: true, role: true, organization: { select: { name: true } } }
+        });
         if (membership) {
           token.organizationId = membership.organizationId;
-          token.organizationName = membership.organization.name;
           token.role = membership.role;
+          token.organizationName = membership.organization.name;
         }
       }
       return token;
     },
     async session({ session, token }) {
+      // READ FROM TOKEN — do NOT query DB here
       if (token.sub) {
         session.user.id = token.sub;
       }
@@ -123,18 +109,15 @@ export const authOptions = {
         session.user.email = token.email;
       }
       
-      // Fetch user's primary organization
-      if (token.sub) {
-        const membership = await prisma.organizationMember.findFirst({
-          where: { userId: token.sub, isActive: true },
-          include: { organization: true }
-        });
-        
-        if (membership) {
-          (session.user as any).organizationId = membership.organizationId;
-          (session.user as any).organizationName = membership.organization.name;
-          (session.user as any).role = membership.role;
-        }
+      // Read from token only - no DB queries
+      if (token.organizationId) {
+        (session.user as any).organizationId = token.organizationId as string;
+      }
+      if (token.organizationName) {
+        (session.user as any).organizationName = token.organizationName as string;
+      }
+      if (token.role) {
+        (session.user as any).role = token.role as string;
       }
       
       return session;
