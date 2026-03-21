@@ -54,7 +54,8 @@ export async function POST(
           clicked: 0
         }),
         audienceSegmentId: campaign.audienceSegmentId,
-        createdBy: campaign.createdBy
+        createdBy: campaign.createdBy,
+        organizationId: campaign.organizationId
       }
     })
 
