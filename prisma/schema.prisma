@@ -64,7 +64,7 @@ model Contact {
   lastContacted DateTime?
   tags          String   // JSON array of tags
   attributes    String   // JSON object for custom attributes
-  userId        String   // @db.ObjectId
+  userId        String   @db.ObjectId
   organizationId String  @db.ObjectId
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

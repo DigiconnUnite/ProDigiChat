@@ -3,16 +3,10 @@ import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
 
 export async function GET(request: NextRequest) {
-  // Get session for authentication using getToken
   const token = await getToken({ req: request })
   
-  // DEBUG: Log authentication attempt first
-  console.log('[DEBUG] GET /api/campaigns - Token:', { hasToken: !!token, userId: token?.sub })
-  
-  // Validate session
   const userId = token?.sub as string | undefined
   if (!userId) {
-    console.log('[DEBUG] GET /api/campaigns - No userId found, returning 401')
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }
@@ -20,19 +14,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // DEBUG: Log user info for diagnosis
-    console.log('[DEBUG] GET /api/campaigns - User authenticated:', userId)
-
-    // DEBUG: Check total campaigns in database (without filter)
-    const totalCampaignsInDb = await prisma.campaign.count()
-    console.log('[DEBUG] GET /api/campaigns - Total campaigns in DB:', totalCampaignsInDb)
-
-    // DEBUG: Check campaigns without createdBy
-    const campaignsWithoutCreator = await prisma.campaign.count({
-      where: { createdBy: null }
-    })
-    console.log('[DEBUG] GET /api/campaigns - Campaigns without createdBy:', campaignsWithoutCreator)
-
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status') || ''
     const type = searchParams.get('type') || ''
@@ -41,7 +22,6 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10')
     const skip = (page - 1) * limit
 
-    // Build query conditions - ALWAYS filter by authenticated user
     const conditions: any = {
       createdBy: userId
     }
@@ -66,13 +46,8 @@ export async function GET(request: NextRequest) {
           ]
         }
       ]
-      console.log('[DEBUG] GET /api/campaigns - Searching with createdBy filter:', userId)
-    } else {
-      console.log('[DEBUG] GET /api/campaigns - Filtering by userId:', userId)
     }
     
-    console.log('[DEBUG] GET /api/campaigns - Final query conditions:', JSON.stringify(conditions))
-
     // Get total count
     const total = await prisma.campaign.count({ where: conditions })
 
@@ -120,16 +95,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // Get session for authentication using getToken
   const token = await getToken({ req: request })
   
-  // DEBUG: Log authentication attempt first
-  console.log('[DEBUG] POST /api/campaigns - Token:', { hasToken: !!token, userId: token?.sub })
-  
-  // Validate session
   const userId = token?.sub as string | undefined
   if (!userId) {
-    console.log('[DEBUG] POST /api/campaigns - No userId found, returning 401')
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }
@@ -138,9 +107,6 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    
-    // DEBUG: Log user info for diagnosis
-    console.log('[DEBUG] POST /api/campaigns - User authenticated:', userId)
     
     const {
       name,
@@ -184,12 +150,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Add createdBy from token
-    if (userId) {
-      campaignData.createdBy = userId
-      console.log('[DEBUG] POST /api/campaigns - Setting createdBy:', userId)
-    } else {
-      console.log('[DEBUG] POST /api/campaigns - WARNING: userId is missing!')
-    }
+    campaignData.createdBy = userId
 
     // Create new campaign
     const campaign = await prisma.campaign.create({

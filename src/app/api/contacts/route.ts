@@ -7,6 +7,14 @@ async function getUserId(request: NextRequest): Promise<string | null> {
   return token?.sub || null
 }
 
+async function getUserAndOrgId(request: NextRequest): Promise<{ userId: string | null; organizationId: string | null }> {
+  const token = await getToken({ req: request })
+  return {
+    userId: token?.sub || null,
+    organizationId: token?.organizationId as string | null
+  }
+}
+
 export async function GET(request: NextRequest) {
   const userId = await getUserId(request)
   if (!userId) {
@@ -103,10 +111,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const userId = await getUserId(request)
-  if (!userId) {
+  const { userId, organizationId } = await getUserAndOrgId(request)
+  if (!userId || !organizationId) {
     return NextResponse.json(
-      { error: 'Unauthorized' },
+      { error: 'Unauthorized - organization not found' },
       { status: 401 }
     )
   }
@@ -120,7 +128,7 @@ export async function POST(request: NextRequest) {
       where: {
         phoneNumber: phoneNumber,
         userId: userId
-      } as any
+      }
     })
 
     if (existingContact) {
@@ -141,7 +149,8 @@ export async function POST(request: NextRequest) {
         attributes: JSON.stringify(attributes || {}),
         optInStatus: optInStatus || 'pending',
         userId: userId,
-      } as any
+        organizationId: organizationId,
+      }
     })
 
     return NextResponse.json({
@@ -191,7 +200,7 @@ export async function PUT(request: NextRequest) {
       where: {
         id,
         userId: userId
-      } as any
+      }
     })
 
     if (!existingContact) {
@@ -261,7 +270,7 @@ export async function DELETE(request: NextRequest) {
       where: {
         id,
         userId: userId
-      } as any
+      }
     })
 
     if (!existingContact) {

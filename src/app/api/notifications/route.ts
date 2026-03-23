@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic"
 export async function GET(request: NextRequest) {
   try {
     const token = await getToken({ req: request })
-    const userId = token?.id as string
+    const userId = token?.sub as string
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const token = await getToken({ req: request })
-    const userId = token?.id as string
+    const userId = token?.sub as string
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const token = await getToken({ req: request })
-    const userId = token?.id as string
+    const userId = token?.sub as string
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -134,7 +134,7 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const token = await getToken({ req: request })
-    const userId = token?.id as string
+    const userId = token?.sub as string
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

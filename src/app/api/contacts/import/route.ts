@@ -7,6 +7,14 @@ async function getUserId(request: NextRequest): Promise<string | null> {
   return token?.sub || null
 }
 
+async function getUserAndOrgId(request: NextRequest): Promise<{ userId: string | null; organizationId: string | null }> {
+  const token = await getToken({ req: request })
+  return {
+    userId: token?.sub || null,
+    organizationId: token?.organizationId as string | null
+  }
+}
+
 // Simple CSV line parser (handles quoted values)
 function parseCSVLine(line: string): string[] {
   const result: string[] = []
@@ -29,10 +37,10 @@ function parseCSVLine(line: string): string[] {
 }
 
 export async function POST(request: NextRequest) {
-  const userId = await getUserId(request)
-  if (!userId) {
+  const { userId, organizationId } = await getUserAndOrgId(request)
+  if (!userId || !organizationId) {
     return NextResponse.json(
-      { error: 'Unauthorized' },
+      { error: 'Unauthorized - organization not found' },
       { status: 401 }
     )
   }
@@ -107,8 +115,8 @@ export async function POST(request: NextRequest) {
         const existingContact = await prisma.contact.findFirst({
           where: { 
             phoneNumber,
-            userId: userId as string
-          } as any
+            userId: userId
+          }
         })
 
         if (existingContact) {
@@ -126,8 +134,9 @@ export async function POST(request: NextRequest) {
             tags: JSON.stringify(tagsArray),
             attributes: JSON.stringify({}),
             optInStatus: defaultOptInStatus,
-            userId: userId as string,
-          } as any
+            userId: userId,
+            organizationId: organizationId,
+          }
         })
 
         imported++
