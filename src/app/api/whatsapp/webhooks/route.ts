@@ -64,7 +64,8 @@ export async function GET(request: NextRequest) {
     const challenge = searchParams.get("hub.challenge");
 
     // Get verify token from env or use default
-    const verifyToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || "whatsapp_verify_token";
+    const verifyToken =
+      process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || "prodigichat_webhook_2026";
     
     // Debug: Log what we received
     console.log("[Webhook Verification] Received:", { mode, token, challenge });
