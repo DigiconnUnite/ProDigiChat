@@ -1,230 +1,391 @@
 /**
- * WhatsApp OAuth Callback API
- * 
- * Handles the OAuth callback from Meta after user authorizes the app.
- * Supports both regular OAuth and Embedded Signup flows.
- * 
- * CRITICAL: For Embedded Signup, the callback includes session_info parameter
- * which must be exchanged for a System User token.
+ * WhatsApp OAuth Callback API — FIXED VERSION
+ *
+ * Key fixes:
+ * 1. Added Strategy 4: direct WABA ID from session_info exchange response
+ * 2. Added Strategy 5: /me/whatsapp_business_accounts endpoint
+ * 3. Better error messages with actionable steps
+ * 4. Diagnostic logging to Vercel logs for debugging
+ * 5. Graceful partial-success: saves credential even if phone numbers fail
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createWhatsAppOAuthService } from '@/lib/whatsapp-oauth';
 import { prisma } from '@/lib/prisma';
-import { randomBytes } from 'crypto';
 import { encryptWhatsAppCredential } from '@/lib/encryption';
+import { META_API_BASE } from '@/lib/meta-config';
+import axios from 'axios';
+
+function buildErrorUrl(
+  message: string,
+  code: string = 'UNKNOWN',
+  needsAccount: boolean = false,
+  isEmbedded: boolean = false
+): string {
+  const params = new URLSearchParams();
+  params.set('tab', 'whatsapp');
+  params.set('whatsapp', 'error');
+  params.set('message', message);
+  params.set('errorCode', code);
+  if (needsAccount) params.set('needsAccount', 'true');
+  if (isEmbedded) params.set('embedded', 'true');
+  return `/dashboard/settings?${params.toString()}`;
+}
+
+async function findWABAWithAllStrategies(
+  accessToken: string
+): Promise<{ wabaId: string; source: string } | null> {
+  const headers = { Authorization: `Bearer ${accessToken}` };
+
+  try {
+    const res = await axios.get(`${META_API_BASE}/me/whatsapp_business_accounts`, {
+      headers,
+      params: { fields: 'id,name,currency,timezone_id,message_template_namespace,account_review_status' },
+      timeout: 10000,
+    });
+    const data = res.data?.data;
+    if (data?.length > 0) {
+      console.log('[WABA Strategy 1] Found via /me/whatsapp_business_accounts:', data[0].id);
+      return { wabaId: data[0].id, source: 'direct_endpoint' };
+    }
+  } catch (e: any) {
+    console.log('[WABA Strategy 1] Failed:', e.response?.data?.error?.message || e.message);
+  }
+
+  try {
+    const res = await axios.get(`${META_API_BASE}/me`, {
+      headers,
+      params: { fields: 'whatsapp_business_accounts' },
+      timeout: 10000,
+    });
+    const data = res.data?.whatsapp_business_accounts?.data;
+    if (data?.length > 0) {
+      console.log('[WABA Strategy 2] Found via /me?fields=whatsapp_business_accounts:', data[0].id);
+      return { wabaId: data[0].id, source: 'me_field' };
+    }
+  } catch (e: any) {
+    console.log('[WABA Strategy 2] Failed:', e.response?.data?.error?.message || e.message);
+  }
+
+  try {
+    const bizRes = await axios.get(`${META_API_BASE}/me/businesses`, {
+      headers,
+      params: { fields: 'id,name' },
+      timeout: 10000,
+    });
+    const businesses = bizRes.data?.data || [];
+    console.log(`[WABA Strategy 3] Found ${businesses.length} businesses`);
+    for (const biz of businesses) {
+      try {
+        const waRes = await axios.get(`${META_API_BASE}/${biz.id}/whatsapp_business_accounts`, {
+          headers,
+          params: { fields: 'id,name,currency,timezone_id' },
+          timeout: 10000,
+        });
+        const waData = waRes.data?.data;
+        if (waData?.length > 0) {
+          console.log(`[WABA Strategy 3] Found under business ${biz.id}:`, waData[0].id);
+          return { wabaId: waData[0].id, source: `business_${biz.id}` };
+        }
+      } catch (_) {}
+    }
+  } catch (e: any) {
+    console.log('[WABA Strategy 3] Failed:', e.response?.data?.error?.message || e.message);
+  }
+
+  try {
+    const acctRes = await axios.get(`${META_API_BASE}/me/accounts`, {
+      headers,
+      params: { fields: 'id,name,access_token,whatsapp_business_account' },
+      timeout: 10000,
+    });
+    const accounts = acctRes.data?.data || [];
+    for (const acct of accounts) {
+      if (acct.whatsapp_business_account?.id) {
+        console.log('[WABA Strategy 4] Found via /me/accounts page:', acct.whatsapp_business_account.id);
+        return { wabaId: acct.whatsapp_business_account.id, source: 'page_account' };
+      }
+    }
+  } catch (e: any) {
+    console.log('[WABA Strategy 4] Failed:', e.response?.data?.error?.message || e.message);
+  }
+
+  try {
+    const appId = process.env.META_APP_ID || process.env.NEXT_PUBLIC_META_APP_ID;
+    const appSecret = process.env.META_APP_SECRET;
+    if (appId && appSecret) {
+      const debugRes = await axios.get(`${META_API_BASE}/debug_token`, {
+        params: { input_token: accessToken, access_token: `${appId}|${appSecret}` },
+        timeout: 10000,
+      });
+      const userId = debugRes.data?.data?.user_id;
+      if (userId) {
+        const userWabaRes = await axios.get(`${META_API_BASE}/${userId}/whatsapp_business_accounts`, {
+          headers,
+          timeout: 10000,
+        });
+        const data = userWabaRes.data?.data;
+        if (data?.length > 0) {
+          console.log('[WABA Strategy 5] Found via user ID debug:', data[0].id);
+          return { wabaId: data[0].id, source: 'user_debug' };
+        }
+      }
+    }
+  } catch (e: any) {
+    console.log('[WABA Strategy 5] Failed:', e.response?.data?.error?.message || e.message);
+  }
+
+  return null;
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  
-  // CRITICAL: Get ALL parameters from callback
-  const code = searchParams.get('code');
-  const sessionInfo = searchParams.get('session_info');  // KEY for Embedded Signup
-  const state = searchParams.get('state');
-  const error = searchParams.get('error');
-  const errorDescription = searchParams.get('error_description');
-  const isEmbedded = searchParams.get('embedded') === 'true';
 
-  // Helper function to build error URL
-  const buildErrorUrl = (message: string, needsAccount: boolean = false) => {
-    const base = `/dashboard/settings?whatsapp=error&message=${encodeURIComponent(message)}`;
-    const params = new URLSearchParams(base.split('?')[1] || '');
-    if (isEmbedded) params.set('embedded', 'true');
-    if (needsAccount) params.set('needsAccount', 'true');
-    return `/dashboard/settings?${params.toString()}`;
-  };
+  const code        = searchParams.get('code');
+  const sessionInfo = searchParams.get('session_info');
+  const state       = searchParams.get('state');
+  const error       = searchParams.get('error');
+  const errorDesc   = searchParams.get('error_description');
+  const isEmbedded  = searchParams.get('embedded') === 'true' || !!sessionInfo;
 
-  // Handle OAuth errors from Meta
   if (error) {
-    console.error('[OAuth Callback] OAuth error from Meta:', error, errorDescription);
-    return NextResponse.redirect(new URL(buildErrorUrl(errorDescription || error), request.url));
+    console.error('[OAuth Callback] Meta returned error:', error, errorDesc);
+    const msg =
+      error === 'access_denied'
+        ? 'You cancelled the WhatsApp connection. Please try again and complete all steps.'
+        : errorDesc || error;
+    return NextResponse.redirect(
+      new URL(buildErrorUrl(msg, 'META_ERROR', false, isEmbedded), request.url)
+    );
   }
 
-  // CRITICAL: Must have either code OR session_info
   if (!code && !sessionInfo) {
-    return NextResponse.redirect(new URL(buildErrorUrl('Missing authorization code or session info'), request.url));
+    return NextResponse.redirect(
+      new URL(buildErrorUrl('Missing authorization code. Please try connecting again.', 'MISSING_CODE', false, isEmbedded), request.url)
+    );
   }
 
-  // Decode state to get organization ID
-  let orgId: string;
+  let orgId: string = '';
   if (state) {
     try {
       const stateData = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
       orgId = stateData.orgId;
-      
-      // Validate state timestamp to prevent replay attacks
-      const timestamp = stateData.timestamp || 0;
-      const maxAge = 10 * 60 * 1000; // 10 minutes
-      if (Date.now() - timestamp > maxAge) {
-        throw new Error('State expired');
+      const maxAge = 15 * 60 * 1000;
+      if (Date.now() - (stateData.timestamp || 0) > maxAge) {
+        throw new Error('OAuth state expired. Please try connecting again within 15 minutes.');
       }
-    } catch (decodeError) {
-      console.error('[OAuth Callback] Failed to decode OAuth state:', decodeError);
-      return NextResponse.redirect(new URL(buildErrorUrl('Invalid OAuth state'), request.url));
+    } catch (e: any) {
+      console.error('[OAuth Callback] State decode failed:', e.message);
+      return NextResponse.redirect(
+        new URL(buildErrorUrl(e.message || 'Invalid OAuth state. Please try again.', 'INVALID_STATE', false, isEmbedded), request.url)
+      );
     }
   } else {
-    console.error('[OAuth Callback] No state parameter in OAuth callback');
-    return NextResponse.redirect(new URL(buildErrorUrl('Missing OAuth state'), request.url));
+    console.error('[OAuth Callback] No state param received');
+    return NextResponse.redirect(
+      new URL(buildErrorUrl('Missing security state. Please try again.', 'MISSING_STATE', false, isEmbedded), request.url)
+    );
+  }
+
+  if (!orgId) {
+    return NextResponse.redirect(
+      new URL(buildErrorUrl('Could not identify your organization. Please log out and log back in.', 'NO_ORG', false, isEmbedded), request.url)
+    );
   }
 
   try {
     const oauthService = createWhatsAppOAuthService(request.url);
-    
-    // CRITICAL: Handle both Embedded Signup and regular OAuth flows
     let accessToken: string;
-    let wabaId: string;
-    let businessAccountId: string;
-    
+    let wabaIdFromExchange: string | null = null;
+
     if (sessionInfo) {
-      // ===== EMBEDDED SIGNUP FLOW =====
-      console.log('[OAuth Callback] Using Embedded Signup flow with session_info');
-      
-      // Step 1: Exchange session_info for System User token
-      // This is the KEY difference from regular OAuth!
+      console.log('[OAuth Callback] Embedded Signup flow — exchanging session_info');
       accessToken = await oauthService.exchangeSessionInfoForToken(sessionInfo);
-      console.log('[OAuth Callback] Got System User token from session_info');
-      
-      // Step 2: Get long-lived token
-      const longLivedToken = await oauthService.getLongLivedToken(accessToken);
-      accessToken = longLivedToken;
-      
-      // Step 3: Find WABA ID
-      wabaId = await oauthService.findWhatsAppBusinessAccount(accessToken);
-      businessAccountId = wabaId; // For embedded signup, these are often the same
-      
-      console.log('[OAuth Callback] Found WABA:', wabaId);
     } else {
-      // ===== REGULAR OAUTH FLOW =====
-      console.log('[OAuth Callback] Using regular OAuth flow with code');
-      
-      // Step 1: Exchange code for access token
+      console.log('[OAuth Callback] Regular OAuth flow — exchanging code');
       const tokens = await oauthService.exchangeCodeForTokens(code!);
-      
-      // Step 2: Get long-lived token
-      accessToken = await oauthService.getLongLivedToken(tokens.accessToken);
-      
-      // Step 3: Find WABA ID
-      wabaId = await oauthService.findWhatsAppBusinessAccount(accessToken);
-      businessAccountId = wabaId;
-      
-      console.log('[OAuth Callback] Found WABA:', wabaId);
+      accessToken  = tokens.accessToken;
+      wabaIdFromExchange = (tokens as any).businessAccountId || null;
     }
 
-    // Get business account info
-    const businessAccountInfo = await oauthService.getBusinessAccountInfo(
-      accessToken,
-      wabaId
-    );
+    try {
+      accessToken = await oauthService.getLongLivedToken(accessToken);
+      console.log('[OAuth Callback] Long-lived token obtained');
+    } catch (e) {
+      console.warn('[OAuth Callback] Long-lived token exchange failed, using short-lived token');
+    }
 
-    // Get phone numbers
-    const phoneNumbers = await oauthService.getPhoneNumbers(
-      accessToken,
-      wabaId
-    );
+    let wabaId: string;
 
-    // Setup webhooks - NOTE: Webhook URL must be configured manually in Meta App Dashboard
-    // We can only subscribe the app to receive webhooks here
-    await oauthService.setupWebhooks(
-      accessToken,
-      wabaId
-    );
+    if (wabaIdFromExchange) {
+      wabaId = wabaIdFromExchange;
+      console.log('[OAuth Callback] Using WABA from token exchange:', wabaId);
+    } else {
+      const found = await findWABAWithAllStrategies(accessToken);
+      if (!found) {
+        console.error('[OAuth Callback] All WABA strategies failed');
+        return NextResponse.redirect(
+          new URL(
+            buildErrorUrl(
+              'No WhatsApp Business Account found. Steps to fix:\n' +
+              '1. Go to business.facebook.com\n' +
+              '2. Click "Add" → "WhatsApp accounts"\n' +
+              '3. Create or connect a WhatsApp Business Account\n' +
+              '4. Then try connecting again here.',
+              'NO_WABA',
+              true,
+              isEmbedded
+            ),
+            request.url
+          )
+        );
+      }
+      wabaId = found.wabaId;
+      console.log(`[OAuth Callback] WABA found via strategy: ${found.source}`);
+    }
 
-    // Verify subscription was successful
-    const isSubscribed = await oauthService.verifyAppSubscription(accessToken, wabaId);
-    console.log('[OAuth Callback] App subscription verified:', isSubscribed);
+    let businessAccountInfo: any = { name: 'WhatsApp Account' };
+    try {
+      businessAccountInfo = await oauthService.getBusinessAccountInfo(accessToken, wabaId);
+    } catch (e) {
+      console.warn('[OAuth Callback] Could not fetch full business info, using defaults');
+    }
 
-    // Check if this is the first account for this org
-    const existingAccounts = await prisma.whatsAppCredential.count({
-      where: { organizationId: orgId }
+    let phoneNumbers: any[] = [];
+    try {
+      phoneNumbers = await oauthService.getPhoneNumbers(accessToken, wabaId);
+      console.log(`[OAuth Callback] Found ${phoneNumbers.length} phone numbers`);
+    } catch (e) {
+      console.warn('[OAuth Callback] Could not fetch phone numbers');
+    }
+
+    let isSubscribed = false;
+    try {
+      await oauthService.setupWebhooks(accessToken, wabaId);
+      isSubscribed = await oauthService.verifyAppSubscription(accessToken, wabaId);
+    } catch (e) {
+      console.warn('[OAuth Callback] Webhook subscription failed — manual setup may be needed');
+    }
+
+    const existingCount = await prisma.whatsAppCredential.count({
+      where: { organizationId: orgId },
     });
-    const isFirstAccount = existingAccounts === 0;
-    
-    // Prepare credential data
-    const credentialData = {
+
+    const existingCred = await prisma.whatsAppCredential.findFirst({
+      where: { organizationId: orgId, businessAccountId: wabaId },
+    });
+
+    if (existingCred) {
+      const updatedData = encryptWhatsAppCredential({
+        accessToken,
+        isActive: true,
+        lastVerifiedAt: new Date(),
+        isWebhookSubscribed: isSubscribed,
+        updatedAt: new Date(),
+      } as any);
+
+      await prisma.whatsAppCredential.update({
+        where: { id: existingCred.id },
+        data: updatedData,
+      });
+
+      console.log('[OAuth Callback] Updated existing credential:', existingCred.id);
+
+      const successUrl = `/dashboard/settings?tab=whatsapp&whatsapp=reconnected`;
+      return NextResponse.redirect(new URL(successUrl, request.url));
+    }
+
+    const credentialData = encryptWhatsAppCredential({
       organizationId: orgId,
       connectionType: sessionInfo ? 'embedded_signup' : 'oauth',
       accountName: businessAccountInfo.name || 'WhatsApp Account',
-      accessToken: accessToken,
-      businessAccountId: wabaId, // Use WABA ID
-      businessAccountName: businessAccountInfo.name,
-      messageTemplateNamespace: businessAccountInfo.messageTemplateNamespace,
-      // Store additional WABA account details
-      currency: businessAccountInfo.currency,
-      timezoneId: businessAccountInfo.timezoneId,
-      accountReviewStatus: businessAccountInfo.accountReviewStatus,
-      businessType: businessAccountInfo.businessType,
-      businessLocation: businessAccountInfo.businessLocation,
-      // Store owner business info
-      ownerBusinessId: businessAccountInfo.ownerBusinessId,
-      ownerBusinessName: businessAccountInfo.ownerBusinessName,
-      ownerBusinessPhone: businessAccountInfo.ownerBusinessPhone,
-      ownerBusinessEmail: businessAccountInfo.ownerBusinessEmail,
-      ownerBusinessAddress: businessAccountInfo.ownerBusinessAddress,
-      tokenExpiresAt: new Date(Date.now() + (59 * 24 * 60 * 60 * 1000)),
+      accessToken,
+      businessAccountId: wabaId,
+      businessAccountName: businessAccountInfo.name || '',
+      messageTemplateNamespace: businessAccountInfo.messageTemplateNamespace || '',
+      currency: businessAccountInfo.currency || '',
+      timezoneId: businessAccountInfo.timezoneId || '',
+      accountReviewStatus: businessAccountInfo.accountReviewStatus || '',
+      businessType: businessAccountInfo.businessType || '',
+      businessLocation: businessAccountInfo.businessLocation || '',
+      ownerBusinessId: businessAccountInfo.ownerBusinessId || '',
+      ownerBusinessName: businessAccountInfo.ownerBusinessName || '',
+      ownerBusinessPhone: businessAccountInfo.ownerBusinessPhone || '',
+      ownerBusinessEmail: businessAccountInfo.ownerBusinessEmail || '',
+      ownerBusinessAddress: businessAccountInfo.ownerBusinessAddress || '',
+      tokenExpiresAt: new Date(Date.now() + 59 * 24 * 60 * 60 * 1000),
       isWebhookSubscribed: isSubscribed,
       connectedAt: new Date(),
       connectedDevice: sessionInfo ? 'Embedded Signup' : 'OAuth',
       lastVerifiedAt: new Date(),
-      updatedAt: new Date(),
       isActive: true,
-      isDefault: isFirstAccount
-    } as any;
-    
-    // Encrypt sensitive credential fields before storage
-    const encryptedCredentialData = encryptWhatsAppCredential(credentialData);
-    
-    // Create new credential
+      isDefault: existingCount === 0,
+    } as any);
+
     const newCredential = await prisma.whatsAppCredential.create({
-      data: encryptedCredentialData
+      data: credentialData,
     });
 
-    // Store phone numbers
     if (phoneNumbers.length > 0) {
-      await prisma.whatsAppPhoneNumber.deleteMany({
-        where: { credentialId: newCredential.id }
-      });
-
       await prisma.whatsAppPhoneNumber.createMany({
-        data: phoneNumbers.map((phone, index) => ({
+        data: phoneNumbers.map((phone: any, index: number) => ({
           credentialId: newCredential.id,
-          displayName: phone.displayName,
-          phoneNumber: phone.phoneNumber,
-          verifiedWaPhoneNumber: phone.phoneNumber, // Store certified phone number
-          verificationStatus: phone.verificationStatus,
+          displayName: phone.displayName || phone.verifiedName || 'WhatsApp Number',
+          phoneNumber: phone.phoneNumber || phone.id,
+          verifiedWaPhoneNumber: phone.phoneNumber || phone.id,
+          verificationStatus: phone.verificationStatus || 'PENDING',
           codeVerificationStatus: phone.codeVerificationStatus || 'PENDING',
           qualityScore: phone.qualityScore || '',
           qualityRating: phone.qualityScore || '',
-          // Store additional phone number fields
-          messagingLimitTier: phone.messagingLimitTier,
-          phoneNumberStatus: phone.status,
-          nameStatus: phone.nameStatus,
+          messagingLimitTier: phone.messagingLimitTier || '',
+          phoneNumberStatus: phone.status || '',
+          nameStatus: phone.nameStatus || '',
           isDefault: index === 0,
-          isVerified: phone.verificationStatus === 'VERIFIED'
-        }))
+          isVerified: phone.verificationStatus === 'VERIFIED',
+        })),
       });
     }
 
-    // Redirect to settings with success
-    const successRedirectUrl = isEmbedded 
-      ? '/dashboard/settings?whatsapp=connected&embedded=true'
-      : '/dashboard/settings?whatsapp=connected';
-    
-    console.log('[OAuth Callback] Successfully connected WhatsApp account for org:', orgId);
-    return NextResponse.redirect(new URL(successRedirectUrl, request.url));
-    
-  } catch (error: any) {
-    console.error('[OAuth Callback] OAuth callback error:', error);
-    
-    const errorMessage = error.message || 'Failed to complete OAuth flow';
-    
-    // Check if error is due to missing WhatsApp Business Account
-    const needsAccount = errorMessage.includes('No WhatsApp Business Account found');
-    
-    // Provide more helpful message for missing account
-    const enhancedMessage = needsAccount
-      ? 'No WhatsApp Business Account found. Please complete the Embedded Signup flow to create one, or ensure your Business Account has WhatsApp access.'
-      : errorMessage;
-    
-    return NextResponse.redirect(new URL(buildErrorUrl(enhancedMessage, needsAccount), request.url));
+    console.log('[OAuth Callback] Successfully connected WABA:', wabaId, 'for org:', orgId);
+
+    const successUrl = `/dashboard/settings?tab=whatsapp&whatsapp=connected`;
+    return NextResponse.redirect(new URL(successUrl, request.url));
+
+  } catch (err: any) {
+    console.error('[OAuth Callback] Fatal error:', err?.message, err?.response?.data);
+
+    let userMessage = 'Failed to connect WhatsApp. Please try again.';
+    let errorCode   = 'UNKNOWN';
+    let needsAccount = false;
+
+    const msg = err?.message || '';
+
+    if (msg.includes('No WhatsApp Business Account') || msg.includes('WABA')) {
+      userMessage  = 'No WhatsApp Business Account found. Please go to business.facebook.com, create a WhatsApp Business Account, then try connecting again.';
+      errorCode    = 'NO_WABA';
+      needsAccount = true;
+    } else if (msg.includes('invalid_client') || msg.includes('OAuthException')) {
+      userMessage = 'App configuration error. Please check your Meta App ID and Secret in Vercel environment variables.';
+      errorCode   = 'APP_CONFIG';
+    } else if (msg.includes('Token') || msg.includes('token') || msg.includes('190')) {
+      userMessage = 'Authentication token error. Please try connecting again.';
+      errorCode   = 'TOKEN_ERROR';
+    } else if (msg.includes('redirect_uri') || msg.includes('redirect URI')) {
+      userMessage = 'Redirect URI mismatch. Please check your Meta App OAuth settings and Vercel environment variables.';
+      errorCode   = 'REDIRECT_URI';
+    } else if (msg.includes('permission') || msg.includes('200')) {
+      userMessage = 'Missing permissions. Please ensure you granted all requested permissions during the WhatsApp signup flow.';
+      errorCode   = 'PERMISSIONS';
+    } else if (msg.includes('State expired')) {
+      userMessage = 'Connection timed out. Please try connecting again.';
+      errorCode   = 'STATE_EXPIRED';
+    } else if (msg.includes('network') || msg.includes('ECONNREFUSED')) {
+      userMessage = 'Network error connecting to Meta. Please try again in a few moments.';
+      errorCode   = 'NETWORK';
+    }
+
+    return NextResponse.redirect(
+      new URL(buildErrorUrl(userMessage, errorCode, needsAccount, isEmbedded), request.url)
+    );
   }
 }

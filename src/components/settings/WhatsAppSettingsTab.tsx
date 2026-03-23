@@ -61,6 +61,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { EmbeddedSignupButton } from '@/components/whatsapp/EmbeddedSignupButton';
+import { WhatsAppStatusBanner } from '@/components/whatsapp/WhatsAppStatusBanner';
 
 interface WhatsAppPhoneNumber {
   id: string;
@@ -1268,6 +1269,8 @@ export function WhatsAppSettingsTab({ organizationId }: WhatsAppSettingsTabProps
 
   return (
     <div className="space-y-6">
+      <WhatsAppStatusBanner onRetry={handleConnect} />
+
       {/* Token Expiration Alert Banner */}
       {tokenAlert && tokenAlert.alertLevel !== 'healthy' && tokenAlert.alertLevel !== 'warning' && (
         <div className={`rounded-lg p-4 border-2 ${
