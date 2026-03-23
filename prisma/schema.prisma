@@ -65,7 +65,7 @@ model Contact {
   tags          String   // JSON array of tags
   attributes    String   // JSON object for custom attributes
   userId        String   @db.ObjectId
-  organizationId String  @db.ObjectId
+  organizationId String?  @db.ObjectId
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -125,7 +125,7 @@ model Campaign {
   type              String   // "broadcast", "recurring", "ab_test"
   status            String   @default("draft") // "draft", "scheduled", "running", "paused", "completed", "failed"
   createdBy         String?  @db.ObjectId
-  organizationId    String   @db.ObjectId
+  organizationId    String?  @db.ObjectId
   audienceSegmentId String?  @db.ObjectId
   whatsappNumberId  String?  // WhatsApp phone number ID used to send messages
   whatsappAccountId String?  // WhatsApp account/credential ID used to send messages

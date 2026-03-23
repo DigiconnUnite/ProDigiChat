@@ -23,7 +23,8 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit
 
     const conditions: any = {
-      createdBy: userId
+      createdBy: userId,
+      organizationId: { not: null }
     }
     
     // Apply status filter if provided and not 'all'

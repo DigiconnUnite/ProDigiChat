@@ -39,7 +39,8 @@ export async function GET(request: NextRequest) {
 
     // Build query conditions - ALWAYS filter by authenticated user
     const conditions: any = {
-      userId: userId
+      userId: userId,
+      organizationId: { not: null }
     }
     
     if (status && status !== 'all') {
