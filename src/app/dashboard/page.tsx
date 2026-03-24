@@ -216,31 +216,13 @@ export default function DashboardPage() {
   // If no valid orgId exists, the user should not have access to the dashboard
   const organizationId = (session?.user as Record<string, unknown>)?.organizationId as string
   
-  // Show loading if session is being fetched, or error if no orgId
-  if (!session) {
-    return (
-      <div className="container mx-auto py-6">
-        <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    )
-  }
-  
-  if (!organizationId) {
-    return (
-      <div className="container mx-auto py-6">
-        <Card className="border-destructive/50 bg-destructive/10">
-          <CardContent className="pt-6">
-            <p className="text-destructive">No organization found. Please log in again.</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  // Fetch analytics data
+  // BUG FIX: Fetch analytics data - useEffect must be called BEFORE any conditional returns
+  // Add guard inside useEffect to check session and organizationId before fetching
   useEffect(() => {
+    if (!session || !organizationId) {
+      return
+    }
+    
     const fetchAnalyticsData = async () => {
       setIsLoading(true)
       setError(null)
@@ -270,7 +252,31 @@ export default function DashboardPage() {
     }
 
     fetchAnalyticsData()
-  }, [dateRange])
+  }, [dateRange, session, organizationId])
+
+  // Show loading if session is being fetched, or error if no orgId
+  // These conditional returns now come AFTER the useEffect (which is correct per React rules)
+  if (!session) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+  
+  if (!organizationId) {
+    return (
+      <div className="container mx-auto py-6">
+        <Card className="border-destructive/50 bg-destructive/10">
+          <CardContent className="pt-6">
+            <p className="text-destructive">No organization found. Please log in again.</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   // Compute metrics from API data
   const metrics = analyticsData ? [

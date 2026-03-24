@@ -12,12 +12,13 @@ export async function POST(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams;
-    const action = searchParams.get('action') || (await request.json()).action;
+    
+    // BUG FIX: Parse body once - request.json() can only be read once in Next.js
+    const body = await request.json().catch(() => ({}));
+    const action = searchParams.get('action') || body.action;
     
     // Get organization ID from session or body
-    let organizationId = searchParams.get('organizationId') || session.user.organizationId;
-    const body = await request.json().catch(() => ({}));
-    organizationId = organizationId || body.organizationId;
+    let organizationId = searchParams.get('organizationId') || session.user.organizationId || body.organizationId;
 
     if (!organizationId) {
       return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });

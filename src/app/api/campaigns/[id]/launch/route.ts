@@ -363,8 +363,40 @@ export async function POST(
     let queueResult = { processed: 0, succeeded: 0, failed: 0 }
     
     // BUG FIX: Get the WhatsApp account ID to use for sending messages
-    // Use the credential ID from the active WhatsApp account
-    const whatsappAccountId = creds?.id;
+    // Use the campaign's chosen phone number (whatsappNumberId) to find the correct credential
+    let whatsappAccountId: string | undefined;
+    
+    if (campaign.whatsappNumberId) {
+      // Find the credential that has the campaign's selected phone number
+      const phoneNumber = creds?.phoneNumbers?.find((p: any) => p.id === campaign.whatsappNumberId);
+      if (phoneNumber) {
+        whatsappAccountId = creds?.id;
+        console.log('[CampaignLaunch] Using campaign-selected phone number:', campaign.whatsappNumberId, 'with credential:', whatsappAccountId);
+      } else {
+        // Phone number not found in current credential, search all credentials
+        const allCreds = await prisma.whatsAppCredential.findMany({
+          where: { 
+            organizationId: campaign.organizationId ?? undefined,
+            isActive: true
+          },
+          include: { phoneNumbers: true }
+        });
+        
+        for (const cred of allCreds) {
+          const hasPhoneNumber = cred.phoneNumbers?.some((p: any) => p.id === campaign.whatsappNumberId);
+          if (hasPhoneNumber) {
+            whatsappAccountId = cred.id;
+            console.log('[CampaignLaunch] Found credential with phone number in other account:', whatsappAccountId);
+            break;
+          }
+        }
+      }
+    }
+    
+    // Fallback to default credential if not found
+    if (!whatsappAccountId) {
+      whatsappAccountId = creds?.id;
+    }
     
     console.log('[CampaignLaunch] Using WhatsApp account ID:', whatsappAccountId);
     

@@ -300,6 +300,7 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
     // Parse message content
     let parsedContent: {
       text?: string;
+      freeformMessage?: string;
       templateName?: string;
       components?: any[];
       mediaUrl?: string;
@@ -341,9 +342,10 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
         
       case MessageType.TEXT:
       default:
+        // BUG FIX: Also check for freeformMessage property
         result = await sendTextMessage(
           recipientPhone,
-          parsedContent.text || messageContent,
+          parsedContent.text || parsedContent.freeformMessage || messageContent,
           organizationId,
           accountId // BUG FIX: Pass account ID
         );
