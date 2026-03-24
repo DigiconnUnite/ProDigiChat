@@ -301,7 +301,7 @@ export default function NewCampaignPage() {
         type: formData.type,
         description: formData.description,
         audienceSegmentId: formData.audienceType === "existing" ? formData.audienceSegmentId : null,
-        fromNumber: formData.fromNumber, // Issue 3 fix - include fromNumber in API payload
+        fromNumber: formData.fromNumber,
         messageContent: JSON.stringify({
           type: formData.messageType,
           templateId: formData.templateId,
@@ -330,8 +330,8 @@ export default function NewCampaignPage() {
       const result = await response.json()
       
       if (formData.sendNow && result.data?.id) {
-        const launchResponse = await fetch(`/api/campaigns/${result.data.id}/launch`, { 
-          method: "POST" 
+        const launchResponse = await fetch(`/api/campaigns/${result.data.id}/launch`, {
+          method: "POST"
         })
         const launchResult = await launchResponse.json()
         console.log('[Campaign] Launch result:', launchResult)
@@ -409,702 +409,746 @@ export default function NewCampaignPage() {
 
   const previewData = formData.messageType === 'template' ? getTemplatePreviewData() : getFreeformPreviewData()
 
-  return (
-    <div className="container mx-auto py-6 px-4 space-y-6">
-      
+  // Render each step's content
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold mb-1">Campaign Details</h2>
+              <p className="text-muted-foreground">Enter the basic information about your campaign</p>
+            </div>
 
-      <div className="flex items-center justify-between">
-        <div className="hidden md:flex items-center gap-2">
-          {steps.map((step, index) => {
-            const StepIcon = step.icon
-            const isActive = step.id === currentStep
-            const isCompleted = step.id < currentStep
-
-            return (
-              <div key={step.id} className="flex items-center">
-                {index > 0 && (
-                  <div className={cn("w-8 h-0.5 mx-1", isCompleted ? "bg-primary" : "bg-muted")} />
-                )}
-                <div className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
-                  isActive && "bg-primary text-primary-foreground",
-                  isCompleted && "bg-primary/10 text-primary",
-                  !isActive && !isCompleted && "bg-muted text-muted-foreground",
-                )}>
-                  {isCompleted ? <Check className="h-4 w-4" /> : <StepIcon className="h-4 w-4" />}
-                  <span className="hidden lg:inline">{step.name}</span>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {errors.submit && (
-        <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg flex items-center gap-2">
-          <AlertCircle className="h-4 w-4" />
-          {errors.submit}
-        </div>
-      )}
-
-      <Card className="min-h-[600px]">
-        <CardContent className="pt-6">
-          {/* Step 1: Campaign Details */}
-          {currentStep === 1 && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-semibold mb-1">Campaign Details</h2>
-                <p className="text-muted-foreground">Enter the basic information about your campaign</p>
+            <div className="grid gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="name">Campaign Name <span className="text-destructive">*</span></Label>
+                <Input
+                  id="name"
+                  placeholder="e.g., Summer Sale 2024"
+                  value={formData.name}
+                  onChange={(e) => updateFormData({ name: e.target.value })}
+                  className={cn(errors.name && "border-destructive")}
+                />
+                {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
               </div>
 
-              <div className="grid gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Campaign Name <span className="text-destructive">*</span></Label>
-                  <Input
-                    id="name"
-                    placeholder="e.g., Summer Sale 2024"
-                    value={formData.name}
-                    onChange={(e) => updateFormData({ name: e.target.value })}
-                    className={cn(errors.name && "border-destructive")}
-                  />
-                  {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
-                </div>
+              <div className="space-y-2">
+                <Label>Campaign Type <span className="text-destructive">*</span></Label>
+                <RadioGroup
+                  value={formData.type}
+                  onValueChange={(value) => updateFormData({ type: value as any })}
+                  className="flex flex-col sm:flex-row gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="broadcast" id="broadcast" />
+                    <Label htmlFor="broadcast" className="font-normal cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <Send className="text-lime-500" />
+                        <div>
+                          <span className="font-medium">Broadcast</span>
+                          <p className="text-xs text-muted-foreground">One-time message to all recipients</p>
+                        </div>
+                      </div>
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="recurring" id="recurring" />
+                    <Label htmlFor="recurring" className="font-normal cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <Settings className="text-lime-500" />
+                        <div>
+                          <span className="font-medium">Recurring</span>
+                          <p className="text-xs text-muted-foreground">Scheduled messages on repeat</p>
+                        </div>
+                      </div>
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="ab_test" id="ab_test" />
+                    <Label htmlFor="ab_test" className="font-normal cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <FileText className="text-lime-500" />
+                        <div>
+                          <span className="font-medium">A/B Test</span>
+                          <p className="text-xs text-muted-foreground">Test different message variants</p>
+                        </div>
+                      </div>
+                    </Label>
+                  </div>
+                </RadioGroup>
+                {errors.type && <p className="text-sm text-destructive">{errors.type}</p>}
+              </div>
 
-                <div className="space-y-2">
-                  <Label>Campaign Type <span className="text-destructive">*</span></Label>
-                  <RadioGroup
-                    value={formData.type}
-                    onValueChange={(value) => updateFormData({ type: value as any })}
-                    className="flex flex-col sm:flex-row gap-4"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="broadcast" id="broadcast" />
-                      <Label htmlFor="broadcast" className="font-normal cursor-pointer">
-                        <div className="flex items-center gap-2">
-                          <Send className="text-lime-500" />
-                          <div>
-                            <span className="font-medium">Broadcast</span>
-                            <p className="text-xs text-muted-foreground">One-time message to all recipients</p>
-                          </div>
-                        </div>
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="recurring" id="recurring" />
-                      <Label htmlFor="recurring" className="font-normal cursor-pointer">
-                        <div className="flex items-center gap-2">
-                          <Settings className="text-lime-500" />
-                          <div>
-                            <span className="font-medium">Recurring</span>
-                            <p className="text-xs text-muted-foreground">Scheduled messages on repeat</p>
-                          </div>
-                        </div>
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="ab_test" id="ab_test" />
-                      <Label htmlFor="ab_test" className="font-normal cursor-pointer">
-                        <div className="flex items-center gap-2">
-                          <FileText className="text-lime-500" />
-                          <div>
-                            <span className="font-medium">A/B Test</span>
-                            <p className="text-xs text-muted-foreground">Test different message variants</p>
-                          </div>
-                        </div>
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                  {errors.type && <p className="text-sm text-destructive">{errors.type}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description (Optional)</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Describe the purpose of this campaign..."
-                    value={formData.description}
-                    onChange={(e) => updateFormData({ description: e.target.value })}
-                    rows={3}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description (Optional)</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Describe the purpose of this campaign..."
+                  value={formData.description}
+                  onChange={(e) => updateFormData({ description: e.target.value })}
+                  rows={3}
+                />
               </div>
             </div>
-          )}
+          </div>
+        )
 
-          {/* Step 2: Audience */}
-          {currentStep === 2 && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-semibold mb-1">Select Audience</h2>
-                <p className="text-muted-foreground">Choose who will receive your campaign messages</p>
-              </div>
+      case 2:
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold mb-1">Select Audience</h2>
+              <p className="text-muted-foreground">Choose who will receive your campaign messages</p>
+            </div>
 
+            <Tabs
+              value={formData.audienceType}
+              onValueChange={(value) => updateFormData({ audienceType: value as any })}
+            >
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="all">All Contacts</TabsTrigger>
+                <TabsTrigger value="existing">Existing Segment</TabsTrigger>
+                <TabsTrigger value="new">Create New</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="all" className="mt-4">
+                <div className="bg-muted/50 rounded-lg p-6 text-center">
+                  <Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+                  <h3 className="font-medium mb-1">All Contacts</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    This campaign will be sent to all opted-in contacts
+                  </p>
+                  <div className="text-3xl font-bold text-primary">
+                    {isLoadingData ? <span className="text-sm text-gray-400">Loading...</span> :
+                      totalContacts > 0 ? totalContacts.toLocaleString() : "0"}
+                  </div>
+                  <p className="text-sm text-muted-foreground">Opted-in contacts</p>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="existing" className="mt-4">
+                <div className="space-y-4">
+                  <Select
+                    value={formData.audienceSegmentId}
+                    onValueChange={(value) => updateFormData({ audienceSegmentId: value })}
+                  >
+                    <SelectTrigger className={cn(errors.audienceSegmentId && "border-destructive")}>
+                      <SelectValue placeholder="Select a segment" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {segments.length > 0 ? segments.map((segment) => (
+                        <SelectItem key={segment.id} value={segment.id}>
+                          <div className="flex items-center justify-between w-full">
+                            <span>{segment.name}</span>
+                            <Badge variant="secondary" className="ml-2">{segment.memberCount}</Badge>
+                          </div>
+                        </SelectItem>
+                      )) : (
+                        <div className="p-2 text-sm text-muted-foreground">No segments available</div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {errors.audienceSegmentId && <p className="text-sm text-destructive">{errors.audienceSegmentId}</p>}
+
+                  {selectedSegment && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-center gap-3">
+                        <Users className="h-5 w-5 text-green-600" />
+                        <div>
+                          <p className="font-medium text-green-900">{selectedSegment.name}</p>
+                          <p className="text-sm text-green-700">{selectedSegment.memberCount} recipients</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="new" className="mt-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="segmentName">Segment Name</Label>
+                    <Input
+                      id="segmentName"
+                      placeholder="e.g., High-Value Customers"
+                      value={formData.segmentName}
+                      onChange={(e) => updateFormData({ segmentName: e.target.value })}
+                      className={cn(errors.segmentName && "border-destructive")}
+                    />
+                    {errors.segmentName && <p className="text-sm text-destructive">{errors.segmentName}</p>}
+                  </div>
+                  <Separator />
+                  <div className="space-y-3">
+                    <Label>Segment Rules</Label>
+                    <p className="text-sm text-muted-foreground">Add rules to define which contacts should be included</p>
+                    {formData.segmentRules.length === 0 ? (
+                      <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                        <Users className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">No rules added yet</p>
+                        <Button variant="outline" size="sm" className="mt-2" onClick={() => {
+                          updateFormData({ segmentRules: [{ id: Date.now().toString(), field: "optInStatus", operator: "equals", value: "opted_in" }] })
+                        }}>
+                          <Plus className="h-4 w-4 mr-1" /> Add Rule
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {formData.segmentRules.map((rule, index) => (
+                          <div key={rule.id} className="flex items-center gap-2">
+                            <Select value={rule.field} onValueChange={(value) => {
+                              const newRules = [...formData.segmentRules]
+                              newRules[index].field = value
+                              updateFormData({ segmentRules: newRules })
+                            }}>
+                              <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="optInStatus">Opt-in Status</SelectItem>
+                                <SelectItem value="tags">Tags</SelectItem>
+                                <SelectItem value="createdAt">Date Added</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Input placeholder="Value" value={rule.value} onChange={(e) => {
+                              const newRules = [...formData.segmentRules]
+                              newRules[index].value = e.target.value
+                              updateFormData({ segmentRules: newRules })
+                            }} className="flex-1" />
+                            <Button variant="ghost" size="icon" onClick={() => {
+                              updateFormData({ segmentRules: formData.segmentRules.filter((_, i) => i !== index) })
+                            }}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        <Button variant="outline" size="sm" onClick={() => {
+                          updateFormData({ segmentRules: [...formData.segmentRules, { id: Date.now().toString(), field: "optInStatus", operator: "equals", value: "" }] })
+                        }}>
+                          <Plus className="h-4 w-4 mr-1" /> Add Another Rule
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+        )
+
+      case 3:
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold mb-1">Message Content</h2>
+              <p className="text-muted-foreground">Create your WhatsApp message</p>
+            </div>
+
+            <div>
               <Tabs
-                value={formData.audienceType}
-                onValueChange={(value) => updateFormData({ audienceType: value as any })}
+                value={formData.messageType}
+                onValueChange={(value) => updateFormData({ messageType: value as any })}
               >
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="all">All Contacts</TabsTrigger>
-                  <TabsTrigger value="existing">Existing Segment</TabsTrigger>
-                  <TabsTrigger value="new">Create New</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="template">Use Template</TabsTrigger>
+                  <TabsTrigger value="freeform">Freeform Message</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="all" className="mt-4">
-                  <div className="bg-muted/50 rounded-lg p-6 text-center">
-                    <Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-                    <h3 className="font-medium mb-1">All Contacts</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      This campaign will be sent to all opted-in contacts
-                    </p>
-                    <div className="text-3xl font-bold text-primary">
-                      {isLoadingData ? <span className="text-sm text-gray-400">Loading...</span> : 
-                        totalContacts > 0 ? totalContacts.toLocaleString() : "0"}
-                    </div>
-                    <p className="text-sm text-muted-foreground">Opted-in contacts</p>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="existing" className="mt-4">
+                <TabsContent value="template" className="mt-4">
                   <div className="space-y-4">
                     <Select
-                      value={formData.audienceSegmentId}
-                      onValueChange={(value) => updateFormData({ audienceSegmentId: value })}
+                      value={formData.templateId}
+                      onValueChange={(value) => updateFormData({ templateId: value })}
                     >
-                      <SelectTrigger className={cn(errors.audienceSegmentId && "border-destructive")}>
-                        <SelectValue placeholder="Select a segment" />
+                      <SelectTrigger className={cn(errors.templateId && "border-destructive")}>
+                        <SelectValue placeholder="Select a template" />
                       </SelectTrigger>
                       <SelectContent>
-                        {segments.length > 0 ? segments.map((segment) => (
-                          <SelectItem key={segment.id} value={segment.id}>
-                            <div className="flex items-center justify-between w-full">
-                              <span>{segment.name}</span>
-                              <Badge variant="secondary" className="ml-2">{segment.memberCount}</Badge>
-                            </div>
-                          </SelectItem>
-                        )) : (
-                          <div className="p-2 text-sm text-muted-foreground">No segments available</div>
+                        {templates.filter(t => t.status === "approved").length > 0 ? (
+                          templates.filter(t => t.status === "approved").map((template) => (
+                            <SelectItem key={template.id} value={template.id}>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs">{template.category}</Badge>
+                                <span>{template.name}</span>
+                              </div>
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <div className="p-2 text-sm text-muted-foreground">No approved templates available</div>
                         )}
                       </SelectContent>
                     </Select>
-                    {errors.audienceSegmentId && <p className="text-sm text-destructive">{errors.audienceSegmentId}</p>}
+                    {errors.templateId && <p className="text-sm text-destructive">{errors.templateId}</p>}
 
-                    {selectedSegment && (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <div className="flex items-center gap-3">
-                          <Users className="h-5 w-5 text-green-600" />
-                          <div>
-                            <p className="font-medium text-green-900">{selectedSegment.name}</p>
-                            <p className="text-sm text-green-700">{selectedSegment.memberCount} recipients</p>
+                    {selectedTemplate && (
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-sm font-medium">{selectedTemplate.name}</CardTitle>
+                            <Badge variant="secondary">{selectedTemplate.category}</Badge>
                           </div>
-                        </div>
-                      </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <p className="text-sm whitespace-pre-wrap">{selectedTemplate.content}</p>
+                          </div>
+                          {selectedTemplate.variables.length > 0 && (
+                            <div className="mt-4 space-y-2">
+                              <Label className="text-xs text-muted-foreground">Fill Template Variables</Label>
+                              {selectedTemplate.variables.map((variable, index) => (
+                                <div key={variable} className="flex items-center gap-2">
+                                  <span className="text-sm font-medium w-24">{`{{${index + 1}}}`} ({variable}):</span>
+                                  <Input
+                                    placeholder={`Enter ${variable}`}
+                                    value={formData.templateVariables[variable] || ""}
+                                    onChange={(e) => {
+                                      const newVars = { ...formData.templateVariables, [variable]: e.target.value }
+                                      updateFormData({ templateVariables: newVars })
+                                      setPreviewVariables(prev => prev.map(v =>
+                                        v.index === index + 1 ? { ...v, sampleValue: e.target.value } : v
+                                      ))
+                                    }}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
                     )}
                   </div>
                 </TabsContent>
 
-                <TabsContent value="new" className="mt-4">
+                <TabsContent value="freeform" className="mt-4">
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="segmentName">Segment Name</Label>
-                      <Input
-                        id="segmentName"
-                        placeholder="e.g., High-Value Customers"
-                        value={formData.segmentName}
-                        onChange={(e) => updateFormData({ segmentName: e.target.value })}
-                        className={cn(errors.segmentName && "border-destructive")}
+                      <Label htmlFor="freeformMessage">Message Content</Label>
+                      <Textarea
+                        id="freeformMessage"
+                        placeholder="Type your message here..."
+                        value={formData.freeformMessage}
+                        onChange={(e) => updateFormData({ freeformMessage: e.target.value })}
+                        rows={6}
+                        className={cn(errors.freeformMessage && "border-destructive")}
                       />
-                      {errors.segmentName && <p className="text-sm text-destructive">{errors.segmentName}</p>}
+                      {errors.freeformMessage && <p className="text-sm text-destructive">{errors.freeformMessage}</p>}
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>Use {"{{contact.name}}"} for personalization</span>
+                        <span>{formData.freeformMessage.length}/4096</span>
+                      </div>
                     </div>
-                    <Separator />
-                    <div className="space-y-3">
-                      <Label>Segment Rules</Label>
-                      <p className="text-sm text-muted-foreground">Add rules to define which contacts should be included</p>
-                      {formData.segmentRules.length === 0 ? (
-                        <div className="text-center py-8 border-2 border-dashed rounded-lg">
-                          <Users className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                          <p className="text-sm text-muted-foreground">No rules added yet</p>
-                          <Button variant="outline" size="sm" className="mt-2" onClick={() => {
-                            updateFormData({ segmentRules: [{ id: Date.now().toString(), field: "optInStatus", operator: "equals", value: "opted_in" }] })
-                          }}>
-                            <Plus className="h-4 w-4 mr-1" /> Add Rule
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {formData.segmentRules.map((rule, index) => (
-                            <div key={rule.id} className="flex items-center gap-2">
-                              <Select value={rule.field} onValueChange={(value) => {
-                                const newRules = [...formData.segmentRules]
-                                newRules[index].field = value
-                                updateFormData({ segmentRules: newRules })
-                              }}>
-                                <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="optInStatus">Opt-in Status</SelectItem>
-                                  <SelectItem value="tags">Tags</SelectItem>
-                                  <SelectItem value="createdAt">Date Added</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <Input placeholder="Value" value={rule.value} onChange={(e) => {
-                                const newRules = [...formData.segmentRules]
-                                newRules[index].value = e.target.value
-                                updateFormData({ segmentRules: newRules })
-                              }} className="flex-1" />
-                              <Button variant="ghost" size="icon" onClick={() => {
-                                updateFormData({ segmentRules: formData.segmentRules.filter((_, i) => i !== index) })
-                              }}>
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                          <Button variant="outline" size="sm" onClick={() => {
-                            updateFormData({ segmentRules: [...formData.segmentRules, { id: Date.now().toString(), field: "optInStatus", operator: "equals", value: "" }] })
-                          }}>
-                            <Plus className="h-4 w-4 mr-1" /> Add Another Rule
-                          </Button>
-                        </div>
-                      )}
+                    <div className="space-y-2">
+                      <Label>Media Attachments (Optional)</Label>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm"><Image className="h-4 w-4 mr-1" />Image</Button>
+                        <Button variant="outline" size="sm"><Video className="h-4 w-4 mr-1" />Video</Button>
+                        <Button variant="outline" size="sm"><FileAudio className="h-4 w-4 mr-1" />Audio</Button>
+                        <Button variant="outline" size="sm"><Paperclip className="h-4 w-4 mr-1" />Document</Button>
+                      </div>
                     </div>
                   </div>
                 </TabsContent>
               </Tabs>
             </div>
-          )}
 
-          {/* Step 3: Message */}
-          {currentStep === 3 && (
-            <div className="space-y-6">
-              
+          </div>
+          
+                  
+        )  
 
-              <div className="flex gap-6">
-                {/* Message Editor */}
-                <div className="flex-1">
-                  <Tabs
-                    value={formData.messageType}
-                    onValueChange={(value) => updateFormData({ messageType: value as any })}
-                  >
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="template">Use Template</TabsTrigger>
-                      <TabsTrigger value="freeform">Freeform Message</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="template" className="mt-4">
-                      <div className="space-y-4">
-                        <Select
-                          value={formData.templateId}
-                          onValueChange={(value) => updateFormData({ templateId: value })}
-                        >
-                          <SelectTrigger className={cn(errors.templateId && "border-destructive")}>
-                            <SelectValue placeholder="Select a template" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {templates.filter(t => t.status === "approved").length > 0 ? (
-                              templates.filter(t => t.status === "approved").map((template) => (
-                                <SelectItem key={template.id} value={template.id}>
-                                  <div className="flex items-center gap-2">
-                                    <Badge variant="outline" className="text-xs">{template.category}</Badge>
-                                    <span>{template.name}</span>
-                                  </div>
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <div className="p-2 text-sm text-muted-foreground">No approved templates available</div>
-                            )}
-                          </SelectContent>
-                        </Select>
-                        {errors.templateId && <p className="text-sm text-destructive">{errors.templateId}</p>}
-
-                        {selectedTemplate && (
-                          <Card>
-                            <CardHeader className="pb-3">
-                              <div className="flex items-center justify-between">
-                                <CardTitle className="text-sm font-medium">{selectedTemplate.name}</CardTitle>
-                                <Badge variant="secondary">{selectedTemplate.category}</Badge>
-                              </div>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                                <p className="text-sm whitespace-pre-wrap">{selectedTemplate.content}</p>
-                              </div>
-                              {selectedTemplate.variables.length > 0 && (
-                                <div className="mt-4 space-y-2">
-                                  <Label className="text-xs text-muted-foreground">Fill Template Variables</Label>
-                                  {selectedTemplate.variables.map((variable, index) => (
-                                    <div key={variable} className="flex items-center gap-2">
-                                      <span className="text-sm font-medium w-24">{`{{${index + 1}}}`} ({variable}):</span>
-                                      <Input
-                                        placeholder={`Enter ${variable}`}
-                                        value={formData.templateVariables[variable] || ""}
-                                        onChange={(e) => {
-                                          const newVars = { ...formData.templateVariables, [variable]: e.target.value }
-                                          updateFormData({ templateVariables: newVars })
-                                          // Also update preview variables
-                                          setPreviewVariables(prev => prev.map(v => 
-                                            v.index === index + 1 ? { ...v, sampleValue: e.target.value } : v
-                                          ))
-                                        }}
-                                      />
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </CardContent>
-                          </Card>
-                        )}
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="freeform" className="mt-4">
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="freeformMessage">Message Content</Label>
-                          <Textarea
-                            id="freeformMessage"
-                            placeholder="Type your message here..."
-                            value={formData.freeformMessage}
-                            onChange={(e) => updateFormData({ freeformMessage: e.target.value })}
-                            rows={6}
-                            className={cn(errors.freeformMessage && "border-destructive")}
-                          />
-                          {errors.freeformMessage && <p className="text-sm text-destructive">{errors.freeformMessage}</p>}
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>Use {"{{contact.name}}"} for personalization</span>
-                            <span>{formData.freeformMessage.length}/4096</span>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Media Attachments (Optional)</Label>
-                          <div className="flex gap-2">
-                            <Button variant="outline" size="sm"><Image className="h-4 w-4 mr-1" />Image</Button>
-                            <Button variant="outline" size="sm"><Video className="h-4 w-4 mr-1" />Video</Button>
-                            <Button variant="outline" size="sm"><FileAudio className="h-4 w-4 mr-1" />Audio</Button>
-                            <Button variant="outline" size="sm"><Paperclip className="h-4 w-4 mr-1" />Document</Button>
-                          </div>
-                        </div>
-                      </div>
-                    </TabsContent>
-                  </Tabs>
-                </div>
-
-                {/* Preview Panel */}
-                <div className="w-[360px] shrink-0 hidden lg:block">
-                  <div className="sticky top-4">
-                    <TemplatePreview preview={previewData} />
-                  </div>
-                </div>
-              </div>
+      case 4:
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold mb-1">Schedule Campaign</h2>
+              <p className="text-muted-foreground">Choose when to send your campaign</p>
             </div>
-          )}
 
-          {/* Step 4: Schedule */}
-          {currentStep === 4 && (
             <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-semibold mb-1">Schedule Campaign</h2>
-                <p className="text-muted-foreground">Choose when to send your campaign</p>
-              </div>
-
-              <div className="space-y-6">
-                <div className="space-y-3">
-                  <Label>When to Send</Label>
-                  <RadioGroup
-                    value={formData.sendNow ? "now" : "later"}
-                    onValueChange={(value) => updateFormData({ sendNow: value === "now" })}
-                    className="flex flex-col sm:flex-row gap-4"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="now" id="sendNow" />
-                      <Label htmlFor="sendNow" className="font-normal cursor-pointer">
-                        <div className="flex items-center gap-2">
-                          <Send className="h-4 w-4 text-green-500" />
-                          <span>Send Immediately</span>
-                        </div>
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="later" id="scheduleLater" />
-                      <Label htmlFor="scheduleLater" className="font-normal cursor-pointer">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-blue-500" />
-                          <span>Schedule for Later</span>
-                        </div>
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-
-                {!formData.sendNow && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="scheduledDate">Date</Label>
-                      <Input
-                        id="scheduledDate"
-                        type="date"
-                        value={formData.scheduledDate}
-                        onChange={(e) => updateFormData({ scheduledDate: e.target.value })}
-                        className={cn(errors.scheduledDate && "border-destructive")}
-                      />
-                      {errors.scheduledDate && <p className="text-sm text-destructive">{errors.scheduledDate}</p>}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="scheduledTime">Time</Label>
-                      <Input
-                        id="scheduledTime"
-                        type="time"
-                        value={formData.scheduledTime}
-                        onChange={(e) => updateFormData({ scheduledTime: e.target.value })}
-                        className={cn(errors.scheduledTime && "border-destructive")}
-                      />
-                      {errors.scheduledTime && <p className="text-sm text-destructive">{errors.scheduledTime}</p>}
-                    </div>
+              <div className="space-y-3">
+                <Label>When to Send</Label>
+                <RadioGroup
+                  value={formData.sendNow ? "now" : "later"}
+                  onValueChange={(value) => updateFormData({ sendNow: value === "now" })}
+                  className="flex flex-col sm:flex-row gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="now" id="sendNow" />
+                    <Label htmlFor="sendNow" className="font-normal cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <Send className="h-4 w-4 text-green-500" />
+                        <span>Send Immediately</span>
+                      </div>
+                    </Label>
                   </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="timezone">Timezone</Label>
-                  <Select value={formData.timezone} onValueChange={(value) => updateFormData({ timezone: value })}>
-                    <SelectTrigger id="timezone"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {timezones.map((tz) => (
-                        <SelectItem key={tz.value} value={tz.value}>{tz.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {formData.type === "recurring" && (
-                  <>
-                    <Separator />
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="recurringType">Repeat</Label>
-                        <Select value={formData.recurringType} onValueChange={(value) => updateFormData({ recurringType: value as any })}>
-                          <SelectTrigger id="recurringType"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Don't repeat</SelectItem>
-                            <SelectItem value="daily">Daily</SelectItem>
-                            <SelectItem value="weekly">Weekly</SelectItem>
-                            <SelectItem value="monthly">Monthly</SelectItem>
-                          </SelectContent>
-                        </Select>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="later" id="scheduleLater" />
+                    <Label htmlFor="scheduleLater" className="font-normal cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-blue-500" />
+                        <span>Schedule for Later</span>
                       </div>
-                      {formData.recurringType !== "none" && (
-                        <div className="space-y-2">
-                          <Label htmlFor="recurringEndDate">End Date (Optional)</Label>
-                          <Input
-                            id="recurringEndDate"
-                            type="date"
-                            value={formData.recurringEndDate}
-                            onChange={(e) => updateFormData({ recurringEndDate: e.target.value })}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-
-                <Separator />
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Message Throttling</Label>
-                      <p className="text-xs text-muted-foreground">Control how fast messages are sent</p>
-                    </div>
-                    <Switch
-                      checked={formData.throttleRate > 0}
-                      onCheckedChange={(checked) => updateFormData({ throttleRate: checked ? 100 : 0 })}
-                    />
+                    </Label>
                   </div>
-                  {formData.throttleRate > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Messages per hour</span>
-                        <span className="font-medium">{formData.throttleRate}</span>
-                      </div>
-                      <Input
-                        type="range"
-                        min="10"
-                        max="1000"
-                        step="10"
-                        value={formData.throttleRate}
-                        onChange={(e) => updateFormData({ throttleRate: parseInt(e.target.value) })}
-                        className="w-full"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Step 5: Review & Launch */}
-          {currentStep === 5 && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-semibold mb-1">Review & Launch</h2>
-                <p className="text-muted-foreground">Review your campaign details before launching</p>
+                </RadioGroup>
               </div>
 
-              <div className="grid gap-6 md:grid-cols-2">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Campaign Details</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Name</span>
-                      <span className="font-medium">{formData.name}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Type</span>
-                      <Badge variant="outline" className="capitalize">{formData.type.replace("_", " ")}</Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Audience</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Target</span>
-                      <span className="font-medium">
-                        {formData.audienceType === "all" ? "All Contacts" : 
-                          formData.audienceType === "existing" ? selectedSegment?.name || "Selected Segment" : 
-                          formData.segmentName || "New Segment"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Recipients</span>
-                      <span className="font-medium">
-                        {formData.audienceType === "all" ? (totalContacts > 0 ? totalContacts.toLocaleString() : "0") : 
-                          selectedSegment?.memberCount?.toLocaleString() || "—"}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Message</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Type</span>
-                      <Badge variant="outline" className="capitalize">{formData.messageType}</Badge>
-                    </div>
-                    {formData.messageType === "template" && selectedTemplate && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Template</span>
-                        <span className="font-medium text-sm">{selectedTemplate.name}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Media</span>
-                      <span className="font-medium">
-                        {formData.mediaAttachments.length > 0 ? `${formData.mediaAttachments.length} attached` : "None"}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Schedule</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">When</span>
-                      <span className="font-medium">
-                        {formData.sendNow ? "Send Immediately" : `${formData.scheduledDate} at ${formData.scheduledTime}`}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Throttling</span>
-                      <span className="font-medium">
-                        {formData.throttleRate > 0 ? `${formData.throttleRate}/hr` : "Unlimited"}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Advanced Settings</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              {!formData.sendNow && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="fromNumber">WhatsApp Number <span className="text-destructive">*</span></Label>
-                    <Select value={formData.fromNumber} onValueChange={(value) => updateFormData({ fromNumber: value })}>
-                      <SelectTrigger id="fromNumber" className={cn(errors.fromNumber && "border-destructive")}>
-                        <SelectValue placeholder="Select WhatsApp number" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {phoneNumbers.length > 0 ? phoneNumbers.map((number) => (
-                          <SelectItem key={number.id} value={number.id}>
-                            <span>{number.displayName}</span>
-                            <span className="text-muted-foreground ml-2">{number.phoneNumber}</span>
-                          </SelectItem>
-                        )) : (
-                          <div className="p-2 text-sm text-muted-foreground">No WhatsApp numbers available</div>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    {errors.fromNumber && <p className="text-sm text-destructive">{errors.fromNumber}</p>}
+                    <Label htmlFor="scheduledDate">Date</Label>
+                    <Input
+                      id="scheduledDate"
+                      type="date"
+                      value={formData.scheduledDate}
+                      onChange={(e) => updateFormData({ scheduledDate: e.target.value })}
+                      className={cn(errors.scheduledDate && "border-destructive")}
+                    />
+                    {errors.scheduledDate && <p className="text-sm text-destructive">{errors.scheduledDate}</p>}
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="scheduledTime">Time</Label>
+                    <Input
+                      id="scheduledTime"
+                      type="time"
+                      value={formData.scheduledTime}
+                      onChange={(e) => updateFormData({ scheduledTime: e.target.value })}
+                      className={cn(errors.scheduledTime && "border-destructive")}
+                    />
+                    {errors.scheduledTime && <p className="text-sm text-destructive">{errors.scheduledTime}</p>}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="timezone">Timezone</Label>
+                <Select value={formData.timezone} onValueChange={(value) => updateFormData({ timezone: value })}>
+                  <SelectTrigger id="timezone"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {timezones.map((tz) => (
+                      <SelectItem key={tz.value} value={tz.value}>{tz.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {formData.type === "recurring" && (
+                <>
                   <Separator />
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label className="text-sm">Send to opted-in contacts only</Label>
-                        <p className="text-xs text-muted-foreground">Only send to contacts who have opted in</p>
-                      </div>
-                      <Switch checked={formData.useOptedInOnly} onCheckedChange={(checked) => updateFormData({ useOptedInOnly: checked })} />
+                    <div className="space-y-2">
+                      <Label htmlFor="recurringType">Repeat</Label>
+                      <Select value={formData.recurringType} onValueChange={(value) => updateFormData({ recurringType: value as any })}>
+                        <SelectTrigger id="recurringType"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Don't repeat</SelectItem>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label className="text-sm">Track link clicks</Label>
-                        <p className="text-xs text-muted-foreground">Track when recipients click links</p>
+                    {formData.recurringType !== "none" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="recurringEndDate">End Date (Optional)</Label>
+                        <Input
+                          id="recurringEndDate"
+                          type="date"
+                          value={formData.recurringEndDate}
+                          onChange={(e) => updateFormData({ recurringEndDate: e.target.value })}
+                        />
                       </div>
-                      <Switch checked={formData.trackClicks} onCheckedChange={(checked) => updateFormData({ trackClicks: checked })} />
+                    )}
+                  </div>
+                </>
+              )}
+
+              <Separator />
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Message Throttling</Label>
+                    <p className="text-xs text-muted-foreground">Control how fast messages are sent</p>
+                  </div>
+                  <Switch
+                    checked={formData.throttleRate > 0}
+                    onCheckedChange={(checked) => updateFormData({ throttleRate: checked ? 100 : 0 })}
+                  />
+                </div>
+                {formData.throttleRate > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Messages per hour</span>
+                      <span className="font-medium">{formData.throttleRate}</span>
                     </div>
+                    <Input
+                      type="range"
+                      min="10"
+                      max="1000"
+                      step="10"
+                      value={formData.throttleRate}
+                      onChange={(e) => updateFormData({ throttleRate: parseInt(e.target.value) })}
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+
+      case 5:
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold mb-1">Review & Launch</h2>
+              <p className="text-muted-foreground">Review your campaign details before launching</p>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Campaign Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Name</span>
+                    <span className="font-medium">{formData.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Type</span>
+                    <Badge variant="outline" className="capitalize">{formData.type.replace("_", " ")}</Badge>
                   </div>
                 </CardContent>
               </Card>
 
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-green-600 mt-0.5" />
-                  <div>
-                    <h4 className="font-medium text-green-900">Ready to Launch</h4>
-                    <p className="text-sm text-green-700">
-                      {formData.sendNow ? "Your campaign will be sent immediately after confirmation." : "Your campaign will be sent at the scheduled time."}
-                    </p>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Audience</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Target</span>
+                    <span className="font-medium">
+                      {formData.audienceType === "all" ? "All Contacts" : 
+                        formData.audienceType === "existing" ? selectedSegment?.name || "Selected Segment" : 
+                        formData.segmentName || "New Segment"}
+                    </span>
                   </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Recipients</span>
+                    <span className="font-medium">
+                      {formData.audienceType === "all" ? (totalContacts > 0 ? totalContacts.toLocaleString() : "0") : 
+                        selectedSegment?.memberCount?.toLocaleString() || "—"}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Message</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Type</span>
+                    <Badge variant="outline" className="capitalize">{formData.messageType}</Badge>
+                  </div>
+                  {formData.messageType === "template" && selectedTemplate && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Template</span>
+                      <span className="font-medium text-sm">{selectedTemplate.name}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Media</span>
+                    <span className="font-medium">
+                      {formData.mediaAttachments.length > 0 ? `${formData.mediaAttachments.length} attached` : "None"}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Schedule</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">When</span>
+                    <span className="font-medium">
+                      {formData.sendNow ? "Send Immediately" : `${formData.scheduledDate} at ${formData.scheduledTime}`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Throttling</span>
+                    <span className="font-medium">
+                      {formData.throttleRate > 0 ? `${formData.throttleRate}/hr` : "Unlimited"}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Advanced Settings</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="fromNumber">WhatsApp Number <span className="text-destructive">*</span></Label>
+                  <Select value={formData.fromNumber} onValueChange={(value) => updateFormData({ fromNumber: value })}>
+                    <SelectTrigger id="fromNumber" className={cn(errors.fromNumber && "border-destructive")}>
+                      <SelectValue placeholder="Select WhatsApp number" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {phoneNumbers.length > 0 ? phoneNumbers.map((number) => (
+                        <SelectItem key={number.id} value={number.id}>
+                          <span>{number.displayName}</span>
+                          <span className="text-muted-foreground ml-2">{number.phoneNumber}</span>
+                        </SelectItem>
+                      )) : (
+                        <div className="p-2 text-sm text-muted-foreground">No WhatsApp numbers available</div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {errors.fromNumber && <p className="text-sm text-destructive">{errors.fromNumber}</p>}
+                </div>
+                <Separator />
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm">Send to opted-in contacts only</Label>
+                      <p className="text-xs text-muted-foreground">Only send to contacts who have opted in</p>
+                    </div>
+                    <Switch checked={formData.useOptedInOnly} onCheckedChange={(checked) => updateFormData({ useOptedInOnly: checked })} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm">Track link clicks</Label>
+                      <p className="text-xs text-muted-foreground">Track when recipients click links</p>
+                    </div>
+                    <Switch checked={formData.trackClicks} onCheckedChange={(checked) => updateFormData({ trackClicks: checked })} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-green-900">Ready to Launch</h4>
+                  <p className="text-sm text-green-700">
+                    {formData.sendNow ? "Your campaign will be sent immediately after confirmation." : "Your campaign will be sent at the scheduled time."}
+                  </p>
                 </div>
               </div>
             </div>
+          </div>
+        )
+
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div className="container mx-auto py-6 px-4 space-y-6">
+      {/* Three column layout for Step 3, Two column for others */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        
+        {/* Left Sidebar - Stepper */}
+        <div className={cn(
+          "shrink-0",
+          currentStep === 3 ? "lg:w-52" : "w-full lg:w-64"
+        )}>
+          <div className="bg-card rounded-lg border p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/campaigns')}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <span className="font-semibold">Steps</span>
+            </div>
+            
+            <div className="space-y-2">
+              {steps.map((step, index) => {
+                const StepIcon = step.icon
+                const isActive = step.id === currentStep
+                const isCompleted = step.id < currentStep
+
+                return (
+                  <div key={step.id} className="flex items-center">
+                    {index > 0 && (
+                      <div className={cn("w-6 h-0.5 mx-1", isCompleted ? "bg-primary" : "bg-muted")} />
+                    )}
+                    <button
+                      onClick={() => {
+                        if (isCompleted || step.id === currentStep) {
+                          setCurrentStep(step.id)
+                        }
+                      }}
+                      disabled={!isCompleted && step.id !== currentStep}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors w-full",
+                        isActive && "bg-primary text-primary-foreground",
+                        isCompleted && "bg-primary/10 text-primary",
+                        !isActive && !isCompleted && "bg-muted text-muted-foreground hover:bg-muted/80",
+                      )}
+                    >
+                      {isCompleted ? <Check className="h-4 w-4" /> : <StepIcon className="h-4 w-4" />}
+                      <span>{step.name}</span>
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Middle - Form Content */}
+        <div className={cn(
+          "min-w-0",
+          currentStep === 3 ? "lg:flex-1" : "flex-1"
+        )}>
+          {errors.submit && (
+            <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg flex items-center gap-2 mb-4">
+              <AlertCircle className="h-4 w-4" />
+              {errors.submit}
+            </div>
           )}
-        </CardContent>
-      </Card>
 
-      <div className="flex items-center justify-between">
-        <Button variant="outline" onClick={handleBack} disabled={currentStep === 1 || isSubmitting}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
+          <Card className="min-h-[600px]">
+            <CardContent className="pt-6">
+              {renderStepContent()}
+            </CardContent>
+          </Card>
 
-        {currentStep < steps.length ? (
-          <Button onClick={handleNext}>
-            Continue
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-        ) : (
-          <Button onClick={handleSubmit} disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">
-            {isSubmitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Launching...</> : <><Send className="h-4 w-4 mr-2" />Launch Campaign</>}
-          </Button>
+          {/* Navigation Buttons */}
+          <div className="flex items-center justify-between mt-6">
+            <Button variant="outline" onClick={handleBack} disabled={currentStep === 1 || isSubmitting}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+
+            {currentStep < steps.length ? (
+              <Button onClick={handleNext}>
+                Continue
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            ) : (
+              <Button onClick={handleSubmit} disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">
+                {isSubmitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Launching...</> : <><Send className="h-4 w-4 mr-2" />Launch Campaign</>}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Right Side - Preview Panel (Only for Step 3) */}
+        {currentStep === 3 && (
+          <div className="w-full lg:w-[360px] shrink-0">
+            <div className="sticky top-4">
+              <TemplatePreview preview={previewData} />
+            </div>
+          </div>
         )}
       </div>
     </div>
