@@ -330,7 +330,15 @@ export default function NewCampaignPage() {
       const result = await response.json()
       
       if (formData.sendNow && result.data?.id) {
-        await fetch(`/api/campaigns/${result.data.id}/launch`, { method: "POST" })
+        const launchResponse = await fetch(`/api/campaigns/${result.data.id}/launch`, { 
+          method: "POST" 
+        })
+        const launchResult = await launchResponse.json()
+        console.log('[Campaign] Launch result:', launchResult)
+        
+        if (!launchResponse.ok || !launchResult.success) {
+          throw new Error(launchResult.error || 'Failed to launch campaign')
+        }
       }
 
       router.push("/dashboard/campaigns")
