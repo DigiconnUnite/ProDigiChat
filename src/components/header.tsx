@@ -2,7 +2,8 @@
 
 import { useSession, signOut } from "next-auth/react"
 import { use } from "react"
-import { Bell, User } from "lucide-react"
+import Image from "next/image"
+import { User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -96,15 +97,16 @@ export function Header({ variant = "public", className }: HeaderProps) {
         {/* Logo and Nav Links */}
         <div className="flex items-center gap-8">
           {/* Logo */}
-          <Link
-            href={isDashboard ? "/dashboard" : "/landing"}
-            className="flex items-center gap-2"
-          >
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <MessageSquare className="h-5 w-5" />
-            </div>
-            <span className="text-xl font-bold text-white">ProDigi Chat</span>
-          </Link>
+          <Link href="/" className="flex items-center gap-2 shrink-0">
+              <Image
+                src="/logo.svg"
+                alt="Prodigichat Logo"
+                width={40}
+                height={40}
+                className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg"
+              />
+              <span className="text-xl sm:text-2xl font-bold text-white">Prodigichat</span>
+            </Link>
         </div>
 
         {/* Right side - Navigation Links and Actions */}
@@ -238,15 +240,6 @@ export function Header({ variant = "public", className }: HeaderProps) {
           ) : (
             // Public: Show sign in and get started buttons OR user avatar if authenticated
             <>
-              {/* Notifications (non-functional for landing) */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="flex relative bg-white/10 border border-white/20 p-3 h-10 w-10 items-center gap-2 px-3 py-2 text-sm font-medium rounded-full transition-colors hover:bg-white/20"
-              >
-                <Bell className="h-5 w-5 text-white" />
-              </Button>
-
               {session?.user ? (
                 // Authenticated: Show user avatar with dropdown
                 <DropdownMenu>
@@ -377,10 +370,14 @@ function MobileDashboardTopHeader({
         href="/dashboard"
         className="flex items-center gap-2"
       >
-        <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-        </div>
-        <span className="text-base sm:text-lg font-bold text-white">ProDigi Chat</span>
+        <Image
+          src="/logo.svg"
+          alt="Prodigichat Logo"
+          width={32}
+          height={32}
+          className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg"
+        />
+        <span className="text-base sm:text-lg font-bold text-white">Prodigichat</span>
       </Link>
 
       {/* Right Side Actions */}
@@ -528,10 +525,14 @@ function MobilePublicNavigation({
     <nav className="md:hidden fixed top-0 left-0 rounded-b-2xl right-0 bg-green-950 border-none shadow z-50 flex items-center justify-between h-14 px-4">
       <div className="container mx-auto flex h-16 items-center justify-between ">
         <Link href="/landing" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
-          </div>
-          <span className="text-lg sm:text-xl font-bold text-white">ProDigi Chat</span>
+          <Image
+            src="/logo.svg"
+            alt="ProDigi Chat Logo"
+            width={36}
+            height={36}
+            className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg"
+          />
+          <span className="text-lg sm:text-xl font-bold text-white">Prodigichat</span>
         </Link>
         <div className="flex items-center gap-2">
           {session?.user ? (

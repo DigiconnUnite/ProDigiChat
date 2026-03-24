@@ -207,17 +207,30 @@ export async function POST(request: Request) {
         }
       });
     } else {
-      await prisma.message.create({
-        data: {
-          whatsappMessageId: messageId,
-          status: status,
-          content: JSON.stringify({ text: "Status update" }),
-          direction: "outgoing",
-          contactId: contact.id,
-          campaignId: campaignId || undefined,
-          organizationId: contact.organizationId
-        }
-      });
+      // Get organizationId from campaign if available, otherwise use contact's organizationId
+      let messageOrgId: string | undefined = contact.organizationId ?? undefined;
+      if (!messageOrgId && campaignId) {
+        const campaign = await prisma.campaign.findUnique({
+          where: { id: campaignId },
+          select: { organizationId: true }
+        });
+        messageOrgId = campaign?.organizationId ?? undefined;
+      }
+      
+      // Only create message if we have an organizationId
+      if (messageOrgId) {
+        await prisma.message.create({
+          data: {
+            whatsappMessageId: messageId,
+            status: status,
+            content: JSON.stringify({ text: "Status update" }),
+            direction: "outgoing",
+            contactId: contact.id,
+            campaignId: campaignId || undefined,
+            organizationId: messageOrgId
+          }
+        });
+      }
     }
 
     if (campaignId) {

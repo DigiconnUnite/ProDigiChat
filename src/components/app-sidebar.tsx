@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
@@ -41,9 +42,13 @@ export function AppSidebar() {
       {/* Logo section */}
       <div className="flex h-16 items-center border-b border-sidebar-border px-6">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary">
-            <MessageSquare className="h-5 w-5 text-sidebar-primary-foreground" />
-          </div>
+          <Image
+            src="/logo.svg"
+            alt="ProDigi Chat Logo"
+            width={32}
+            height={32}
+            className="h-8 w-8 rounded-lg"
+          />
           <span className="text-lg font-semibold text-sidebar-foreground">
             WhatsApp CRM
           </span>

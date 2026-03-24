@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { MessageSquare, Send, Mail, Twitter, Linkedin, Facebook, Instagram, Youtube } from "lucide-react";
 
 export function PublicFooter() {
@@ -12,10 +13,14 @@ export function PublicFooter() {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 shrink-0">
-              <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-green-500 text-white">
-                <Send className="h-4 w-4 sm:h-5 sm:w-5" />
-              </div>
-              <span className="text-lg sm:text-xl font-bold text-white">ProDigi Chat</span>
+              <Image
+                src="/logo.svg"
+                alt="Prodigichat Logo"
+                width={40}
+                height={40}
+                className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg"
+              />
+              <span className="text-xl sm:text-2xl font-bold text-white">Prodigichat</span>
             </Link>
 
             {/* Newsletter Subscribe */}
@@ -213,7 +218,19 @@ export function PublicFooter() {
         <div className="pt-4 sm:pt-8">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-4">
             <p className="text-sm text-green-200">
-              © {currentYear} <span className="text-orange-400 font-bold">ProDigi Chat</span>. All rights reserved.
+              © {currentYear} <span className="text-orange-400 font-bold">Prodigichat</span>. All rights reserved.
+            </p>
+
+            <p className="text-sm text-green-300 order-first sm:order-none mb-2 sm:mb-0">
+              Developed by{" "}
+              <Link
+                href="https://digiconnunite.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-orange-400 hover:text-orange-300 font-semibold transition-colors"
+              >
+                Digiconn Unite Pvt. Ltd.
+              </Link>
             </p>
 
             <div className="flex items-center gap-4">

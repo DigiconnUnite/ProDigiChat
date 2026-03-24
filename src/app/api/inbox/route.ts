@@ -159,12 +159,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Get contact - only if it belongs to user
-    const userFilter: any = userId ? { userId } : {};
     const contact = await prisma.contact.findFirst({
-      where: {
-        id: contactId,
-        ...userFilter
-      } as any
+      where: userId ? { id: contactId, userId } : { id: contactId }
     });
 
     if (!contact) {
@@ -175,6 +171,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Create message in database
+    // Use contact's organizationId or fall back to token's orgId
+    const messageOrgId: string = (contact.organizationId ?? orgId ?? "") as string;
+    if (!messageOrgId) {
+      return NextResponse.json(
+        { error: "Organization ID is required" },
+        { status: 400 }
+      );
+    }
+    
     const message = await prisma.message.create({
       data: {
         contactId,
@@ -182,7 +187,7 @@ export async function POST(request: NextRequest) {
         status: "sent",
         content: JSON.stringify({ text: content, type }),
         sentBy: userId || undefined,
-        organizationId: contact.organizationId,
+        organizationId: messageOrgId,
       },
       include: {
         contact: {
