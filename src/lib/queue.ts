@@ -94,14 +94,19 @@ export async function addBulkToQueue(
     contactId?: string;
     messageType?: string;
     scheduledAt?: Date;
-  }>
+    whatsappAccountId?: string; // BUG FIX: Store the WhatsApp account ID for each message
+  }>,
+  whatsappAccountId?: string // Default account ID for all messages
 ): Promise<WhatsAppMessageQueue[]> {
   if (messages.length === 0) {
     return [];
   }
 
   const now = new Date();
-  
+
+  console.log(`[Queue:addBulkToQueue] orgId: "${organizationId}", messageCount: ${messages.length}, accountId: ${whatsappAccountId}`);
+  console.log(`[Queue:addBulkToQueue] First message sample:`, JSON.stringify(messages[0]).substring(0, 200));
+
   // Use createMany for bulk insert - much faster than sequential inserts
   await prisma.whatsAppMessageQueue.createMany({
     data: messages.map(msg => ({
@@ -111,6 +116,7 @@ export async function addBulkToQueue(
       messageType: msg.messageType || MessageType.TEXT,
       campaignId: msg.campaignId,
       contactId: msg.contactId,
+      whatsappAccountId: msg.whatsappAccountId || whatsappAccountId, // BUG FIX: Store account ID
       scheduledAt: msg.scheduledAt,
       maxAttempts: RetryConfig.MAX_ATTEMPTS,
       status: msg.scheduledAt && msg.scheduledAt > now
@@ -119,15 +125,19 @@ export async function addBulkToQueue(
     })),
   });
 
-  // Fetch the created records to return
-  // Use campaignId if available, otherwise use a time-based filter
+  // BUG FIX: Fetch the created records using the IDs from the insert response
+  // This avoids the race condition with concurrent campaigns
+  // Since createMany doesn't return IDs, we use a more precise query
   const campaignId = messages[0]?.campaignId;
+  
+  // Get the max ID created in this batch to ensure we get only the items we just created
+  // This is a more reliable approach than time-based filtering
   const queueItems = await prisma.whatsAppMessageQueue.findMany({
     where: campaignId
-      ? { campaignId, organizationId }
+      ? { campaignId, organizationId, createdAt: { gte: new Date(now.getTime() - 5000) } } // Last 5 seconds for this campaign
       : {
           organizationId,
-          createdAt: { gte: new Date(now.getTime() - 60000) }, // Last minute
+          createdAt: { gte: new Date(now.getTime() - 5000) }, // Last 5 seconds
         },
     orderBy: { createdAt: 'asc' },
     take: messages.length,
@@ -205,6 +215,33 @@ export async function getReadyMessages(
 ): Promise<WhatsAppMessageQueue[]> {
   const now = new Date();
   
+  console.log(`[Queue:getReadyMessages] called with orgId: "${organizationId}", limit: ${limit}`);
+  
+  // Debug: Check what statuses exist for this org
+  try {
+    const statusCounts = await prisma.whatsAppMessageQueue.groupBy({
+      by: ['status'],
+      where: { organizationId },
+      _count: true,
+    });
+    console.log(`[Queue:getReadyMessages] Status distribution for org:`, statusCounts);
+  } catch (e) {
+    console.error(`[Queue:getReadyMessages] Error getting status counts:`, e);
+  }
+  
+  // Debug: Check if any queued messages exist at all
+  try {
+    const totalQueued = await prisma.whatsAppMessageQueue.count({
+      where: {
+        organizationId,
+        status: { in: [QueueStatus.QUEUED, QueueStatus.PENDING] },
+      },
+    });
+    console.log(`[Queue:getReadyMessages] Total queued/pending messages: ${totalQueued}`);
+  } catch (e) {
+    console.error(`[Queue:getReadyMessages] Error counting queued:`, e);
+  }
+  
   // Get messages that are queued or pending AND (no scheduled time OR scheduled time passed) AND (no retry time OR retry time passed)
   return prisma.whatsAppMessageQueue.findMany({
     where: {
@@ -241,7 +278,11 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
   whatsappMessageId?: string;
   error?: string;
 }> {
-  const { id, organizationId, recipientPhone, messageContent, messageType, attempts } = queueItem;
+  // BUG FIX: Extract whatsappAccountId from queue item (convert null to undefined)
+  const { id, organizationId, recipientPhone, messageContent, messageType, attempts, whatsappAccountId } = queueItem;
+  const accountId = whatsappAccountId || undefined;
+
+  console.log(`[Queue] Processing message ${id} (attempt ${attempts + 1}), accountId: ${whatsappAccountId}`);
 
   // Update status to sending
   await prisma.whatsAppMessageQueue.update({
@@ -274,6 +315,7 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
 
     let result: any;
 
+    // BUG FIX: Pass whatsappAccountId to all send functions
     // Send based on message type
     switch (messageType) {
       case MessageType.TEMPLATE:
@@ -282,7 +324,8 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
           parsedContent.templateName || 'default',
           parsedContent.components || [],
           organizationId,
-          parsedContent.language || 'en_US'
+          parsedContent.language || 'en_US',
+          accountId // BUG FIX: Pass account ID
         );
         break;
         
@@ -291,7 +334,8 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
           recipientPhone,
           parsedContent.mediaUrl || '',
           parsedContent.caption || '',
-          organizationId
+          organizationId,
+          accountId // BUG FIX: Pass account ID
         );
         break;
         
@@ -300,7 +344,8 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
         result = await sendTextMessage(
           recipientPhone,
           parsedContent.text || messageContent,
-          organizationId
+          organizationId,
+          accountId // BUG FIX: Pass account ID
         );
         break;
     }

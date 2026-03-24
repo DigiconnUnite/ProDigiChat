@@ -5,9 +5,11 @@ import { decryptWhatsAppCredential, encryptField } from "@/lib/encryption";
 import { META_API_BASE } from "@/lib/meta-config";
 
 // Cache for the WhatsApp client
+// BUG FIX: Cache key should include both orgId and accountId to avoid cross-account contamination
 let whatsappClientInstance: WhatsAppClient | null = null;
 let lastSettingsFetch: number = 0;
 let cachedOrgId: string | null = null;
+let cachedAccountId: string | null = null; // BUG FIX: Track account ID in cache
 const CACHE_TTL = 60000; // 1 minute cache
 
 // Get credentials from Prisma database or fall back to legacy settings
@@ -178,16 +180,19 @@ function clearClientCache(): void {
   whatsappClientInstance = null;
   lastSettingsFetch = 0;
   cachedOrgId = null;
+  cachedAccountId = null; // BUG FIX: Clear account ID cache too
   console.log('[WhatsAppAuth] Cleared client cache');
 }
 
 export async function getWhatsAppClient(orgId?: string, accountId?: string): Promise<WhatsAppClient> {
   const now = Date.now();
   const targetOrgId = orgId || getDefaultOrgId();
+  const targetAccountId = accountId || null;
   
-  // Return cached instance if still valid and same org and account
-  if (whatsappClientInstance && (now - lastSettingsFetch) < CACHE_TTL && cachedOrgId === targetOrgId) {
-    console.log('[WhatsAppAuth] Returning cached client');
+  // BUG FIX: Return cached instance only if both orgId AND accountId match
+  // This prevents cross-account contamination in multi-account scenarios
+  if (whatsappClientInstance && (now - lastSettingsFetch) < CACHE_TTL && cachedOrgId === targetOrgId && cachedAccountId === targetAccountId) {
+    console.log('[WhatsAppAuth] Returning cached client for org:', targetOrgId, 'account:', targetAccountId);
     return whatsappClientInstance;
   }
 
@@ -219,7 +224,8 @@ export async function getWhatsAppClient(orgId?: string, accountId?: string): Pro
     whatsappClientInstance = client;
     lastSettingsFetch = now;
     cachedOrgId = targetOrgId;
-    console.log('[WhatsAppAuth] Created new WhatsApp client');
+    cachedAccountId = targetAccountId; // BUG FIX: Store account ID in cache
+    console.log('[WhatsAppAuth] Created new WhatsApp client for org:', targetOrgId, 'account:', targetAccountId);
     return client;
   } catch (error) {
     console.error("[WhatsAppAuth] Error fetching WhatsApp settings:", error);

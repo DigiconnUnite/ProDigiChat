@@ -192,23 +192,24 @@ export async function POST(
         .map((m: any) => m.contact)
         .filter((c: any) => c && c.phoneNumber)
     } else {
-      // Get all opted-in contacts for this user
+      // BUG FIX: Get all opted-in contacts for the organization, not just the user's contacts
+      // This ensures multi-user organizations can send campaigns to contacts created by teammates
       contacts = await prisma.contact.findMany({
         where: { 
           optInStatus: 'opted_in',
-          userId: userId
+          organizationId: campaign.organizationId
         }
       })
     }
 
-    // Get total contacts count for debugging
+    // BUG FIX: Count contacts using organizationId instead of userId
     const totalContacts = await prisma.contact.count({
-      where: { userId: userId }
+      where: { organizationId: campaign.organizationId }
     })
     const optedInContacts = await prisma.contact.count({
       where: { 
         optInStatus: 'opted_in',
-        userId: userId
+        organizationId: campaign.organizationId
       }
     })
     
@@ -274,13 +275,18 @@ export async function POST(
         )
       }
       
-      // Check if template has been submitted to Meta
-      if (!template.whatsappTemplateId) {
+      // BUG FIX: Allow templates that are locally approved (status APPROVED but no whatsappTemplateId)
+      // Only check for whatsappTemplateId if the template is in PENDING status on Meta
+      // Approved templates can be used even without whatsappTemplateId if they have local approval
+      if (!template.whatsappTemplateId && template.status === 'PENDING') {
         return NextResponse.json(
-          { success: false, error: `Template "${template.name}" has not been submitted to WhatsApp Meta. Please sync or resubmit the template.` },
+          { success: false, error: `Template "${template.name}" is still pending approval on WhatsApp Meta. Please wait for approval or sync the template.` },
           { status: 400 }
         )
       }
+      
+      // Log template info for debugging
+      console.log('[CampaignLaunch] Template info:', { name: template.name, whatsappTemplateId: template.whatsappTemplateId, status: template.status });
       
       // Build template components with variables (use default values for now)
       const components: any[] = []
@@ -356,10 +362,17 @@ export async function POST(
     // Track send results
     let queueResult = { processed: 0, succeeded: 0, failed: 0 }
     
+    // BUG FIX: Get the WhatsApp account ID to use for sending messages
+    // Use the credential ID from the active WhatsApp account
+    const whatsappAccountId = creds?.id;
+    
+    console.log('[CampaignLaunch] Using WhatsApp account ID:', whatsappAccountId);
+    
     // Enqueue all messages and process immediately
     if (queueMessages.length > 0 && orgId) {
-      console.log('[CampaignLaunch] Adding messages to queue:', queueMessages.length)
-      await addBulkToQueue(orgId, queueMessages)
+      console.log('[CampaignLaunch] Adding messages to queue:', queueMessages.length, 'accountId:', whatsappAccountId)
+      // BUG FIX: Pass whatsappAccountId to the queue
+      await addBulkToQueue(orgId, queueMessages, whatsappAccountId)
       
       // Process queue immediately to send messages
       // Process all messages, not just 50
@@ -367,12 +380,12 @@ export async function POST(
       queueResult = await processQueue(orgId, queueMessages.length)
       console.log('[CampaignLaunch] Queue processing result:', queueResult)
       
-      // Update campaign stats with actual sent counts
+      // BUG FIX: Update campaign stats with actual succeeded count (not processed which includes failures)
       await prisma.campaign.update({
         where: { id },
         data: {
           stats: JSON.stringify({
-            totalSent: queueResult.processed,
+            totalSent: queueResult.succeeded, // BUG FIX: Use succeeded instead of processed
             delivered: 0,
             read: 0,
             failed: queueResult.failed,

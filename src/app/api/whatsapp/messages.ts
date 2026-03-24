@@ -21,15 +21,15 @@ function formatPhoneNumber(phone: string): string {
   return cleaned;
 }
 
-export async function sendTextMessage(to: string, message: string, orgId?: string) {
+export async function sendTextMessage(to: string, message: string, orgId?: string, accountId?: string) {
   const formattedTo = formatPhoneNumber(to);
-  console.log('[WhatsAppMessages] sendTextMessage called:', { to: formattedTo, messageLength: message.length, orgId });
+  console.log('[WhatsAppMessages] sendTextMessage called:', { to: formattedTo, messageLength: message.length, orgId, accountId });
   try {
     const response = await whatsappClient.sendMessage({
       to: formattedTo,
       type: "text",
       text: { body: message },
-    }, orgId);
+    }, orgId, accountId);
     console.log('[WhatsAppMessages] Text message sent successfully:', response.data);
     return response.data;
   } catch (error) {
@@ -38,15 +38,15 @@ export async function sendTextMessage(to: string, message: string, orgId?: strin
   }
 }
 
-export async function sendMediaMessage(to: string, mediaUrl: string, caption: string, orgId?: string) {
+export async function sendMediaMessage(to: string, mediaUrl: string, caption: string, orgId?: string, accountId?: string) {
   const formattedTo = formatPhoneNumber(to);
-  console.log('[WhatsAppMessages] sendMediaMessage called:', { to: formattedTo, mediaUrl, caption, orgId });
+  console.log('[WhatsAppMessages] sendMediaMessage called:', { to: formattedTo, mediaUrl, caption, orgId, accountId });
   try {
     const response = await whatsappClient.sendMessage({
       to: formattedTo,
       type: "image",
       image: { link: mediaUrl, caption },
-    }, orgId);
+    }, orgId, accountId);
     console.log('[WhatsAppMessages] Media message sent successfully:', response.data);
     return response.data;
   } catch (error) {
@@ -55,15 +55,15 @@ export async function sendMediaMessage(to: string, mediaUrl: string, caption: st
   }
 }
 
-export async function sendTemplateMessage(to: string, templateName: string, components: any[], orgId?: string, language: string = 'en_US') {
+export async function sendTemplateMessage(to: string, templateName: string, components: any[], orgId?: string, language: string = 'en_US', accountId?: string) {
   const formattedTo = formatPhoneNumber(to);
-  console.log('[WhatsAppMessages] sendTemplateMessage called:', { to: formattedTo, templateName, components, orgId, language });
+  console.log('[WhatsAppMessages] sendTemplateMessage called:', { to: formattedTo, templateName, components, orgId, language, accountId });
   try {
     const response = await whatsappClient.sendMessage({
       to: formattedTo,
       type: "template",
       template: { name: templateName, language: { code: language }, components },
-    }, orgId);
+    }, orgId, accountId);
     console.log('[WhatsAppMessages] Template message sent successfully:', response.data);
     return response.data;
   } catch (error) {
