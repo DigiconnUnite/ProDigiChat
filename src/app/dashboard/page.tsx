@@ -418,16 +418,6 @@ export default function DashboardPage() {
                 today.
               </p>
             </div>
-
-            {/* WhatsApp Connection Status Badge */}
-            <div className="shrink-0 w-full lg:min-w-85 lg:w-auto">
-              <WhatsAppConnectionStatus
-                organizationId={organizationId}
-                showFullDetails={false}
-                variant="banner"
-                className="w-full"
-              />
-            </div>
           </div>
         </div>
       </div>
