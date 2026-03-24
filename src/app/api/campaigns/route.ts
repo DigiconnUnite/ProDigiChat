@@ -2,10 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
 
-export async function GET(request: NextRequest) {
+async function getUserAndOrgId(request: NextRequest): Promise<{ userId: string | null; organizationId: string | null }> {
   const token = await getToken({ req: request })
+  return {
+    userId: token?.sub || null,
+    organizationId: token?.organizationId as string | null
+  }
+}
+
+export async function GET(request: NextRequest) {
+  const { userId, organizationId } = await getUserAndOrgId(request)
   
-  const userId = token?.sub as string | undefined
   if (!userId) {
     return NextResponse.json(
       { error: 'Unauthorized' },
@@ -22,9 +29,12 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10')
     const skip = (page - 1) * limit
 
+    // Build conditions - support both legacy (createdBy) and new (organizationId) campaigns
     const conditions: any = {
-      createdBy: userId,
-      organizationId: { not: null }
+      OR: [
+        { createdBy: userId },
+        { organizationId: organizationId }
+      ]
     }
     
     // Apply status filter if provided and not 'all'
@@ -96,10 +106,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const token = await getToken({ req: request })
+  const { userId, organizationId } = await getUserAndOrgId(request)
   
-  const userId = token?.sub as string | undefined
-  if (!userId) {
+  if (!userId || !organizationId) {
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }
@@ -119,20 +128,22 @@ export async function POST(request: NextRequest) {
       fromNumber,
     } = body
 
-    // Build data object conditionally
+    // Build data object with required fields
     const campaignData: any = {
       name,
       type: type || 'broadcast',
       status: 'draft',
       messageContent,
-      whatsappNumberId: fromNumber || null, // Issue 3 fix - store fromNumber
+      whatsappNumberId: fromNumber || null,
       stats: JSON.stringify({
         totalSent: 0,
         delivered: 0,
         read: 0,
         failed: 0,
         clicked: 0
-      })
+      }),
+      createdBy: userId,
+      organizationId: organizationId
     }
 
     // Add description if provided
@@ -149,9 +160,6 @@ export async function POST(request: NextRequest) {
     if (schedule) {
       campaignData.schedule = schedule
     }
-
-    // Add createdBy from token
-    campaignData.createdBy = userId
 
     // Create new campaign
     const campaign = await prisma.campaign.create({
