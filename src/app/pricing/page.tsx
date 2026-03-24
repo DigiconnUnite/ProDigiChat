@@ -1,441 +1,222 @@
 "use client"
 
-import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Check, ChevronRight, BarChart3, CheckCircle2, Zap, TrendingUp, MessageSquare, Users, Shield } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
+import { Header } from "@/components/header"
 import { PublicFooter } from "@/components/public-footer"
+import { PublicCTA } from "@/components/public-cta"
+import {
+  CheckCircle2,
+  XCircle,
+  ArrowRight,
+  Star
+} from "lucide-react"
+import { useState } from "react"
 
-interface PricingPlan {
-  id: string
-  name: string
-  price: string
-  period: string
-  description: string
-  features: string[]
-  popular: boolean
-  cta: string
-}
-
-const pricingPlans: PricingPlan[] = [
+const plans = [
   {
-    id: "starter",
     name: "Starter",
-    price: "$0",
-    period: "forever free",
-    description: "Perfect for testing and small projects. Get started with essential WhatsApp marketing features.",
+    description: "Perfect for small businesses.",
+    monthlyPrice: 29,
+    yearlyPrice: 24,
     features: [
-      "Up to 500 contacts",
-      "500 messages per month",
-      "5 automation workflows",
-      "Basic analytics",
-      "Community support",
-    ],
-    popular: false,
-    cta: "Start Free Trial",
+      { text: "1,000 contacts", included: true },
+      { text: "10,000 messages/mo", included: true },
+      { text: "3 team members", included: true },
+      { text: "1 phone number", included: true },
+      { text: "Bulk messaging", included: true },
+      { text: "Contact management", included: true },
+      { text: "Basic analytics", included: true },
+      { text: "Email support", included: true },
+      { text: "Advanced automation", included: false },
+      { text: "Team inbox", included: false },
+      { text: "API access", included: false },
+    ]
   },
   {
-    id: "professional",
     name: "Professional",
-    price: "$49",
-    period: "per month",
-    description: "For growing businesses ready to scale their WhatsApp marketing operations.",
+    description: "For growing businesses.",
+    monthlyPrice: 79,
+    yearlyPrice: 66,
+    highlight: true,
     features: [
-      "10,000 contacts",
-      "10,000 messages per month",
-      "50 automation workflows",
-      "Advanced analytics",
-      "Priority support",
-      "Campaign A/B testing",
-      "Custom branding",
-      "API access",
-    ],
-    popular: true,
-    cta: "Start 14-Day Trial",
+      { text: "10,000 contacts", included: true },
+      { text: "100,000 messages/mo", included: true },
+      { text: "10 team members", included: true },
+      { text: "3 phone numbers", included: true },
+      { text: "Bulk messaging", included: true },
+      { text: "Contact management", included: true },
+      { text: "Advanced analytics", included: true },
+      { text: "Priority support", included: true },
+      { text: "Advanced automation", included: true },
+      { text: "Team inbox", included: true },
+      { text: "API access", included: true },
+    ]
   },
   {
-    id: "enterprise",
     name: "Enterprise",
-    price: "$199",
-    period: "per month",
-    description: "For large organizations with advanced needs and dedicated support.",
+    description: "For large organizations.",
+    monthlyPrice: 199,
+    yearlyPrice: 166,
     features: [
-      "Unlimited contacts",
-      "Unlimited messages",
-      "Unlimited automations",
-      "Full analytics suite",
-      "Dedicated account manager",
-      "24/7 phone support",
-      "Custom integrations",
-      "White-label solution",
-      "SSO & advanced security",
-    ],
-    popular: false,
-    cta: "Contact Sales",
-  },
+      { text: "Unlimited contacts", included: true },
+      { text: "Unlimited messages", included: true },
+      { text: "Unlimited team members", included: true },
+      { text: "Unlimited phone numbers", included: true },
+      { text: "Bulk messaging", included: true },
+      { text: "Contact management", included: true },
+      { text: "Advanced analytics", included: true },
+      { text: "24/7 dedicated support", included: true },
+      { text: "Advanced automation", included: true },
+      { text: "Team inbox", included: true },
+      { text: "Full API access", included: true },
+    ]
+  }
 ]
 
-const comparisonFeatures = [
-  { name: "Messages/Month", starter: "500", professional: "10,000", enterprise: "Unlimited" },
-  { name: "Contacts", starter: "500", professional: "10,000", enterprise: "Unlimited" },
-  { name: "Automations", starter: "5", professional: "50", enterprise: "Unlimited" },
-  { name: "Analytics", starter: "Basic", professional: "Advanced", enterprise: "Full Suite" },
-  { name: "Support", starter: "Community", professional: "Priority", enterprise: "24/7" },
-  { name: "API Access", starter: false, professional: true, enterprise: true },
+const faqs = [
+  {
+    question: "What's included in the free trial?",
+    answer: "The 14-day free trial gives you full access to all Professional plan features. No credit card required."
+  },
+  {
+    question: "Can I change plans later?",
+    answer: "Yes, you can upgrade or downgrade your plan at any time."
+  },
+  {
+    question: "What payment methods do you accept?",
+    answer: "We accept all major credit cards and PayPal."
+  },
+  {
+    question: "Is there a long-term contract?",
+    answer: "No long-term contracts. All plans are month-to-month and you can cancel anytime."
+  },
 ]
 
 export default function PricingPage() {
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly")
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
+  const [isYearly, setIsYearly] = useState(false)
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <section className="py-16 bg-muted/30">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-foreground mb-4">
-              Simple, Transparent Pricing
+    <>
+      <Header variant="public" className="fixed top-0 left-0 right-0 z-50" />
+      
+      <main className="bg-background">
+        {/* Hero */}
+        <section className="pt-32 pb-16 bg-background rounded-b-[3rem]">
+          <div className="container mx-auto px-4 text-center">
+            <h1 className="text-4xl md:text-5xl font-bold">
+              Pricing
             </h1>
-            <p className="text-lg text-muted-foreground">
-              Choose the plan that fits your business needs. All plans include a 14-day free trial.
+            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+              Choose the perfect plan for your business. Start with a 14-day free trial.
             </p>
-          </div>
-
-          {/* Billing Toggle */}
-          <div className="flex justify-center mb-12">
-            <div className="inline-flex items-center rounded-lg bg-muted p-1">
-              <span className="text-sm font-medium mr-4">Bill</span>
+            
+            {/* Billing Toggle */}
+            <div className="mt-8 inline-flex items-center gap-4 p-1 bg-muted rounded-full">
               <button
-                onClick={() => setBillingCycle("monthly")}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  billingCycle === "monthly"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted"
+                onClick={() => setIsYearly(false)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  !isYearly ? "bg-background shadow" : ""
                 }`}
               >
                 Monthly
               </button>
               <button
-                onClick={() => setBillingCycle("yearly")}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  billingCycle === "yearly"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted"
+                onClick={() => setIsYearly(true)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
+                  isYearly ? "bg-background shadow" : ""
                 }`}
               >
-                Yearly <span className="ml-2 text-xs">Save 20%</span>
+                Yearly
+                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                  Save 20%
+                </span>
               </button>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Pricing Plans */}
-      <section className="py-20 bg-background">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-8">
-            {pricingPlans.map((plan) => (
-              <Card
-                key={plan.id}
-                className={`relative overflow-hidden transition-all duration-300 ${
-                  selectedPlan === plan.id
-                    ? "ring-2 ring-primary scale-105 shadow-2xl"
-                    : "hover:shadow-lg hover:scale-105"
-                }`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-3 -right-3 z-10">
-                    <Badge className="bg-primary text-primary-foreground text-xs font-semibold">
-                      MOST POPULAR
-                    </Badge>
-                  </div>
-                )}
-
-                <CardHeader className="text-center pb-6">
-                  <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
-                  <CardDescription>
-                    <span className="text-3xl font-bold text-primary">{plan.price}</span>
-                    <span className="text-muted-foreground">/{plan.period}</span>
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent className="space-y-6">
-                  <p className="text-center text-muted-foreground mb-6">
-                    {plan.description}
-                  </p>
-
-                  <ul className="space-y-3">
-                    {plan.features.map((feature, index) => (
-                      <li key={index} className="flex items-start gap-3">
-                        <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
-                        <span className="text-sm">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Link
-                    href={plan.id === "starter" ? "/login" : `/pricing?plan=${plan.id}`}
-                    className="block mt-6"
-                  >
-                    <Button
-                      className="w-full bg-primary hover:bg-primary/90"
-                      variant={plan.id === selectedPlan ? "default" : "outline"}
-                    >
-                      {plan.cta}
-                      <ChevronRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            ))}
+        {/* Pricing Cards */}
+        <section className="py-16 -mt-8">
+          <div className="container mx-auto px-4">
+            <div className="grid lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+              {plans.map((plan, index) => (
+                <Card 
+                  key={index} 
+                  className={`border-border ${plan.highlight ? "border-primary border-2" : ""}`}
+                >
+                  <CardHeader>
+                    <CardTitle>{plan.name}</CardTitle>
+                    <CardDescription>{plan.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="mb-6">
+                      <span className="text-4xl font-bold">
+                        ${isYearly ? plan.yearlyPrice : plan.monthlyPrice}
+                      </span>
+                      <span className="text-muted-foreground">/month</span>
+                    </div>
+                    <ul className="space-y-3">
+                      {plan.features.map((feature, fIndex) => (
+                        <li key={fIndex} className="flex items-center gap-3 text-sm">
+                          {feature.included ? (
+                            <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+                          )}
+                          <span className={feature.included ? "" : "text-muted-foreground/50"}>
+                            {feature.text}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                  <CardFooter>
+                    <Link href="/signup" className="w-full">
+                      <Button 
+                        className="w-full" 
+                        variant={plan.highlight ? "default" : "outline"}
+                      >
+                        Start Free Trial
+                      </Button>
+                    </Link>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Feature Comparison */}
-      <section className="py-20 bg-muted/30">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center text-foreground mb-8">
-            Compare Plans Side by Side
-          </h2>
-
-          <Card>
-            <CardContent className="p-6">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="py-3 text-left text-sm font-semibold text-muted-foreground">
-                      Feature
-                    </th>
-                    <th className="py-3 text-center text-sm font-semibold text-muted-foreground">
-                      Starter
-                    </th>
-                    <th className="py-3 text-center text-sm font-semibold text-muted-foreground">
-                      Professional
-                    </th>
-                    <th className="py-3 text-center text-sm font-semibold text-muted-foreground">
-                      Enterprise
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {comparisonFeatures.map((feature) => (
-                    <tr key={feature.name} className="border-b border-border/50">
-                      <td className="py-4 text-sm font-medium">
-                        {feature.name}
-                      </td>
-                      <td className="py-4 text-center text-sm">
-                        <span className="font-semibold">{feature.starter}</span>
-                      </td>
-                      <td className="py-4 text-center text-sm">
-                        <span className="font-semibold">{feature.professional}</span>
-                      </td>
-                      <td className="py-4 text-center text-sm">
-                        <span className="font-semibold text-foreground">{feature.enterprise}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* Features Breakdown */}
-      <section className="py-20 bg-background">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-foreground mb-8">
-            Every Plan Includes
-          </h2>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Messages & Automation */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <MessageSquare className="h-5 w-5 text-primary" />
-                  </div>
-                  <CardTitle>Messages & Automation</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3 text-sm">
-                  <li className="flex items-start gap-2">
-                    <Zap className="h-4 w-4 text-primary flex-shrink-0" />
-                    <span>Multi-step campaign wizard with A/B testing</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Zap className="h-4 w-4 text-primary flex-shrink-0" />
-                    <span>Visual automation workflow builder</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Zap className="h-4 w-4 text-primary flex-shrink-0" />
-                    <span>Schedule campaigns with time zone support</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Zap className="h-4 w-4 text-primary flex-shrink-0" />
-                    <span>Message templates & personalization</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            {/* Analytics */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <BarChart3 className="h-5 w-5 text-primary" />
-                  </div>
-                  <CardTitle>Analytics</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3 text-sm">
-                  <li className="flex items-start gap-2">
-                    <TrendingUp className="h-4 w-4 text-primary flex-shrink-0" />
-                    <span>Real-time dashboards with charts</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <TrendingUp className="h-4 w-4 text-primary flex-shrink-0" />
-                    <span>Campaign performance tracking</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <TrendingUp className="h-4 w-4 text-primary flex-shrink-0" />
-                    <span>Contact growth analytics</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <TrendingUp className="h-4 w-4 text-primary flex-shrink-0" />
-                    <span>Export data in multiple formats</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            {/* Integration */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <Shield className="h-5 w-5 text-primary" />
-                  </div>
-                  <CardTitle>Integrations</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3 text-sm">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                    <span>WhatsApp Business API integration</span>
-                  </li>
-                    <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                    <span>CRM platform connectors (Shopify, Salesforce)</span>
-                  </li>
-                    <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                    <span>Webhook & API access</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                    <span>E-commerce platform integrations</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
+        {/* Simple FAQ */}
+        <section className="py-16 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <h2 className="text-2xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+            <div className="max-w-7xl mx-auto space-y-4">
+              {faqs.map((faq, index) => (
+                <Card key={index} className="border-border">
+                  <CardContent className="p-4">
+                    <p className="font-medium">{faq.question}</p>
+                    <p className="text-sm text-muted-foreground mt-2">{faq.answer}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* FAQ Section */}
-      <section className="py-20 bg-muted/30">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-foreground mb-8">
-            Frequently Asked Questions
-          </h2>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            {faqData.map((faq) => (
-              <Card key={faq.id}>
-                <CardHeader className="cursor-pointer">
-                  <CardTitle className="font-semibold">
-                    {faq.question}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm text-muted-foreground">
-                  {faq.answer}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-primary">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl lg:text-4xl font-bold text-primary-foreground mb-4">
-            Ready to Get Started?
-          </h2>
-          <p className="text-xl text-primary-foreground mb-8 max-w-2xl mx-auto">
-            Start your 14-day free trial. No credit card required.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/login">
-              <Button size="lg" variant="secondary" className="w-full sm:w-auto">
-                Compare Plans
-              </Button>
-            </Link>
-            <Link href="/login">
-              <Button size="lg" className="w-full sm:w-auto bg-background text-primary hover:bg-primary/90">
-                Start Free Trial
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
+        {/* CTA */}
+        <PublicCTA
+          title="Ready to get started?"
+          description="Start your 14-day free trial today."
+          primaryButtonText="Start Free Trial"
+          primaryButtonHref="/signup"
+          secondaryButtonText="Contact Sales"
+          secondaryButtonHref="/contact"
+        />
+      </main>
+      
       <PublicFooter />
-    </div>
+    </>
   )
 }
-
-// FAQ data
-const faqData = [
-  {
-    id: 1,
-    question: "What is WhatsApp Marketing Automation?",
-    answer: "WhatsApp Marketing Automation is a platform that allows businesses to send automated messages, create targeted campaigns, and manage customer interactions on WhatsApp at scale. Our platform provides tools like campaign wizards, visual automation builders, and analytics to help you grow your business.",
-  },
-  {
-    id: 2,
-    question: "How does the free trial work?",
-    answer: "The free trial gives you full access to all features for 14 days with no credit card required. After the trial, you can choose a paid plan that fits your needs.",
-  },
-  {
-    id: 3,
-    question: "Can I change plans later?",
-    answer: "Yes, you can upgrade or downgrade your plan at any time. Changes will be prorated based on your remaining time in the current billing cycle.",
-  },
-  {
-    id: 4,
-    question: "Is my data secure?",
-    answer: "Absolutely. We use enterprise-grade encryption for all data and follow industry best practices. Your data is protected and GDPR compliant.",
-  },
-  {
-    id: 5,
-    question: "Do I need to install anything?",
-    answer: "No, everything is cloud-based. Just log in to your account from any web browser and start using WhatsApp Marketing Automation.",
-  },
-  {
-    id: 6,
-    question: "Can I cancel anytime?",
-    answer: "Yes, you can cancel your subscription at any time. You'll continue to have access until the end of your billing period.",
-  },
-]

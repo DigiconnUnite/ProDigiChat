@@ -64,8 +64,8 @@ const dashboardBottomNavItems: NavItem[] = [
 // Navigation items for public pages
 const publicNavigation: NavItem[] = [
   { name: "Home", href: "/landing", icon: Home },
-  { name: "Features", href: "#features", icon: LayoutDashboard },
-  { name: "Pricing", href: "#pricing", icon: Megaphone },
+  { name: "Features", href: "/features", icon: LayoutDashboard },
+  { name: "Pricing", href: "/pricing", icon: Megaphone },
   { name: "Templates", href: "#templates", icon: FileText },
 ]
 
