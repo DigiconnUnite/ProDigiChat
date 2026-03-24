@@ -48,6 +48,8 @@ export async function POST(
     // Get userId and organization ID from token
     const token = await getToken({ req: request })
     const userId = token?.sub
+    console.log('[CampaignLaunch] Token:', { userId, hasOrgId: !!token?.organizationId, orgIdRaw: token?.organizationId })
+    
     // Handle organizationId - can be string or object
     let orgId: string | undefined = undefined
     if (token?.organizationId) {
@@ -57,13 +59,10 @@ export async function POST(
         orgId = String(token.organizationId)
       }
     }
+    
     console.log('[CampaignLaunch] Organization ID from token:', orgId)
     
-    if (!orgId) {
-      console.log('[CampaignLaunch] No organization ID found - will use default')
-    }
-
-    // Get the campaign (filter by userId for security)
+    // Get the campaign first to check organizationId
     const campaign = await prisma.campaign.findUnique({
       where: { id },
       include: {
@@ -78,14 +77,32 @@ export async function POST(
         }
       }
     })
-
+    
     if (!campaign) {
       return NextResponse.json(
         { success: false, error: 'Campaign not found' },
         { status: 404 }
       )
     }
+    
+    // Use orgId from token, or fall back to campaign's organizationId
+    if (!orgId && campaign.organizationId) {
+      orgId = campaign.organizationId!
+      console.log('[CampaignLaunch] Using organizationId from campaign:', orgId)
+    }
+    
+    if (!orgId) {
+      console.log('[CampaignLaunch] No organization ID found - will use default')
+    }
 
+    // Verify the campaign was found
+    if (!campaign) {
+      return NextResponse.json(
+        { success: false, error: 'Campaign not found' },
+        { status: 404 }
+      )
+    }
+    
     // Verify the campaign belongs to the current user
     if (campaign.createdBy && campaign.createdBy !== userId) {
       return NextResponse.json(
@@ -109,11 +126,11 @@ export async function POST(
     // Find active WhatsApp credential for the organization
     const creds = await prisma.whatsAppCredential.findFirst({
       where: { 
-        organizationId: campaign.organizationId,
+        organizationId: campaign.organizationId ?? undefined,
         isActive: true
       },
       include: { phoneNumbers: true }
-    })
+    }) as any
     
     if (!creds) {
       console.log('[CampaignLaunch] No WhatsApp credential found for org:', campaign.organizationId)
@@ -129,7 +146,7 @@ export async function POST(
     }
 
     // Check if phone number is verified (warn but allow sending)
-    const phoneVerified = creds.phoneNumbers?.find(p => p.isDefault || p.isVerified)
+    const phoneVerified = creds.phoneNumbers?.find((p: any) => p.isDefault || p.isVerified)
     const phoneNotVerifiedWarning = !phoneVerified?.isVerified 
       ? '⚠️ Warning: Your phone number is not verified. Messages to unverified numbers may fail.' 
       : null
@@ -184,9 +201,33 @@ export async function POST(
       })
     }
 
+    // Get total contacts count for debugging
+    const totalContacts = await prisma.contact.count({
+      where: { userId: userId }
+    })
+    const optedInContacts = await prisma.contact.count({
+      where: { 
+        optInStatus: 'opted_in',
+        userId: userId
+      }
+    })
+    
+    console.log('[CampaignLaunch] Total contacts:', totalContacts, 'Opted in:', optedInContacts)
+    
     if (contacts.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'No contacts found to send to' },
+        { 
+          success: false, 
+          error: 'No contacts found to send to',
+          details: {
+            totalContacts,
+            optedInContacts,
+            hasSegment: !!campaign.audienceSegmentId
+          },
+          hint: optedInContacts === 0 
+            ? 'No contacts have opted in. Contacts must have "opted_in" status to receive messages.'
+            : 'The selected segment may have no contacts with opted_in status.'
+        },
         { status: 400 }
       )
     }
