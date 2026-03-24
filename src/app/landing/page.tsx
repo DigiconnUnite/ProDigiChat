@@ -129,7 +129,7 @@ export default function LandingPage() {
               ))}
             </div>
           </div>
-        </section>
+        </section>  
 
 
         {/* Simple CTA */}

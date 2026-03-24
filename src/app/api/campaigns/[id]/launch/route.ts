@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
-import { addBulkToQueue } from '@/lib/queue'
+import { addBulkToQueue, processQueue } from '@/lib/queue'
 
 async function validateSession(request: NextRequest) {
   const token = await getToken({ req: request })
@@ -106,16 +106,20 @@ export async function POST(
     console.log('[CampaignLaunch] Campaign has whatsappNumberId:', campaign.whatsappNumberId)
 
     // Check WhatsApp verification status before sending messages
+    // Find active WhatsApp credential for the organization
     const creds = await prisma.whatsAppCredential.findFirst({
       where: { 
-        OR: [
-          { id: campaign.whatsappNumberId },
-          { phoneNumberId: campaign.whatsappNumberId },
-          { phoneNumbers: { some: { id: campaign.whatsappNumberId } } }
-        ]
+        organizationId: campaign.organizationId,
+        isActive: true
       },
       include: { phoneNumbers: true }
     })
+    
+    if (!creds) {
+      console.log('[CampaignLaunch] No WhatsApp credential found for org:', campaign.organizationId)
+    } else {
+      console.log('[CampaignLaunch] Found WhatsApp credential:', creds.id)
+    }
 
     if (!creds?.isActive) {
       return NextResponse.json(
@@ -132,6 +136,8 @@ export async function POST(
     if (phoneNotVerifiedWarning) {
       console.log('[CampaignLaunch]', phoneNotVerifiedWarning)
     }
+    
+    console.log('[CampaignLaunch] Phone verified:', phoneVerified?.isVerified, 'Phone number:', phoneVerified?.phoneNumber)
 
     // Check if campaign can be launched
     if (!['draft', 'scheduled'].includes(campaign.status)) {
@@ -306,42 +312,65 @@ export async function POST(
       }
     })
 
-    // Enqueue all messages (async - returns immediately)
+    // Track send results
+    let queueResult = { processed: 0, succeeded: 0, failed: 0 }
+    
+    // Enqueue all messages and process immediately
     if (queueMessages.length > 0 && orgId) {
+      console.log('[CampaignLaunch] Adding messages to queue:', queueMessages.length)
       await addBulkToQueue(orgId, queueMessages)
+      
+      // Process queue immediately to send messages
+      // Process all messages, not just 50
+      console.log('[CampaignLaunch] Processing queue for org:', orgId)
+      queueResult = await processQueue(orgId, queueMessages.length)
+      console.log('[CampaignLaunch] Queue processing result:', queueResult)
+      
+      // Update campaign stats with actual sent counts
+      await prisma.campaign.update({
+        where: { id },
+        data: {
+          stats: JSON.stringify({
+            totalSent: queueResult.processed,
+            delivered: 0,
+            read: 0,
+            failed: queueResult.failed,
+            clicked: 0
+          })
+        }
+      })
+    } else if (!orgId) {
+      console.error('[CampaignLaunch] ERROR: No organization ID - messages will not be sent!')
+      return NextResponse.json(
+        { success: false, error: 'Organization not found. Please log in again.' },
+        { status: 400 }
+      )
     }
 
+    // Determine final status
+    const finalStatus = queueResult.failed > 0 && queueResult.succeeded === 0 ? 'failed' : 'running'
+    
     // Update campaign status to running
     await prisma.campaign.update({
       where: { id },
-      data: { status: 'running' }
+      data: { status: finalStatus }
     })
 
-    // Initialize campaign stats
-    await prisma.campaign.update({
-      where: { id },
-      data: {
-        stats: JSON.stringify({
-          totalSent: 0,
-          delivered: 0,
-          read: 0,
-          failed: 0,
-          clicked: 0
-        })
-      }
-    })
-
-    // Return immediately - workers will process queue asynchronously
+    // Return results with actual send status
     return NextResponse.json({
-      success: true,
-      message: phoneNotVerifiedWarning 
-        ? 'Campaign queued with warnings: Your phone number is not verified. Some messages may fail.' 
-        : 'Campaign queued successfully - messages will be sent asynchronously',
+      success: queueResult.succeeded > 0,
+      message: queueResult.succeeded > 0 
+        ? (phoneNotVerifiedWarning 
+            ? `Sent ${queueResult.succeeded} messages (${queueResult.failed} failed). Warning: Your phone number is not verified.`
+            : `Successfully sent ${queueResult.succeeded} messages`)
+        : 'Campaign launched but no messages were sent. Check your WhatsApp connection.',
       warning: phoneNotVerifiedWarning,
       data: {
         campaignId: id,
-        status: 'running',
-        recipientsCount: contacts.length
+        status: finalStatus,
+        recipientsCount: contacts.length,
+        sentCount: queueResult.succeeded,
+        failedCount: queueResult.failed
       }
     })
   } catch (error) {
