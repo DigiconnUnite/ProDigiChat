@@ -19,9 +19,11 @@ export interface Notification {
 interface NotificationContextType {
   notifications: Notification[]
   unreadCount: number
+  inboxUnreadCount: number
   isLoading: boolean
   fetchNotifications: () => Promise<void>
   fetchUnreadCount: () => Promise<void>
+  fetchInboxUnreadCount: () => Promise<void>
   markAsRead: (notificationIds: string[]) => Promise<void>
   markAllAsRead: () => Promise<void>
   deleteNotification: (notificationId: string) => Promise<void>
@@ -38,12 +40,14 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
   const { data: session, status } = useSession()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
+  const [inboxUnreadCount, setInboxUnreadCount] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
 
   // Fetch unread count on session load
   useEffect(() => {
     if (status === "authenticated") {
       fetchUnreadCount()
+      fetchInboxUnreadCount()
     }
   }, [status])
 
@@ -53,6 +57,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
 
     const interval = setInterval(() => {
       fetchUnreadCount()
+      fetchInboxUnreadCount()
     }, 30000)
 
     return () => clearInterval(interval)
@@ -67,6 +72,18 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
       }
     } catch (error) {
       console.error("Error fetching unread count:", error)
+    }
+  }, [])
+
+  const fetchInboxUnreadCount = useCallback(async () => {
+    try {
+      const response = await fetch("/api/inbox/unread-count")
+      if (response.ok) {
+        const data = await response.json()
+        setInboxUnreadCount(data.unreadCount || 0)
+      }
+    } catch (error) {
+      console.error("Error fetching inbox unread count:", error)
     }
   }, [])
 
@@ -170,9 +187,11 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
       value={{
         notifications,
         unreadCount,
+        inboxUnreadCount,
         isLoading,
         fetchNotifications,
         fetchUnreadCount,
+        fetchInboxUnreadCount,
         markAsRead,
         markAllAsRead,
         deleteNotification,
@@ -196,4 +215,10 @@ export function useNotifications() {
 export function useUnreadCount() {
   const { unreadCount, fetchUnreadCount } = useNotifications()
   return { unreadCount, refresh: fetchUnreadCount }
+}
+
+// Hook to get inbox unread count
+export function useInboxUnreadCount() {
+  const { inboxUnreadCount, fetchInboxUnreadCount } = useNotifications()
+  return { inboxUnreadCount, refresh: fetchInboxUnreadCount }
 }

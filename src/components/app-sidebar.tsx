@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { useNotifications } from "@/components/notification-provider"
+import { useNotifications, useInboxUnreadCount } from "@/components/notification-provider"
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -36,6 +36,7 @@ const navigation = [
 export function AppSidebar() {
   const pathname = usePathname()
   const { unreadCount } = useNotifications()
+  const { inboxUnreadCount } = useInboxUnreadCount()
 
   return (
     <div className="flex h-full w-64 flex-col bg-sidebar border-r border-sidebar-border">
@@ -61,7 +62,7 @@ export function AppSidebar() {
           {navigation.map((item) => {
             const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))
             // Use dynamic badge for Inbox based on actual notification count
-            const showBadge = item.name === "Inbox" && unreadCount > 0
+            const showBadge = item.name === "Inbox" && inboxUnreadCount > 0
             return (
               <Link
                 key={item.name}
@@ -80,7 +81,7 @@ export function AppSidebar() {
                     variant="secondary"
                     className="h-5 min-w-[20px] rounded-full px-1.5 text-xs font-medium"
                   >
-                    {unreadCount > 99 ? '99+' : unreadCount}
+                    {inboxUnreadCount > 99 ? '99+' : inboxUnreadCount}
                   </Badge>
                 )}
               </Link>

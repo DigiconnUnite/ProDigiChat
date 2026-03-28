@@ -49,7 +49,7 @@ const dashboardNavigation: NavItem[] = [
   { name: "Campaigns", href: "/dashboard/campaigns", icon: Megaphone },
   { name: "Contacts", href: "/dashboard/contacts", icon: Users },
   { name: "Templates", href: "/dashboard/templates", icon: FileText },
-  { name: "Inbox", href: "/dashboard/inbox", icon: MessageSquare, badge: 3 },
+  { name: "Inbox", href: "/dashboard/inbox", icon: MessageSquare },
   { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
 ]
 
@@ -58,7 +58,7 @@ const dashboardBottomNavItems: NavItem[] = [
   { name: "Home", href: "/dashboard", icon: Home },
   { name: "Campaigns", href: "/dashboard/campaigns", icon: Megaphone },
   { name: "Contacts", href: "/dashboard/contacts", icon: Users },
-  { name: "Inbox", href: "/dashboard/inbox", icon: MessageSquare, badge: 3 },
+  { name: "Inbox", href: "/dashboard/inbox", icon: MessageSquare },
 ]
 
 // Navigation items for public pages

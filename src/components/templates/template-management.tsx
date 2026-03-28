@@ -359,71 +359,68 @@ export function TemplateManagement({
       </div>
 
       <div className="bg-green-950 rounded-t-3xl rounded-b-lg pt-4 pb-1 px-1 space-y-4">
-        <div className="flex flex-col lg:flex-row justify-between items-center px-2 gap-4">
-          {/* Center - Filter Buttons */}
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            {/* Category Filter */}
-            <Select
-              value={activeCategory}
-              onValueChange={(v) => {
-                setActiveCategory(v as any);
-                setCurrentPage(1);
-              }}
+        <div className="flex flex-row flex-wrap justify-between items-center px-2 gap-2 sm:gap-4">
+          {/* Category Filter */}
+          <Select
+            value={activeCategory}
+            onValueChange={(v) => {
+              setActiveCategory(v as any);
+              setCurrentPage(1);
+            }}
+          >
+            <SelectTrigger className="w-[100px] sm:w-[130px] bg-green-900 border-green-700 text-white text-xs sm:text-sm">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All </SelectItem>
+              <SelectItem value="marketing">Marketing</SelectItem>
+              <SelectItem value="utility">Utility</SelectItem>
+              <SelectItem value="authentication">Authentication</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Status Filter */}
+          <Select
+            value={activeStatus}
+            onValueChange={(v) => {
+              setActiveStatus(v as any);
+              setCurrentPage(1);
+            }}
+          >
+            <SelectTrigger className="w-[100px] sm:w-[130px] bg-green-900 border-green-700 text-white text-xs sm:text-sm">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Clear Filters Button */}
+          {(searchQuery ||
+            activeCategory !== "all" ||
+            activeStatus !== "all") && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={resetFilters}
+              className="border-green-700 text-gray-500 hover:bg-green-800 hover:text-white text-xs sm:text-sm px-2 sm:px-3"
             >
-              <SelectTrigger className="w-[130px] bg-green-900 border-green-700 text-white">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All </SelectItem>
-                <SelectItem value="marketing">Marketing</SelectItem>
-                <SelectItem value="utility">Utility</SelectItem>
-                <SelectItem value="authentication">Authentication</SelectItem>
-              </SelectContent>
-            </Select>
+              Clear
+            </Button>
+          )}
 
-            {/* Status Filter */}
-            <Select
-              value={activeStatus}
-              onValueChange={(v) => {
-                setActiveStatus(v as any);
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger className="w-[130px] bg-green-900 border-green-700 text-white">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Clear Filters Button */}
-            {(searchQuery ||
-              activeCategory !== "all" ||
-              activeStatus !== "all") && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={resetFilters}
-                className="border-green-700 text-gray-500 hover:bg-green-800 hover:text-white"
-              >
-                Clear
-              </Button>
-            )}
-          </div>
-
-          {/* Right side - Show entries */}
-          <div className="flex items-center gap-2 text-sm text-white">
-            <span>Show</span>
+          {/* Show entries */}
+          <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-white">
+            <span className="hidden sm:inline">Show</span>
             <Select
               value={itemsPerPage.toString()}
               onValueChange={handleItemsPerPageChange}
             >
-              <SelectTrigger className="w-[80px] bg-green-900 border-green-700 text-white">
+              <SelectTrigger className="w-[60px] sm:w-[80px] bg-green-900 border-green-700 text-white text-xs sm:text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -434,16 +431,17 @@ export function TemplateManagement({
                 ))}
               </SelectContent>
             </Select>
-            <span>entries</span>
+            <span className="hidden sm:inline">entries</span>
           </div>
-          {/* Left side - Search */}
-          <div className="relative w-full lg:w-auto lg:min-w-[250px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+
+          {/* Search */}
+          <div className="relative w-[150px] sm:w-full lg:w-auto lg:min-w-[250px] flex-1 min-w-0">
+            <Search className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-300" />
             <Input
-              placeholder="Search templates..."
+              placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-white rounded-full border-green-700 text-black placeholder:text-gray-400"
+              className="pl-6 sm:pl-10 bg-white rounded-full border-green-700 text-black placeholder:text-gray-400 text-xs sm:text-sm h-8 sm:h-10"
             />
           </div>
         </div>
