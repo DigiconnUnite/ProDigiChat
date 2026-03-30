@@ -385,7 +385,15 @@ export async function POST(
       // Trigger the queue processing immediately in the background
       // This ensures messages start sending right away in local development
       // where Vercel Cron jobs don't run automatically
-      processQueue(orgId, 100).catch(err => {
+      console.log(`[CampaignLaunch] Triggering background queue processing for org: ${orgId}`);
+      processQueue(orgId, 100).then(result => {
+        console.log(`[CampaignLaunch] Background queue processing completed:`, {
+          processed: result.processed,
+          succeeded: result.succeeded,
+          failed: result.failed,
+          skipped: result.skipped
+        });
+      }).catch(err => {
         console.error('[CampaignLaunch] Background queue processing error:', err);
       });
 

@@ -1,0 +1,276 @@
+{
+  "campaigns": [
+    {
+      "id": "69a134ada162feecbc62ec23",
+      "name": "Shivam Thakur",
+      "status": "running",
+      "organizationId": "69c124b3ac8e82e334b0f8ae",
+      "stats": "{\"totalSent\":2,\"delivered\":0,\"read\":0,\"failed\":0,\"clicked\":0}"
+    },
+    {
+      "id": "69a13ba6fec4b164c0c69a3c",
+      "name": "Shivam Thakur",
+      "status": "running",
+      "organizationId": "69c124b3ac8e82e334b0f8ae",
+      "stats": "{\"totalSent\":2,\"delivered\":0,\"read\":0,\"failed\":0,\"clicked\":0}"
+    },
+    {
+      "id": "69a1431cfec49c6b6bec1506",
+      "name": "Shivam Thakur",
+      "status": "running",
+      "organizationId": "69c124b3ac8e82e334b0f8ae",
+      "stats": "{\"totalSent\":0,\"delivered\":0,\"read\":0,\"failed\":2,\"clicked\":0}"
+    },
+    {
+      "id": "69a16996fec49c6b6bec1509",
+      "name": "sample ",
+      "status": "running",
+      "organizationId": "69c124b3ac8e82e334b0f8ae",
+      "stats": "{\"totalSent\":0,\"delivered\":0,\"read\":0,\"failed\":2,\"clicked\":0}"
+    },
+    {
+      "id": "69a1790ed83a4f8c694ae359",
+      "name": "Shivam Thakur",
+      "status": "running",
+      "organizationId": "69c124b3ac8e82e334b0f8ae",
+      "stats": "{\"totalSent\":0,\"delivered\":0,\"read\":0,\"failed\":2,\"clicked\":0}"
+    },
+    {
+      "id": "69a17abc6a4fc3b07d5d0d19",
+      "name": "Shivam Thakur",
+      "status": "running",
+      "organizationId": "69c124b3ac8e82e334b0f8ae",
+      "stats": "{\"totalSent\":0,\"delivered\":0,\"read\":0,\"failed\":2,\"clicked\":0}"
+    },
+    {
+      "id": "69a17b8a6a4fc3b07d5d0d1c",
+      "name": "Digiconn Unitedsfa ",
+      "status": "running",
+      "organizationId": "69c124b3ac8e82e334b0f8ae",
+      "stats": "{\"totalSent\":2,\"delivered\":0,\"read\":0,\"failed\":0,\"clicked\":0}"
+    },
+    {
+      "id": "69a17c1561d8cb7c585c9ee2",
+      "name": "Shivam Thakur",
+      "status": "running",
+      "organizationId": "69c124b3ac8e82e334b0f8ae",
+      "stats": "{\"totalSent\":0,\"delivered\":0,\"read\":0,\"failed\":2,\"clicked\":0}"
+    },
+    {
+      "id": "69a17cea61d8cb7c585c9ee5",
+      "name": "new template",
+      "status": "running",
+      "organizationId": "69c124b3ac8e82e334b0f8ae",
+      "stats": "{\"totalSent\":2,\"delivered\":0,\"read\":0,\"failed\":0,\"clicked\":0}"
+    },
+    {
+      "id": "69a17d1761d8cb7c585c9ee8",
+      "name": "Digiconn Unite",
+      "status": "running",
+      "organizationId": "69c124b3ac8e82e334b0f8ae",
+      "stats": "{\"totalSent\":0,\"delivered\":0,\"read\":0,\"failed\":2,\"clicked\":0}"
+    },
+    {
+      "id": "69a18c1e61d8cb7c585c9eef",
+      "name": "just testing",
+      "status": "running",
+      "organizationId": "69c124b3ac8e82e334b0f8ae",
+      "stats": "{\"totalSent\":0,\"delivered\":0,\"read\":0,\"failed\":2,\"clicked\":0}"
+    },
+    {
+      "id": "69a18c6661d8cb7c585c9ef2",
+      "name": "testing ",
+      "status": "running",
+      "organizationId": "69c124b3ac8e82e334b0f8ae",
+      "stats": "{\"totalSent\":0,\"delivered\":0,\"read\":0,\"failed\":2,\"clicked\":0}"
+    },
+    {
+      "id": "69a18d1a61d8cb7c585c9ef8",
+      "name": "sdfdsafdsa",
+      "status": "running",
+      "organizationId": "69c124b3ac8e82e334b0f8ae",
+      "stats": "{\"totalSent\":2,\"delivered\":0,\"read\":0,\"failed\":0,\"clicked\":0}"
+    },
+    {
+      "id": "69c274860f16fe61784ba98a",
+      "name": "Shivam Thakur",
+      "status": "running",
+      "organizationId": "69c124b3ac8e82e334b0f8ae",
+      "stats": "{\"totalSent\":0,\"delivered\":0,\"read\":0,\"failed\":0,\"clicked\":0}"
+    },
+    {
+      "id": "69c2852f0f16fe61784ba994",
+      "name": "Shivam Thakur",
+      "status": "running",
+      "organizationId": "69c124b3ac8e82e334b0f8ae",
+      "stats": "{\"totalSent\":0,\"delivered\":0,\"read\":0,\"failed\":0,\"clicked\":0}"
+    },
+    {
+      "id": "69ca4d34a074bdce288a2966",
+      "name": "test message",
+      "status": "running",
+      "organizationId": "69a53a8cdf22e2e7c7cf3f9c",
+      "stats": "{\"totalSent\":0,\"delivered\":0,\"read\":0,\"failed\":0,\"clicked\":0}"
+    }
+  ],
+  "orgs": [
+    {
+      "id": "69a53a8cdf22e2e7c7cf3f9c",
+      "name": "Deshveer Chaudhary's Organization"
+    },
+    {
+      "id": "69bf9491f1afe4430bf055ed",
+      "name": "Raj Kumar's Organization"
+    },
+    {
+      "id": "69c0d0777118d65120f151c1",
+      "name": "Meta Team's Organization"
+    },
+    {
+      "id": "69c124b3ac8e82e334b0f8ae",
+      "name": "Team's Organization"
+    }
+  ],
+  "queueItems": [
+    {
+      "id": "69ca4d38a074bdce288a2967",
+      "organizationId": "69a53a8cdf22e2e7c7cf3f9c",
+      "campaignId": "69ca4d34a074bdce288a2966",
+      "status": "queued",
+      "attempts": 0,
+      "errorMessage": null,
+      "errorCode": null,
+      "createdAt": "2026-03-30T10:15:20.095Z",
+      "updatedAt": "2026-03-30T10:15:20.095Z",
+      "recipientPhone": "918958394972"
+    },
+    {
+      "id": "69ca4d38a074bdce288a2968",
+      "organizationId": "69a53a8cdf22e2e7c7cf3f9c",
+      "campaignId": "69ca4d34a074bdce288a2966",
+      "status": "queued",
+      "attempts": 0,
+      "errorMessage": null,
+      "errorCode": null,
+      "createdAt": "2026-03-30T10:15:20.095Z",
+      "updatedAt": "2026-03-30T10:15:20.095Z",
+      "recipientPhone": "8958394972"
+    },
+    {
+      "id": "69ca4bb5a074bdce288a2964",
+      "organizationId": "69a53a8cdf22e2e7c7cf3f9c",
+      "campaignId": null,
+      "status": "queued",
+      "attempts": 0,
+      "errorMessage": null,
+      "errorCode": null,
+      "createdAt": "2026-03-30T10:08:53.678Z",
+      "updatedAt": "2026-03-30T10:08:53.678Z",
+      "recipientPhone": "918958394972"
+    },
+    {
+      "id": "69ca4bb5a074bdce288a2965",
+      "organizationId": "69a53a8cdf22e2e7c7cf3f9c",
+      "campaignId": null,
+      "status": "queued",
+      "attempts": 0,
+      "errorMessage": null,
+      "errorCode": null,
+      "createdAt": "2026-03-30T10:08:53.678Z",
+      "updatedAt": "2026-03-30T10:08:53.678Z",
+      "recipientPhone": "8958394972"
+    },
+    {
+      "id": "69ca415917f40f31178eb700",
+      "organizationId": "69a53a8cdf22e2e7c7cf3f9c",
+      "campaignId": null,
+      "status": "queued",
+      "attempts": 0,
+      "errorMessage": null,
+      "errorCode": null,
+      "createdAt": "2026-03-30T09:24:41.066Z",
+      "updatedAt": "2026-03-30T09:24:41.066Z",
+      "recipientPhone": "918958394972"
+    },
+    {
+      "id": "69ca415917f40f31178eb701",
+      "organizationId": "69a53a8cdf22e2e7c7cf3f9c",
+      "campaignId": null,
+      "status": "queued",
+      "attempts": 0,
+      "errorMessage": null,
+      "errorCode": null,
+      "createdAt": "2026-03-30T09:24:41.066Z",
+      "updatedAt": "2026-03-30T09:24:41.066Z",
+      "recipientPhone": "8958394972"
+    },
+    {
+      "id": "69ca271c974aa6ff8ad04142",
+      "organizationId": "69a53a8cdf22e2e7c7cf3f9c",
+      "campaignId": null,
+      "status": "queued",
+      "attempts": 0,
+      "errorMessage": null,
+      "errorCode": null,
+      "createdAt": "2026-03-30T07:32:44.542Z",
+      "updatedAt": "2026-03-30T07:32:44.542Z",
+      "recipientPhone": "918958394972"
+    },
+    {
+      "id": "69ca271c974aa6ff8ad04143",
+      "organizationId": "69a53a8cdf22e2e7c7cf3f9c",
+      "campaignId": null,
+      "status": "queued",
+      "attempts": 0,
+      "errorMessage": null,
+      "errorCode": null,
+      "createdAt": "2026-03-30T07:32:44.542Z",
+      "updatedAt": "2026-03-30T07:32:44.542Z",
+      "recipientPhone": "8958394972"
+    },
+    {
+      "id": "69ca259d974aa6ff8ad0413f",
+      "organizationId": "69a53a8cdf22e2e7c7cf3f9c",
+      "campaignId": null,
+      "status": "sent",
+      "attempts": 1,
+      "errorMessage": null,
+      "errorCode": null,
+      "createdAt": "2026-03-30T07:26:21.522Z",
+      "updatedAt": "2026-03-30T07:31:40.098Z",
+      "recipientPhone": "918958394972"
+    },
+    {
+      "id": "69ca259d974aa6ff8ad04140",
+      "organizationId": "69a53a8cdf22e2e7c7cf3f9c",
+      "campaignId": null,
+      "status": "queued",
+      "attempts": 0,
+      "errorMessage": null,
+      "errorCode": null,
+      "createdAt": "2026-03-30T07:26:21.522Z",
+      "updatedAt": "2026-03-30T07:26:21.522Z",
+      "recipientPhone": "8958394972"
+    }
+  ],
+  "creds": [
+    {
+      "id": "69c273fc0f16fe61784ba986",
+      "organizationId": "69c124b3ac8e82e334b0f8ae",
+      "accountName": "Account 1",
+      "isActive": true,
+      "healthCheckStatus": "unknown",
+      "healthCheckError": null,
+      "accessToken": "exists (length: 701)"
+    },
+    {
+      "id": "69ca45fe17f40f31178eb702",
+      "organizationId": "69a53a8cdf22e2e7c7cf3f9c",
+      "accountName": "Account 1",
+      "isActive": true,
+      "healthCheckStatus": "unhealthy",
+      "healthCheckError": "API credentials are invalid or expired; Webhook URL is not configured. Incoming messages will not be received.; 1 phone number(s) not verified",
+      "accessToken": "exists (length: 537)"
+    }
+  ]
+}

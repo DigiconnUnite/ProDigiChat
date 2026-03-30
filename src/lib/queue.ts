@@ -222,19 +222,19 @@ export async function getReadyMessages(
   try {
     const totalQueued = await prisma.whatsAppMessageQueue.count({
       where: {
-        organizationId,
+        organizationId: organizationId || undefined, // Support both null and string search
         status: { in: [QueueStatus.QUEUED, QueueStatus.PENDING] },
       },
     });
-    console.log(`[Queue:getReadyMessages] Total queued/pending messages: ${totalQueued}`);
+    console.log(`[Queue:getReadyMessages] Total queued/pending messages for org "${organizationId}": ${totalQueued}`);
   } catch (e) {
     console.error(`[Queue:getReadyMessages] Error counting queued:`, e);
   }
   
   // Get messages that are queued or pending AND (no scheduled time OR scheduled time passed) AND (no retry time OR retry time passed)
-  return prisma.whatsAppMessageQueue.findMany({
+  const messages = await prisma.whatsAppMessageQueue.findMany({
     where: {
-      organizationId,
+      organizationId: organizationId || undefined,
       status: { in: [QueueStatus.QUEUED, QueueStatus.PENDING] },
       AND: [
         {
@@ -257,6 +257,8 @@ export async function getReadyMessages(
     ],
     take: limit,
   });
+
+  return messages;
 }
 
 /**
@@ -443,8 +445,12 @@ export async function processQueue(
   const now = new Date();
   const rateLimitedAccounts = new Set<string>();
   
+  console.log(`[Queue] Processing ${messages.length} ready messages for org ${organizationId}`);
+
   for (const message of messages) {
-    if (message.whatsappAccountId && message.nextRetryAt && message.nextRetryAt > now) {
+    // BUG FIX: Check if nextRetryAt is ACTUALLY in the future. 
+    // getReadyMessages should already filter these out, but we check again for safety.
+    if (message.whatsappAccountId && message.nextRetryAt && new Date(message.nextRetryAt).getTime() > now.getTime()) {
       rateLimitedAccounts.add(message.whatsappAccountId);
     }
   }
