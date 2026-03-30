@@ -145,6 +145,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (!orgId) {
+      return NextResponse.json({ error: 'Organization ID is required for Meta integration' }, { status: 400 });
+    }
+
     const body: CreateTemplateInput = await request.json();
 
     // Validate required fields
@@ -339,7 +343,7 @@ export async function PUT(request: NextRequest) {
     let metaSubmitSuccess = false;
     let metaTemplateId: string | undefined;
 
-    if (existingTemplate.whatsappTemplateId) {
+    if (existingTemplate.whatsappTemplateId && orgId) {
       try {
         const templateToSubmit: WhatsAppTemplate = {
           id: updatedTemplate.id,
@@ -399,6 +403,10 @@ export async function DELETE(request: NextRequest) {
 
   if (!userId && !orgId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  if (!orgId) {
+    return NextResponse.json({ error: 'Organization ID is required for Meta integration' }, { status: 400 });
   }
 
   const searchParams = request.nextUrl.searchParams;
@@ -476,6 +484,10 @@ export async function PATCH(request: NextRequest) {
 
     if (!userId && !orgId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!orgId) {
+      return NextResponse.json({ error: 'Organization ID is required for Meta integration' }, { status: 400 });
     }
 
     const body = await request.json();

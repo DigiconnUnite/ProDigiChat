@@ -21,7 +21,7 @@ function formatPhoneNumber(phone: string): string {
   return cleaned;
 }
 
-export async function sendTextMessage(to: string, message: string, orgId?: string, accountId?: string) {
+export async function sendTextMessage(to: string, message: string, orgId: string, accountId?: string) {
   const formattedTo = formatPhoneNumber(to);
   console.log('[WhatsAppMessages] sendTextMessage called:', { to: formattedTo, messageLength: message.length, orgId, accountId });
   try {
@@ -38,7 +38,7 @@ export async function sendTextMessage(to: string, message: string, orgId?: strin
   }
 }
 
-export async function sendMediaMessage(to: string, mediaUrl: string, caption: string, orgId?: string, accountId?: string) {
+export async function sendMediaMessage(to: string, mediaUrl: string, caption: string, orgId: string, accountId?: string) {
   const formattedTo = formatPhoneNumber(to);
   console.log('[WhatsAppMessages] sendMediaMessage called:', { to: formattedTo, mediaUrl, caption, orgId, accountId });
   try {
@@ -55,7 +55,7 @@ export async function sendMediaMessage(to: string, mediaUrl: string, caption: st
   }
 }
 
-export async function sendTemplateMessage(to: string, templateName: string, components: any[], orgId?: string, language: string = 'en_US', accountId?: string) {
+export async function sendTemplateMessage(to: string, templateName: string, components: any[], orgId: string, language: string = 'en_US', accountId?: string) {
   const formattedTo = formatPhoneNumber(to);
   console.log('[WhatsAppMessages] sendTemplateMessage called:', { to: formattedTo, templateName, components, orgId, language, accountId });
   try {

@@ -22,28 +22,37 @@ export async function POST(request: Request) {
     return rateLimitResult.response;
   }
 
-  const unauthorizedResponse = await validateSession(request);
-  if (unauthorizedResponse) {
-    return unauthorizedResponse;
+  const token = await getToken({ req: request as any });
+  if (!token) {
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    );
   }
+  
+  const orgId = (token?.organizationId || token?.orgId) as string;
+  if (!orgId) {
+    return NextResponse.json({ error: 'Organization ID is required' }, { status: 400 });
+  }
+
   try {
     const { type, to, message, mediaUrl, caption, templateName, components } = await request.json();
 
     switch (type) {
       case "text":
-        const textResponse = await sendTextMessage(to, message);
+        const textResponse = await sendTextMessage(to, message, orgId);
         return NextResponse.json(textResponse, {
           headers: rateLimitResult.headers,
         });
 
       case "media":
-        const mediaResponse = await sendMediaMessage(to, mediaUrl, caption);
+        const mediaResponse = await sendMediaMessage(to, mediaUrl, caption, orgId);
         return NextResponse.json(mediaResponse, {
           headers: rateLimitResult.headers,
         });
 
       case "template":
-        const templateResponse = await sendTemplateMessage(to, templateName, components);
+        const templateResponse = await sendTemplateMessage(to, templateName, components, orgId);
         return NextResponse.json(templateResponse, {
           headers: rateLimitResult.headers,
         });

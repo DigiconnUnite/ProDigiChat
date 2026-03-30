@@ -22,22 +22,31 @@ export async function POST(request: Request) {
     return rateLimitResult.response;
   }
 
-  const unauthorizedResponse = await validateSession(request);
-  if (unauthorizedResponse) {
-    return unauthorizedResponse;
+  const token = await getToken({ req: request as any });
+  if (!token) {
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    );
   }
+
+  const orgId = (token?.organizationId || token?.orgId) as string;
+  if (!orgId) {
+    return NextResponse.json({ error: 'Organization ID is required' }, { status: 400 });
+  }
+
   try {
     const { action, template, templateId } = await request.json();
 
     switch (action) {
       case "submit":
-        const submitResponse = await submitTemplate(template);
+        const submitResponse = await submitTemplate(template, orgId);
         return NextResponse.json(submitResponse, {
           headers: rateLimitResult.headers,
         });
 
       case "checkStatus":
-        const statusResponse = await checkTemplateStatus(templateId);
+        const statusResponse = await checkTemplateStatus(templateId, orgId);
         return NextResponse.json(statusResponse, {
           headers: rateLimitResult.headers,
         });

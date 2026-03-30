@@ -123,7 +123,7 @@ export function convertMetaStatus(
 // Submit template to Meta and return the response
 export async function submitTemplateToMeta(
   template: WhatsAppTemplate,
-  orgId?: string,
+  orgId: string,
   accountId?: string
 ): Promise<{ success: boolean; metaTemplateId?: string; error?: string }> {
   try {
@@ -166,7 +166,7 @@ export async function submitTemplateToMeta(
 // Check template status from Meta
 export async function checkTemplateStatusFromMeta(
   metaTemplateId: string,
-  orgId?: string,
+  orgId: string,
   accountId?: string
 ): Promise<{
   status: "pending" | "approved" | "rejected";
@@ -195,7 +195,7 @@ export async function checkTemplateStatusFromMeta(
 
 // Sync all templates with Meta (for initial import or reconciliation)
 export async function syncTemplatesWithMeta(
-  orgId?: string,
+  orgId: string,
   accountId?: string
 ): Promise<{
   success: boolean;
@@ -224,7 +224,7 @@ export async function syncTemplatesWithMeta(
 // Delete template from Meta
 export async function deleteTemplateFromMeta(
   metaTemplateId: string,
-  orgId?: string,
+  orgId: string,
   accountId?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
