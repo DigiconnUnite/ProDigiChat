@@ -284,6 +284,36 @@ async function processWebhookAsync(rawBody: string): Promise<void> {
         where: { id: campaignId },
         data: { status: campaignStatus }
       });
+
+      // Update campaign stats JSON
+      try {
+        const campaign = await prisma.campaign.findUnique({
+          where: { id: campaignId },
+          select: { stats: true }
+        });
+
+        if (campaign) {
+          let stats = { totalSent: 0, delivered: 0, read: 0, failed: 0, clicked: 0 };
+          try {
+            stats = JSON.parse(campaign.stats || '{}');
+          } catch (e) {}
+
+          if (status === "delivered") stats.delivered = (stats.delivered || 0) + 1;
+          if (status === "read") {
+            stats.read = (stats.read || 0) + 1;
+            // If it's read, it must have been delivered too, but usually Meta sends both events.
+            // We only increment read here.
+          }
+          if (status === "failed") stats.failed = (stats.failed || 0) + 1;
+
+          await prisma.campaign.update({
+            where: { id: campaignId },
+            data: { stats: JSON.stringify(stats) }
+          });
+        }
+      } catch (statsError) {
+        console.error("[WhatsApp Webhook] Error updating campaign stats (legacy):", statsError);
+      }
     }
   } catch (error) {
     console.error("[WhatsApp Webhook] Error processing webhook async:", error);
@@ -485,6 +515,7 @@ async function processStatusUpdate(
 
   // If it's a campaign message, update campaign stats
   if (existingMessage.campaignId) {
+    await updateCampaignStats(existingMessage.campaignId, messageStatus);
     await updateCampaignStatus(existingMessage.campaignId);
   }
 
@@ -495,6 +526,41 @@ async function processStatusUpdate(
     messageId: id,
     status: messageStatus,
   };
+}
+
+/**
+ * Update campaign stats (delivered, read, failed)
+ */
+async function updateCampaignStats(campaignId: string, status: string): Promise<void> {
+  try {
+    const campaign = await prisma.campaign.findUnique({
+      where: { id: campaignId },
+      select: { stats: true }
+    });
+
+    if (!campaign) return;
+
+    let stats = { totalSent: 0, delivered: 0, read: 0, failed: 0, clicked: 0 };
+    try {
+      stats = JSON.parse(campaign.stats || '{}');
+    } catch (e) {
+      // Use defaults
+    }
+
+    if (status === "delivered") stats.delivered = (stats.delivered || 0) + 1;
+    else if (status === "read") stats.read = (stats.read || 0) + 1;
+    else if (status === "failed") stats.failed = (stats.failed || 0) + 1;
+    else return; // Other statuses don't affect these counters
+
+    await prisma.campaign.update({
+      where: { id: campaignId },
+      data: { stats: JSON.stringify(stats) }
+    });
+
+    console.log(`[WhatsApp Webhook] Campaign ${campaignId} stats updated for status: ${status}`);
+  } catch (error) {
+    console.error(`[WhatsApp Webhook] Error updating campaign stats:`, error);
+  }
 }
 
 /**

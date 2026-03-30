@@ -135,12 +135,22 @@ export async function GET(request: NextRequest) {
     ])
 
     // Calculate current period stats
-    const sentCount = messageStatsCurrent.find(m => m.status === 'sent')?._count || 0
-    const deliveredCount = messageStatsCurrent.find(m => m.status === 'delivered')?._count || 0
-    const readCount = messageStatsCurrent.find(m => m.status === 'read')?._count || 0
+    // Calculate current period stats via status roll-up
+    const getCount = (status: string) => messageStatsCurrent.find(m => m.status === status)?._count || 0
+    
+    const sentOnly = getCount('sent')
+    const deliveredOnly = getCount('delivered')
+    const readOnly = getCount('read')
+    const failedOnly = getCount('failed')
+    
+    // Roll-up logic: messages that are 'read' were also 'delivered' and 'sent'. 
+    // totalSentForRate should include 'failed' to calculate delivery percentage of all attempts.
+    const totalSentForRate = sentOnly + deliveredOnly + readOnly + failedOnly
+    const totalDeliveredForRate = deliveredOnly + readOnly
+    const totalReadForRate = readOnly
 
-    const deliveryRate = sentCount > 0 ? ((deliveredCount / sentCount) * 100) : 0
-    const readRate = deliveredCount > 0 ? ((readCount / deliveredCount) * 100) : 0
+    const deliveryRate = totalSentForRate > 0 ? ((totalDeliveredForRate / totalSentForRate) * 100) : 0
+    const readRate = totalDeliveredForRate > 0 ? ((totalReadForRate / totalDeliveredForRate) * 100) : 0
 
     // Fetch previous period stats for trends
     const [
@@ -187,12 +197,20 @@ export async function GET(request: NextRequest) {
     ])
 
     // Calculate previous period rates
-    const prevSentCount = messageStatsPrevious.find(m => m.status === 'sent')?._count || 0
-    const prevDeliveredCount = messageStatsPrevious.find(m => m.status === 'delivered')?._count || 0
-    const prevReadCount = messageStatsPrevious.find(m => m.status === 'read')?._count || 0
+    // Calculate previous period rates with roll-up
+    const getPrevCount = (status: string) => messageStatsPrevious.find(m => m.status === status)?._count || 0
+    
+    const prevSentOnly = getPrevCount('sent')
+    const prevDeliveredOnly = getPrevCount('delivered')
+    const prevReadOnly = getPrevCount('read')
+    const prevFailedOnly = getPrevCount('failed')
+    
+    const prevTotalSent = prevSentOnly + prevDeliveredOnly + prevReadOnly + prevFailedOnly
+    const prevTotalDelivered = prevDeliveredOnly + prevReadOnly
+    const prevTotalRead = prevReadOnly
 
-    const prevDeliveryRate = prevSentCount > 0 ? ((prevDeliveredCount / prevSentCount) * 100) : 0
-    const prevReadRate = prevDeliveredCount > 0 ? ((prevReadCount / prevDeliveredCount) * 100) : 0
+    const prevDeliveryRate = prevTotalSent > 0 ? ((prevTotalDelivered / prevTotalSent) * 100) : 0
+    const prevReadRate = prevTotalDelivered > 0 ? ((prevTotalRead / prevTotalDelivered) * 100) : 0
 
     // Calculate trend percentages
     const calculateTrend = (current: number, previous: number): number => {
@@ -203,7 +221,7 @@ export async function GET(request: NextRequest) {
     }
 
     const trends = {
-      messagesSent: parseFloat(calculateTrend(sentCount, messagesSentPrevious).toFixed(1)),
+      messagesSent: parseFloat(calculateTrend(totalSentForRate, prevTotalSent).toFixed(1)),
       deliveryRate: parseFloat(calculateTrend(deliveryRate, prevDeliveryRate).toFixed(1)),
       readRate: parseFloat(calculateTrend(readRate, prevReadRate).toFixed(1)),
       newContacts: parseFloat(calculateTrend(newContactsCurrent, newContactsPrevious).toFixed(1))
@@ -236,13 +254,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Count messages by date and status
+    // Count messages by date and status with roll-up
     allMessagesInRange.forEach(msg => {
       const dateStr = msg.createdAt.toISOString().split('T')[0]
       const dayData = messageVolumeMap.get(dateStr)
       if (dayData) {
-        if (msg.status === 'sent') dayData.sent++
-        else if (msg.status === 'delivered') dayData.delivered++
-        else if (msg.status === 'read') dayData.read++
+        // Roll-up logic: if delivered, it was also sent. if read, it was delivered and sent.
+        if (msg.status === 'sent' || msg.status === 'delivered' || msg.status === 'read') dayData.sent++
+        if (msg.status === 'delivered' || msg.status === 'read') dayData.delivered++
+        if (msg.status === 'read') dayData.read++
       }
     })
 
@@ -342,7 +362,7 @@ export async function GET(request: NextRequest) {
       data: {
         overview: {
           totalContacts,
-          messagesSent: sentCount || 0,
+          messagesSent: totalSentForRate || 0,
           activeCampaigns: campaignsData.filter(c => c.status === 'running').length,
           activeAutomations: automationStats.filter(a => a.status === 'active').length
         },
