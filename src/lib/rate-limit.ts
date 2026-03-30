@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { headers } from 'next/headers';
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+import { getToken } from 'next-auth/jwt';
+
+// Store for rate limit tracking
+const rateLimitStore = new Map<string, Map<RateLimitEndpoint, number[]>>();
 
 // Rate limit configurations per endpoint type
 export const RATE_LIMITS = {
@@ -27,30 +32,39 @@ export const RATE_LIMITS = {
 
 export type RateLimitEndpoint = keyof typeof RATE_LIMITS;
 
-// In-memory store for rate limiting using sliding window algorithm
-// Map<orgId, Map<endpoint, RequestTimestamp[]>>
-const rateLimitStore = new Map<string, Map<RateLimitEndpoint, number[]>>();
+// Check if Redis is configured
+const isRedisConfigured = !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
+
+// Initialize Redis
+const redis = isRedisConfigured ? Redis.fromEnv() : null;
+
+// Create rate limiters for each endpoint
+const rateLimiters = redis ? {
+  messages: new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(RATE_LIMITS.messages.limit, `${RATE_LIMITS.messages.windowSec} s`),
+  }),
+  'phone-numbers': new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(RATE_LIMITS['phone-numbers'].limit, `${RATE_LIMITS['phone-numbers'].windowSec} s`),
+  }),
+  templates: new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(RATE_LIMITS.templates.limit, `${RATE_LIMITS.templates.windowSec} s`),
+  }),
+  webhooks: new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(RATE_LIMITS.webhooks.limit, `${RATE_LIMITS.webhooks.windowSec} s`),
+  }),
+} : null;
 
 /**
  * Get organization ID from request
- * Uses header x-org-id or falls back to auth organization
+ * Extracts from verified JWT token
  */
-function getOrganizationId(request: NextRequest): string {
-  // First check for org-id header (set by auth middleware)
-  const orgId = request.headers.get('x-org-id');
-  if (orgId) {
-    return orgId;
-  }
-  
-  // Fallback: check for organization in query params or body
-  const url = new URL(request.url);
-  const orgParam = url.searchParams.get('organizationId');
-  if (orgParam) {
-    return orgParam;
-  }
-  
-  // Default to 'default-org' for unauthenticated requests
-  return 'default-org';
+async function getOrganizationId(request: NextRequest): Promise<string | null> {
+  const token = await getToken({ req: request });
+  return token?.organizationId as string || null;
 }
 
 /**
@@ -66,62 +80,61 @@ function cleanOldTimestamps(
 }
 
 /**
- * Check if request is rate limited using sliding window algorithm
+ * Check if request is rate limited using Redis
  */
-export function checkRateLimit(
-  orgId: string,
+export async function checkRateLimit(
+  orgId: string | null,
   endpoint: RateLimitEndpoint
-): {
+): Promise<{
   allowed: boolean;
   remaining: number;
   resetTime: number;
   limit: number;
-} {
+}> {
+  // Use 'default-org' if no orgId (unauthenticated requests)
+  const key = orgId || 'default-org';
   const config = RATE_LIMITS[endpoint];
+
+  if (rateLimiters) {
+    const limiter = rateLimiters[endpoint];
+
+    const result = await limiter.limit(`${key}:${endpoint}`);
+
+    return {
+      allowed: result.success,
+      remaining: result.remaining,
+      resetTime: result.reset,
+      limit: config.limit,
+    };
+  }
+
+  // Fallback to in-memory store
   const now = Date.now();
   
-  // Initialize org entry if not exists
-  if (!rateLimitStore.has(orgId)) {
-    rateLimitStore.set(orgId, new Map());
+  if (!rateLimitStore.has(key)) {
+    rateLimitStore.set(key, new Map());
   }
   
-  const orgStore = rateLimitStore.get(orgId)!;
-  
-  // Initialize endpoint entry if not exists
+  const orgStore = rateLimitStore.get(key)!;
   if (!orgStore.has(endpoint)) {
     orgStore.set(endpoint, []);
   }
   
-  const timestamps = orgStore.get(endpoint)!;
+  let timestamps = orgStore.get(endpoint)!;
+  timestamps = cleanOldTimestamps(timestamps, config.windowMs);
   
-  // Clean old timestamps outside the window
-  const cleanTimestamps = cleanOldTimestamps(timestamps, config.windowMs);
-  orgStore.set(endpoint, cleanTimestamps);
+  const allowed = timestamps.length < config.limit;
   
-  const currentCount = cleanTimestamps.length;
-  const remaining = Math.max(0, config.limit - currentCount);
-  
-  // Calculate reset time (end of current window)
-  const resetTime = now + config.windowMs;
-  
-  // Check if limit exceeded
-  if (currentCount >= config.limit) {
-    return {
-      allowed: false,
-      remaining: 0,
-      resetTime,
-      limit: config.limit,
-    };
+  if (allowed) {
+    timestamps.push(now);
   }
   
-  // Add current request timestamp
-  cleanTimestamps.push(now);
-  orgStore.set(endpoint, cleanTimestamps);
+  orgStore.set(endpoint, timestamps);
   
   return {
-    allowed: true,
-    remaining: remaining - 1, // Account for current request
-    resetTime,
+    allowed,
+    remaining: Math.max(0, config.limit - timestamps.length),
+    resetTime: timestamps.length > 0 ? timestamps[0] + config.windowMs : now + config.windowMs,
     limit: config.limit,
   };
 }
@@ -184,7 +197,7 @@ function createRateLimitResponse(
 /**
  * Rate limiting middleware for Next.js API routes
  * Call this at the beginning of your API route handler
- * 
+ *
  * @param request - NextRequest object
  * @param endpoint - The endpoint type for rate limiting
  * @returns NextResponse if rate limited, null if allowed
@@ -193,25 +206,25 @@ export async function rateLimit(
   request: NextRequest,
   endpoint: RateLimitEndpoint
 ): Promise<{ allowed: boolean; response?: NextResponse; headers: Headers }> {
-  const orgId = getOrganizationId(request);
-  const clientIP = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() 
-    || request.headers.get('x-real-ip') 
+  const orgId = await getOrganizationId(request);
+  const clientIP = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || request.headers.get('x-real-ip')
     || 'unknown';
-  
-  const result = checkRateLimit(orgId, endpoint);
-  
+
+  const result = await checkRateLimit(orgId, endpoint);
+
   const headers = createRateLimitHeaders(
     result.limit,
     result.remaining,
     result.resetTime
   );
-  
+
   if (!result.allowed) {
-    logRateLimitViolation(orgId, endpoint, clientIP);
+    logRateLimitViolation(orgId || 'unknown', endpoint, clientIP);
     const response = createRateLimitResponse(endpoint, result.resetTime);
     return { allowed: false, response, headers };
   }
-  
+
   return { allowed: true, headers };
 }
 

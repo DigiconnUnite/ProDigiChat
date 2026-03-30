@@ -12,13 +12,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Build user filter for queries
-    const userFilter: any = userId ? { userId } : {};
+    // Build organization filter for queries
+    const orgFilter: any = orgId ? { organizationId: orgId } : {};
 
     // Count total unread messages across all contacts
     const unreadCount = await prisma.message.count({
       where: {
-        ...userFilter,
+        ...orgFilter,
         direction: "incoming",
         status: "sent", // Unread messages have status "sent"
       },

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
 import { addBulkToQueue, processQueue } from '@/lib/queue'
+import { requireRole } from '@/lib/rbac'
 
 async function validateSession(request: NextRequest) {
   const token = await getToken({ req: request })
@@ -11,22 +12,7 @@ async function validateSession(request: NextRequest) {
       { status: 401 }
     )
   }
-  return null
-}
-
-// Helper function to get organization ID from token
-async function getOrganizationId(request: NextRequest): Promise<string | null> {
-  const token = await getToken({ req: request })
-  // Handle both string and object types for organizationId
-  const orgId = token?.organizationId
-  if (typeof orgId === 'string') {
-    return orgId
-  }
-  // Also check if it's stored as a token property
-  if (orgId && typeof orgId !== 'string') {
-    return String(orgId)
-  }
-  return null
+  return token
 }
 
 // POST /api/campaigns/[id]/launch - Launch a campaign (start sending messages)
@@ -34,33 +20,36 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const unauthorizedResponse = await validateSession(request)
-  if (unauthorizedResponse) {
-    return unauthorizedResponse
+  // Get token once for all operations
+  const token = await getToken({ req: request })
+  if (!token) {
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    )
+  }
+
+  const userId = token.sub
+  const orgId = token.organizationId as string
+
+  if (!userId || !orgId) {
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    )
+  }
+
+  // RBAC: Require member role or higher to launch campaigns
+  const roleCheck = await requireRole(request, 'member')
+  if (roleCheck) {
+    return roleCheck
   }
 
   try {
     const { id } = await params
-    
+
     // Debug: Log the campaign ID
     console.log('[CampaignLaunch] Starting campaign launch for ID:', id)
-    
-    // Get userId and organization ID from token
-    const token = await getToken({ req: request })
-    const userId = token?.sub
-    console.log('[CampaignLaunch] Token:', { userId, hasOrgId: !!token?.organizationId, orgIdRaw: token?.organizationId })
-    
-    // Handle organizationId - can be string or object
-    let orgId: string | undefined = undefined
-    if (token?.organizationId) {
-      if (typeof token.organizationId === 'string') {
-        orgId = token.organizationId
-      } else if (token.organizationId && typeof token.organizationId !== 'string') {
-        orgId = String(token.organizationId)
-      }
-    }
-    
-    console.log('[CampaignLaunch] Organization ID from token:', orgId)
     
     // Get the campaign first to check organizationId
     const campaign = await prisma.campaign.findUnique({
@@ -85,30 +74,20 @@ export async function POST(
       )
     }
     
-    // Use orgId from token, or fall back to campaign's organizationId
-    if (!orgId && campaign.organizationId) {
-      orgId = campaign.organizationId!
-      console.log('[CampaignLaunch] Using organizationId from campaign:', orgId)
-    }
-    
-    if (!orgId) {
-      console.log('[CampaignLaunch] No organization ID found - will use default')
-    }
-
-    // Verify the campaign was found
-    if (!campaign) {
-      return NextResponse.json(
-        { success: false, error: 'Campaign not found' },
-        { status: 404 }
-      )
-    }
-    
-    // Verify the campaign belongs to the current user
-    if (campaign.createdBy && campaign.createdBy !== userId) {
+    // Verify the campaign belongs to the user's organization
+    if (campaign.organizationId !== orgId) {
       return NextResponse.json(
         { success: false, error: 'Not authorized to launch this campaign' },
         { status: 403 }
       )
+    }
+    
+    // Any active org member should be able to launch campaigns
+    const membership = await prisma.organizationMember.findFirst({
+      where: { userId, organizationId: campaign.organizationId, isActive: true }
+    });
+    if (!membership) {
+      return NextResponse.json({ error: "You are not a member of this organization" }, { status: 403 });
     }
 
     // Check if campaign has a WhatsApp number assigned
@@ -359,13 +338,10 @@ export async function POST(
       }
     })
 
-    // Track send results
-    let queueResult = { processed: 0, succeeded: 0, failed: 0 }
-    
     // BUG FIX: Get the WhatsApp account ID to use for sending messages
     // Use the campaign's chosen phone number (whatsappNumberId) to find the correct credential
     let whatsappAccountId: string | undefined;
-    
+
     if (campaign.whatsappNumberId) {
       // Find the credential that has the campaign's selected phone number
       const phoneNumber = creds?.phoneNumbers?.find((p: any) => p.id === campaign.whatsappNumberId);
@@ -375,13 +351,13 @@ export async function POST(
       } else {
         // Phone number not found in current credential, search all credentials
         const allCreds = await prisma.whatsAppCredential.findMany({
-          where: { 
+          where: {
             organizationId: campaign.organizationId ?? undefined,
             isActive: true
           },
           include: { phoneNumbers: true }
         });
-        
+
         for (const cred of allCreds) {
           const hasPhoneNumber = cred.phoneNumbers?.some((p: any) => p.id === campaign.whatsappNumberId);
           if (hasPhoneNumber) {
@@ -392,35 +368,37 @@ export async function POST(
         }
       }
     }
-    
+
     // Fallback to default credential if not found
     if (!whatsappAccountId) {
       whatsappAccountId = creds?.id;
     }
-    
+
     console.log('[CampaignLaunch] Using WhatsApp account ID:', whatsappAccountId);
-    
-    // Enqueue all messages and process immediately
+
+    // Enqueue all messages - let cron handle processing
     if (queueMessages.length > 0 && orgId) {
       console.log('[CampaignLaunch] Adding messages to queue:', queueMessages.length, 'accountId:', whatsappAccountId)
       // BUG FIX: Pass whatsappAccountId to the queue
       await addBulkToQueue(orgId, queueMessages, whatsappAccountId)
-      
-      // Process queue immediately to send messages
-      // Process all messages, not just 50
-      console.log('[CampaignLaunch] Processing queue for org:', orgId)
-      queueResult = await processQueue(orgId, queueMessages.length)
-      console.log('[CampaignLaunch] Queue processing result:', queueResult)
-      
-      // BUG FIX: Update campaign stats with actual succeeded count (not processed which includes failures)
+
+      // Trigger the queue processing immediately in the background
+      // This ensures messages start sending right away in local development
+      // where Vercel Cron jobs don't run automatically
+      processQueue(orgId, 100).catch(err => {
+        console.error('[CampaignLaunch] Background queue processing error:', err);
+      });
+
+      // Set campaign status to running immediately after queuing
       await prisma.campaign.update({
         where: { id },
         data: {
+          status: 'running',
           stats: JSON.stringify({
-            totalSent: queueResult.succeeded, // BUG FIX: Use succeeded instead of processed
+            totalSent: 0,
             delivered: 0,
             read: 0,
-            failed: queueResult.failed,
+            failed: 0,
             clicked: 0
           })
         }
@@ -433,30 +411,16 @@ export async function POST(
       )
     }
 
-    // Determine final status
-    const finalStatus = queueResult.failed > 0 && queueResult.succeeded === 0 ? 'failed' : 'running'
-    
-    // Update campaign status to running
-    await prisma.campaign.update({
-      where: { id },
-      data: { status: finalStatus }
-    })
-
-    // Return results with actual send status
+    // Return success - cron will handle actual sending
     return NextResponse.json({
-      success: queueResult.succeeded > 0,
-      message: queueResult.succeeded > 0 
-        ? (phoneNotVerifiedWarning 
-            ? `Sent ${queueResult.succeeded} messages (${queueResult.failed} failed). Warning: Your phone number is not verified.`
-            : `Successfully sent ${queueResult.succeeded} messages`)
-        : 'Campaign launched but no messages were sent. Check your WhatsApp connection.',
+      success: true,
+      message: 'Campaign queued for dispatch',
       warning: phoneNotVerifiedWarning,
       data: {
         campaignId: id,
-        status: finalStatus,
+        status: 'running',
         recipientsCount: contacts.length,
-        sentCount: queueResult.succeeded,
-        failedCount: queueResult.failed
+        queuedCount: queueMessages.length
       }
     })
   } catch (error) {

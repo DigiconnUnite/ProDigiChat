@@ -47,54 +47,8 @@ import {
   GitBranch,
 } from "lucide-react"
 
-// Mock automation workflows data
-const automationWorkflowsData = [
-  {
-    id: 1,
-    name: "Welcome Series",
-    status: "active",
-    trigger: "New contact added",
-    steps: 5,
-    lastRun: "2 hours ago",
-    successRate: 95.2,
-  },
-  {
-    id: 2,
-    name: "Cart Abandonment",
-    status: "active",
-    trigger: "Cart not completed",
-    steps: 3,
-    lastRun: "1 hour ago",
-    successRate: 87.5,
-  },
-  {
-    id: 3,
-    name: "Re-engagement Campaign",
-    status: "paused",
-    trigger: "Contact inactive for 30 days",
-    steps: 4,
-    lastRun: "3 days ago",
-    successRate: 72.1,
-  },
-  {
-    id: 4,
-    name: "VIP Customer Flow",
-    status: "draft",
-    trigger: "High-value purchase",
-    steps: 2,
-    lastRun: "Never",
-    successRate: 0,
-  },
-  {
-    id: 5,
-    name: "Lead Nurturing",
-    status: "active",
-    trigger: "Lead form submission",
-    steps: 6,
-    lastRun: "30 min ago",
-    successRate: 91.8,
-  },
-]
+// Automation workflows data (empty for now - feature coming soon)
+const automationWorkflowsData: any[] = []
 
 const statusConfig = {
   draft: { icon: Clock, label: "Draft", color: "bg-muted text-muted-foreground" },
@@ -123,53 +77,18 @@ export default function AutomationPage() {
         </Button>
       </div>
 
-      {/* Stats cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Total Workflows</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">24</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              All automation flows
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Active Workflows</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">18</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Currently running
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Messages Sent</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-chart-2">12,847</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              This month
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Avg Success Rate</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">89.4%</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Across all workflows
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Coming Soon Notice */}
+      <Card className="border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <Zap className="h-16 w-16 text-muted-foreground mb-4" />
+          <h3 className="text-xl font-semibold text-muted-foreground mb-2">
+            Automation Coming Soon
+          </h3>
+          <p className="text-sm text-muted-foreground text-center max-w-md">
+            Advanced automation workflows are currently in development. You'll be able to create automated customer journeys, drip campaigns, and smart follow-ups soon.
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Automation Workflows Table */}
       <Card>
@@ -178,7 +97,7 @@ export default function AutomationPage() {
             <div>
               <CardTitle>Automation Workflows</CardTitle>
               <CardDescription>
-                {automationWorkflowsData.length} workflow{automationWorkflowsData.length !== 1 ? "s" : ""}
+                {automationWorkflowsData.length} workflow{automationWorkflowsData.length !== 1 ? "s" : ""} (Coming Soon)
               </CardDescription>
             </div>
           </div>

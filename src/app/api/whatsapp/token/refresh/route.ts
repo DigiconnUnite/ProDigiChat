@@ -23,36 +23,35 @@ import { META_API_BASE } from '@/lib/meta-config';
 const REFRESH_THRESHOLD_DAYS = 7; // Refresh tokens expiring within 7 days
 const REFRESH_THRESHOLD_MS = REFRESH_THRESHOLD_DAYS * 24 * 60 * 60 * 1000;
 
-// Meta token refresh endpoint
-const META_REFRESH_TOKEN_URL = META_API_BASE;
-
 /**
  * Refresh the access token using Meta's refresh_token endpoint
  */
 async function refreshAccessToken(
-  accessToken: string,
-  businessAccountId: string
+  accessToken: string
 ): Promise<{ newToken: string; expiresIn: number } | null> {
   try {
-    console.log(`[TokenRefresh] Attempting to refresh token for business account: ${businessAccountId}`);
-    
-    const response = await fetch(`${META_REFRESH_TOKEN_URL}/${businessAccountId}/refresh_token`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      }
+    console.log(`[TokenRefresh] Attempting to refresh token...`);
+
+    // Use the correct Meta token refresh endpoint with URLSearchParams for cleaner code
+    const url = new URL(`${META_API_BASE}/oauth/access_token`);
+    url.searchParams.set('grant_type', 'fb_exchange_token');
+    url.searchParams.set('client_id', process.env.META_APP_ID || '');
+    url.searchParams.set('client_secret', process.env.META_APP_SECRET || '');
+    url.searchParams.set('fb_exchange_token', accessToken);
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       console.error(`[TokenRefresh] Token refresh failed:`, error);
       return null;
     }
-    
+
     const data = await response.json();
-    console.log(`[TokenRefresh] Token refresh successful, expires in: ${data.expires_in} seconds`);
-    
+    console.log(`[TokenRefresh] Token refresh successful, expires in: ${data.expires_in || 'unknown'} seconds`);
+
     return {
       newToken: data.access_token,
       expiresIn: data.expires_in || (59 * 24 * 60 * 60) // Default to ~59 days if not returned
@@ -164,10 +163,7 @@ async function processOrganizationTokenRefresh(
     }
     
     // Attempt to refresh the token
-    const refreshResult = await refreshAccessToken(
-      currentToken,
-      credential.businessAccountId
-    );
+    const refreshResult = await refreshAccessToken(currentToken);
     
     if (!refreshResult) {
       // Update status to failed
@@ -188,14 +184,32 @@ async function processOrganizationTokenRefresh(
       };
     }
     
-    // Encrypt and update the new token
+    // Encrypt the new token - ensure encryption succeeds
     const encryptedNewToken = encryptField(refreshResult.newToken);
+    if (!encryptedNewToken) {
+      console.error(`[TokenRefresh] Failed to encrypt new token for org: ${orgId}`);
+      await prisma.whatsAppCredential.updateMany({
+        where: { organizationId: orgId },
+        data: {
+          lastRefreshStatus: 'failed',
+          lastRefreshError: 'Token encryption failed'
+        }
+      });
+      return {
+        success: false,
+        orgId,
+        refreshed: false,
+        message: 'Token encryption failed',
+        error: 'Failed to encrypt new access token'
+      };
+    }
+
     const newExpirationDate = calculateNewExpiration(refreshResult.expiresIn);
-    
+
     await prisma.whatsAppCredential.updateMany({
       where: { organizationId: orgId },
       data: {
-        accessToken: encryptedNewToken || refreshResult.newToken,
+        accessToken: encryptedNewToken, // Store encrypted token
         tokenExpiresAt: newExpirationDate,
         lastRefreshedAt: new Date(),
         lastVerifiedAt: new Date(),

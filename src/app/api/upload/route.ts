@@ -4,6 +4,7 @@ import { join } from "path";
 import { randomUUID } from "crypto";
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
+import { saveFileMetadata } from '@/lib/files'
 
 // Allowed file types
 const ALLOWED_FILE_TYPES = {
@@ -71,9 +72,18 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(bytes);
     await writeFile(filePath, buffer);
 
-    // Return success response without saving to database (File model not in schema)
+    // Save file metadata to database
+    const fileId = await saveFileMetadata({
+      filename: fileName,
+      originalname: file.name,
+      size: file.size,
+      mimetype: file.type,
+      url: `/uploads/${fileName}`,
+      key: fileName, // Using filename as key for local storage
+    }, req);
+
     const fileRecord = {
-      id: fileName,
+      id: fileId,
       filename: fileName,
       originalName: file.name,
       mimeType: file.type,

@@ -128,22 +128,27 @@ export const authOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async jwt({ token, user }) {
-      // Only fetch organization when user first logs in
-      if (user) {
-        token.sub = user.id;
-        token.name = user.name;
-        token.email = user.email;
-        
-        // Fetch org ONLY when user first logs in
-        const membership = await prisma.organizationMember.findFirst({
-          where: { userId: user.id, isActive: true },
-          select: { organizationId: true, role: true, organization: { select: { name: true } } }
-        });
-        if (membership) {
-          token.organizationId = membership.organizationId;
-          token.role = membership.role;
-          token.organizationName = membership.organization.name;
+    async jwt({ token, user, trigger }) {
+      // Fetch organization when user first logs in OR when token is updated
+      if (user || trigger === 'update') {
+        const userId = user?.id || token.sub;
+        if (userId) {
+          token.sub = userId;
+          if (user) {
+            token.name = user.name;
+            token.email = user.email;
+          }
+
+          // Re-fetch org membership to ensure it's current
+          const membership = await prisma.organizationMember.findFirst({
+            where: { userId: userId, isActive: true },
+            select: { organizationId: true, role: true, organization: { select: { name: true } } }
+          });
+          if (membership) {
+            token.organizationId = membership.organizationId;
+            token.role = membership.role;
+            token.organizationName = membership.organization.name;
+          }
         }
       }
       return token;

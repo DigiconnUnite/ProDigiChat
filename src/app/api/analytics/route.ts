@@ -4,22 +4,21 @@ import { getToken } from 'next-auth/jwt'
 
 export async function GET(request: NextRequest) {
   const token = await getToken({ req: request });
-  const userId = token?.sub;
-  const orgId = token?.organizationId || token?.orgId;
+  const orgId = (token?.organizationId || token?.orgId) as string;
 
-  if (!userId && !orgId) {
+  if (!orgId) {
     return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
+      { error: 'Organization ID not found in token' },
+      { status: 400 }
     );
   }
 
-  // Build user filter for queries - using createdBy for campaigns/automations, userId for contacts/messages
-  const contactFilter: any = userId ? { userId } : {};
-  const campaignFilter: any = userId ? { createdBy: userId } : {};
-  const automationFilter: any = userId ? { createdBy: userId } : {};
-  const messageFilter: any = userId ? { sentBy: userId } : {};
-  const activityFilter: any = userId ? { userId } : {};
+   // Build organization-level filters for org-wide analytics
+   const contactFilter = { organizationId: orgId };
+   const automationFilter = {};
+   const campaignFilter = { organizationId: orgId };
+   const messageFilter = { organizationId: orgId };
+   const activityFilter = {};
 
   try {
     const { searchParams } = new URL(request.url)

@@ -1,36 +1,33 @@
+/**
+ * WhatsApp API Edge Cases and Utilities
+ * 
+ * This file contains utility functions for handling edge cases in the WhatsApp API.
+ * Use these helper functions carefully - some may have side effects like rate limiting
+ * or external API calls. Always ensure proper error handling when using these utilities.
+ */
+
 import { whatsappClient } from "./auth";
 
 const RATE_LIMIT_DELAY = 1000;
 const MAX_RETRIES = 3;
 
-export async function sendMessageWithRetry(to: string, message: string, retries = 0): Promise<any> {
+export async function sendMessageWithRetry(to: string, message: string, orgId: string, accountId?: string, retries = 0): Promise<any> {
   try {
     const response = await whatsappClient.sendMessage({
       to,
       type: "text",
       text: { body: message },
-    });
+    }, orgId, accountId);
     return response.data;
   } catch (error: any) {
     if (error.response && error.response.status === 429 && retries < MAX_RETRIES) {
       console.log(`Rate limited. Retrying in ${RATE_LIMIT_DELAY}ms...`);
       await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
-      return sendMessageWithRetry(to, message, retries + 1);
+      return sendMessageWithRetry(to, message, orgId, accountId, retries + 1);
     }
     console.error("Failed to send message after retries:", error);
     throw error;
   }
-}
-
-export async function validateMessageContent(message: string): Promise<boolean> {
-  const forbiddenPatterns = [/spam/, /promotion/, /discount/];
-  const isValid = !forbiddenPatterns.some(pattern => pattern.test(message.toLowerCase()));
-  
-  if (!isValid) {
-    console.warn("Message content violates WhatsApp policies");
-  }
-  
-  return isValid;
 }
 
 export async function validatePhoneNumber(phoneNumber: string): Promise<boolean> {

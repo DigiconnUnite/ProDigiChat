@@ -4,42 +4,44 @@
  * Generates the OAuth authorization URL for the embedded signup flow.
  * This endpoint is called by the frontend when user clicks "Connect WhatsApp"
  * 
- * CRITICAL: This now uses Embedded Signup which automatically handles:
- * - Business Account creation
- * - WABA creation
- * - Phone number verification
- * - Webhook subscription
+ * CRITICAL SECURITY: orgId is read from the verified JWT token only.
+ * Query parameters are NOT trusted for security-sensitive operations.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { getToken } from 'next-auth/jwt';
 import { createWhatsAppOAuthService } from '@/lib/whatsapp-oauth';
 import { randomBytes } from 'crypto';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const orgId = searchParams.get('orgId');
+    
+    // SECURITY: Read orgId from JWT token, NOT from query params
+    const token = await getToken({ req: request });
+    const orgId = token?.organizationId as string | undefined;
+    
     const forceReauth = searchParams.get('forceReauth') === 'true';
     const embedded = searchParams.get('embedded') !== 'false'; // Default to embedded signup
     
-    // Optional prefill data
+    // Optional prefill data (these are NOT security-sensitive, just UX)
     const prefillPhone = searchParams.get('prefillPhone') || undefined;
     const prefillBusiness = searchParams.get('prefillBusiness') || undefined;
 
     if (!orgId) {
       return NextResponse.json(
-        { error: 'Organization ID is required' },
-        { status: 400 }
+        { error: 'Unauthorized - no organization found in token' },
+        { status: 401 }
       );
     }
 
     // Create OAuth service with dynamic domain detection
     const oauthService = createWhatsAppOAuthService(request.url);
 
-    // Generate state with organization ID for CSRF protection
-    // Include timestamp and nonce for security
+    // Generate state for CSRF protection
+    // NOTE: orgId is NOT included in state since it will be re-verified from JWT
+    // in the callback endpoint, preventing orgId forgery attacks
     const state = Buffer.from(JSON.stringify({ 
-      orgId, 
       timestamp: Date.now(),
       nonce: randomBytes(16).toString('hex')
     })).toString('base64');

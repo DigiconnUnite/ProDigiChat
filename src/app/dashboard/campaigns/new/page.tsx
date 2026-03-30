@@ -111,6 +111,15 @@ interface Segment {
   memberCount: number
 }
 
+interface WhatsAppAccount {
+  id: string
+  accountName: string
+  businessAccountName?: string
+  displayName?: string
+  phoneNumber?: string
+  phoneNumbers?: WhatsAppNumber[]
+}
+
 interface WhatsAppNumber {
   id: string
   phoneNumber: string
@@ -149,6 +158,7 @@ export default function NewCampaignPage() {
   const [segments, setSegments] = useState<Segment[]>([])
   const [templates, setTemplates] = useState<Template[]>([])
   const [phoneNumbers, setPhoneNumbers] = useState<WhatsAppNumber[]>([])
+  const [whatsAppAccounts, setWhatsAppAccounts] = useState<WhatsAppAccount[]>([])
   const [totalContacts, setTotalContacts] = useState(0)
   const [isLoadingData, setIsLoadingData] = useState(true)
   
@@ -184,6 +194,21 @@ export default function NewCampaignPage() {
         const phoneData = await phoneRes.json()
         if (phoneData.success) {
           setPhoneNumbers(phoneData.data || [])
+        }
+        
+        // Fetch WhatsApp accounts from settings API
+        const accountsRes = await fetch('/api/settings/whatsapp')
+        const accountsData = await accountsRes.json()
+        if (accountsData.accounts) {
+          setWhatsAppAccounts(accountsData.accounts || [])
+          // If only one account, default to it
+          if (accountsData.accounts.length === 1 && !formData.fromNumber) {
+            setFormData(prev => ({ ...prev, fromNumber: accountsData.accounts[0].id }))
+          }
+          // Set default account if available
+          if (accountsData.defaultAccountId && !formData.fromNumber) {
+            setFormData(prev => ({ ...prev, fromNumber: accountsData.defaultAccountId }))
+          }
         }
         
         // Fetch contacts count
@@ -464,14 +489,15 @@ export default function NewCampaignPage() {
                       </div>
                     </Label>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="ab_test" id="ab_test" />
-                    <Label htmlFor="ab_test" className="font-normal cursor-pointer">
+                  <div className="flex items-center space-x-2 opacity-50">
+                    <RadioGroupItem value="ab_test" id="ab_test" disabled />
+                    <Label htmlFor="ab_test" className="font-normal cursor-not-allowed">
                       <div className="flex items-center gap-2">
                         <FileText className="text-lime-500" />
                         <div>
                           <span className="font-medium">A/B Test</span>
                           <p className="text-xs text-muted-foreground">Test different message variants</p>
+                          <span className="inline-block px-2 py-1 text-xs bg-muted text-muted-foreground rounded">Coming Soon</span>
                         </div>
                       </div>
                     </Label>
@@ -903,110 +929,40 @@ export default function NewCampaignPage() {
               <p className="text-muted-foreground">Review your campaign details before launching</p>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Campaign Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Name</span>
-                    <span className="font-medium">{formData.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Type</span>
-                    <Badge variant="outline" className="capitalize">{formData.type.replace("_", " ")}</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Audience</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Target</span>
-                    <span className="font-medium">
-                      {formData.audienceType === "all" ? "All Contacts" : 
-                        formData.audienceType === "existing" ? selectedSegment?.name || "Selected Segment" : 
-                        formData.segmentName || "New Segment"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Recipients</span>
-                    <span className="font-medium">
-                      {formData.audienceType === "all" ? (totalContacts > 0 ? totalContacts.toLocaleString() : "0") : 
-                        selectedSegment?.memberCount?.toLocaleString() || "—"}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Message</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Type</span>
-                    <Badge variant="outline" className="capitalize">{formData.messageType}</Badge>
-                  </div>
-                  {formData.messageType === "template" && selectedTemplate && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Template</span>
-                      <span className="font-medium text-sm">{selectedTemplate.name}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Media</span>
-                    <span className="font-medium">
-                      {formData.mediaAttachments.length > 0 ? `${formData.mediaAttachments.length} attached` : "None"}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Schedule</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">When</span>
-                    <span className="font-medium">
-                      {formData.sendNow ? "Send Immediately" : `${formData.scheduledDate} at ${formData.scheduledTime}`}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Throttling</span>
-                    <span className="font-medium">
-                      {formData.throttleRate > 0 ? `${formData.throttleRate}/hr` : "Unlimited"}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
+           
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Advanced Settings</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="fromNumber">WhatsApp Number <span className="text-destructive">*</span></Label>
+                  <Label htmlFor="fromNumber">Send from account <span className="text-destructive">*</span></Label>
                   <Select value={formData.fromNumber} onValueChange={(value) => updateFormData({ fromNumber: value })}>
                     <SelectTrigger id="fromNumber" className={cn(errors.fromNumber && "border-destructive")}>
-                      <SelectValue placeholder="Select WhatsApp number" />
+                      <SelectValue placeholder="Select WhatsApp account" />
                     </SelectTrigger>
                     <SelectContent>
-                      {phoneNumbers.length > 0 ? phoneNumbers.map((number) => (
-                        <SelectItem key={number.id} value={number.id}>
-                          <span>{number.displayName}</span>
-                          <span className="text-muted-foreground ml-2">{number.phoneNumber}</span>
+                      {whatsAppAccounts.length > 0 ? whatsAppAccounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{account.accountName || account.businessAccountName || 'WhatsApp Account'}</span>
+                            {account.phoneNumbers && account.phoneNumbers.length > 0 && (
+                              <span className="text-xs text-muted-foreground">
+                                {account.phoneNumbers.map(p => p.phoneNumber).join(', ')}
+                              </span>
+                            )}
+                          </div>
                         </SelectItem>
-                      )) : (
-                        <div className="p-2 text-sm text-muted-foreground">No WhatsApp numbers available</div>
+                      )) : phoneNumbers.length > 0 ? (
+                        // Fallback to phone numbers if no accounts
+                        phoneNumbers.map((number) => (
+                          <SelectItem key={number.id} value={number.id}>
+                            <span>{number.displayName}</span>
+                            <span className="text-muted-foreground ml-2">{number.phoneNumber}</span>
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <div className="p-2 text-sm text-muted-foreground">No WhatsApp accounts available</div>
                       )}
                     </SelectContent>
                   </Select>

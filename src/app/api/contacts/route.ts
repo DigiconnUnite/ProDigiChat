@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
+import { requireRole } from '@/lib/rbac'
 
 async function getUserId(request: NextRequest): Promise<string | null> {
   const token = await getToken({ req: request })
@@ -16,8 +17,8 @@ async function getUserAndOrgId(request: NextRequest): Promise<{ userId: string |
 }
 
 export async function GET(request: NextRequest) {
-  const userId = await getUserId(request)
-  if (!userId) {
+  const { userId, organizationId } = await getUserAndOrgId(request)
+  if (!userId || !organizationId) {
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }
@@ -32,15 +33,14 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
     const skip = (page - 1) * limit
-    
+
     // Sorting parameters
     const sortBy = searchParams.get('sortBy') || 'createdAt'
     const sortOrder = searchParams.get('sortOrder') || 'desc'
 
-    // Build query conditions - ALWAYS filter by authenticated user
+    // Build query conditions - filter by organization
     const conditions: any = {
-      userId: userId,
-      organizationId: { not: null }
+      organizationId: organizationId
     }
     
     if (status && status !== 'all') {
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
         break
     }
 
-    // Query contacts from database with sorting - filter by userId
+    // Query contacts from database with sorting - filter by organizationId
     const [contacts, total, optedInCount, optedOutCount, pendingCount] = await Promise.all([
       prisma.contact.findMany({
         where: conditions,
@@ -124,11 +124,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { firstName, lastName, phoneNumber, email, tags, attributes, optInStatus } = body
 
-    // Check if contact already exists for this user
+    // Check if contact already exists for this organization
     const existingContact = await prisma.contact.findFirst({
       where: {
         phoneNumber: phoneNumber,
-        userId: userId
+        organizationId: organizationId
       }
     })
 
@@ -177,12 +177,18 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  const userId = await getUserId(request)
-  if (!userId) {
+  const { userId, organizationId } = await getUserAndOrgId(request)
+  if (!userId || !organizationId) {
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }
     )
+  }
+
+  // RBAC: Require manager role or higher to edit contacts
+  const roleCheck = await requireRole(request, 'manager')
+  if (roleCheck) {
+    return roleCheck
   }
 
   try {
@@ -196,11 +202,11 @@ export async function PUT(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Verify contact belongs to the authenticated user
+    // Verify contact belongs to the organization
     const existingContact = await prisma.contact.findFirst({
       where: {
         id,
-        userId: userId
+        organizationId: organizationId
       }
     })
 
@@ -247,12 +253,18 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const userId = await getUserId(request)
-  if (!userId) {
+  const { userId, organizationId } = await getUserAndOrgId(request)
+  if (!userId || !organizationId) {
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }
     )
+  }
+
+  // RBAC: Require member role or higher to delete contacts
+  const roleCheck = await requireRole(request, 'member')
+  if (roleCheck) {
+    return roleCheck
   }
 
   try {
@@ -266,11 +278,11 @@ export async function DELETE(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Verify contact belongs to the authenticated user
+    // Verify contact belongs to the organization
     const existingContact = await prisma.contact.findFirst({
       where: {
         id,
-        userId: userId
+        organizationId: organizationId
       }
     })
 

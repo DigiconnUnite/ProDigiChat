@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
+import { requireRole } from '@/lib/rbac'
 
 async function getUserAndOrgId(request: NextRequest): Promise<{ userId: string | null; organizationId: string | null }> {
   const token = await getToken({ req: request })
@@ -115,6 +116,12 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  // RBAC: Require member role or higher to create campaigns
+  const roleCheck = await requireRole(request, 'member')
+  if (roleCheck) {
+    return roleCheck
+  }
+
   try {
     const body = await request.json()
     
@@ -135,6 +142,7 @@ export async function POST(request: NextRequest) {
       status: 'draft',
       messageContent,
       whatsappNumberId: fromNumber || null,
+      whatsappAccountId: fromNumber || null,  // Store the account ID for multi-account support
       stats: JSON.stringify({
         totalSent: 0,
         delivered: 0,

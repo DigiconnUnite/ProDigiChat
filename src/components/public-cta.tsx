@@ -27,7 +27,7 @@ export function PublicCTA({
   
   return (
     <section className="py-16 ">
-      <div className="container bg-gray-950 text-white mx-auto rounded-4xl px-4 py-16 text-center">
+      <div className="container bg-linear-70 to-gray-800 from-gray-950 text-white mx-auto rounded-4xl px-4 py-16 text-center">
         <h2 className={`text-2xl md:text-3xl font-bold ${isGreen ? "text-white" : ""}`}>
           {title}
         </h2>

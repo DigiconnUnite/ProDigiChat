@@ -41,12 +41,20 @@ function deriveKey(encryptionKey: string, salt: Buffer): Buffer {
 /**
  * Initialize or validate the encryption key
  * Should be called on application startup
- * @throws Error if encryption key is not configured
+ * @throws Error if encryption key is not configured in production
  */
 export function initializeEncryption(): void {
   const encryptionKey = process.env[ENCRYPTION_KEY_ENV];
-  
+
   if (!encryptionKey) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (isProduction) {
+      throw new Error(
+        "ENCRYPTION_KEY environment variable must be configured in production. " +
+        "Sensitive credentials cannot be stored without encryption."
+      );
+    }
+
     if (!encryptionKeyWarningLogged) {
       console.warn(
         "[Encryption] WARNING: ENCRYPTION_KEY environment variable is not set. " +

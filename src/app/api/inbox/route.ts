@@ -15,21 +15,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Build user filter for queries - support both userId and orgId
-    // Note: Contact model has userId field, not organizationId
-    // When orgId is provided without userId, we get all contacts (could be improved with org-level filtering)
-    const userFilter: any = userId ? { userId } : {};
+    // Build organization filter for queries
+    const orgFilter: any = orgId ? { organizationId: orgId } : {};
 
     const { searchParams } = new URL(request.url);
     const contactId = searchParams.get("contactId");
 
     // If contactId is provided, get messages for that conversation
     if (contactId) {
-      // First verify the contact belongs to the user
+      // First verify the contact belongs to the organization
       const contact = await prisma.contact.findFirst({
         where: {
           id: contactId,
-          ...userFilter
+          ...orgFilter
         }
       });
 
@@ -38,9 +36,9 @@ export async function GET(request: NextRequest) {
       }
 
       const messages = await prisma.message.findMany({
-        where: { 
+        where: {
           contactId,
-          ...userFilter
+          ...orgFilter
         },
         orderBy: { createdAt: "asc" },
         include: {
@@ -69,7 +67,7 @@ export async function GET(request: NextRequest) {
     // Otherwise, get all conversations (grouped by contact)
     // Get unique contacts with their latest message
     const contacts = await prisma.contact.findMany({
-      where: userFilter as any,
+      where: orgFilter as any,
       orderBy: { lastContacted: "desc" },
       include: {
         messages: {
@@ -158,9 +156,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get contact - only if it belongs to user
+    // Get contact - only if it belongs to organization
     const contact = await prisma.contact.findFirst({
-      where: userId ? { id: contactId, userId } : { id: contactId }
+      where: orgId ? { id: contactId, organizationId: orgId } : { id: contactId }
     });
 
     if (!contact) {
@@ -257,12 +255,12 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // First verify the contact belongs to the user
-    const userFilter: any = userId ? { userId } : {};
+    // First verify the contact belongs to the organization
+    const orgFilter: any = orgId ? { organizationId: orgId } : {};
     const contact = await prisma.contact.findFirst({
       where: {
         id: contactId,
-        ...userFilter
+        ...orgFilter
       } as any
     });
 

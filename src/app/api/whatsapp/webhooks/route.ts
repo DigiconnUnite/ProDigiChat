@@ -63,13 +63,12 @@ export async function GET(request: NextRequest) {
     const token = searchParams.get("hub.verify_token");
     const challenge = searchParams.get("hub.challenge");
 
-    // Get verify token from env or use default
-    const verifyToken =
-      process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || "prodigichat_webhook_2026";
+    // Get verify token from env
+    const verifyToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
     
     // Debug: Log what we received
     console.log("[Webhook Verification] Received:", { mode, token, challenge });
-    console.log("[Webhook Verification] Expected token:", verifyToken);
+    console.log("[Webhook Verification] Checking token...");
 
     // Security fix: Only allow exact token match - no development bypass
     const tokenMatches = token === verifyToken;
@@ -86,7 +85,7 @@ export async function GET(request: NextRequest) {
     }
 
     console.log("[Webhook Verification] Failed - token mismatch");
-    return NextResponse.json({ error: "Verification failed", received: token, expected: verifyToken }, { status: 403 });
+    return NextResponse.json({ error: "Verification failed" }, { status: 403 });
   } catch (error) {
     console.error("Error in webhook verification:", error);
     return NextResponse.json({ error: "Verification error" }, { status: 500 });
@@ -110,6 +109,31 @@ export async function POST(request: Request) {
       );
     }
 
+    // ✅ CRITICAL: Acknowledge immediately before any processing
+    // Meta requires 200 OK within 5 seconds or it will retry the webhook
+    const ackResponse = NextResponse.json({ success: true });
+    
+    // Process webhook asynchronously - don't await to avoid blocking response
+    processWebhookAsync(rawBody).catch(err => {
+      console.error('[Webhook Processing] Background task failed:', err);
+    });
+    
+    return ackResponse;
+  } catch (error) {
+    console.error("Error in WhatsApp webhook:", error);
+    return NextResponse.json(
+      { error: "Failed to process webhook" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Process webhook payload asynchronously after acknowledgment
+ * This runs in the background and doesn't block the 200 response
+ */
+async function processWebhookAsync(rawBody: string): Promise<void> {
+  try {
     // Now parse the JSON after signature verification
     const payload = JSON.parse(rawBody);
     
@@ -118,28 +142,33 @@ export async function POST(request: Request) {
 
     // Handle Meta WhatsApp Cloud API webhook format
     if (payload.object === "whatsapp_business_account") {
-      return handleMetaWebhook(payload);
+      await handleMetaWebhook(payload);
+      return;
     }
 
     // Handle custom payload format (legacy support)
     const { status, messageId, timestamp, recipient, campaignId } = payload;
 
     if (!status || !messageId || !timestamp || !recipient) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      console.log("[WhatsApp Webhook] Missing required fields in legacy payload");
+      return;
     }
 
     const allowedStatuses = ["sent", "delivered", "read", "failed"];
     if (!allowedStatuses.includes(status)) {
-      return NextResponse.json({ error: "Invalid status value" }, { status: 400 });
+      console.log("[WhatsApp Webhook] Invalid status value");
+      return;
     }
 
     if (!isValidPhoneNumber(recipient)) {
-      return NextResponse.json({ error: "Invalid recipient phone number" }, { status: 400 });
+      console.log("[WhatsApp Webhook] Invalid recipient phone number");
+      return;
     }
 
     const isoTimestamp = new Date(timestamp).toISOString();
     if (isoTimestamp === "Invalid Date") {
-      return NextResponse.json({ error: "Invalid timestamp format" }, { status: 400 });
+      console.log("[WhatsApp Webhook] Invalid timestamp format");
+      return;
     }
 
     console.log(`Message status updated: ${messageId} - ${status}`);
@@ -148,11 +177,13 @@ export async function POST(request: Request) {
     if (payload.type === "inbound") {
       const { from, messageId, timestamp, type, content } = payload;
       if (!from || !messageId || !timestamp || !type || !content) {
-        return NextResponse.json({ error: "Missing required fields for inbound message" }, { status: 400 });
+        console.log("[WhatsApp Webhook] Missing required fields for inbound message");
+        return;
       }
 
       if (!isValidPhoneNumber(from)) {
-        return NextResponse.json({ error: "Invalid sender phone number" }, { status: 400 });
+        console.log("[WhatsApp Webhook] Invalid sender phone number");
+        return;
       }
 
       console.log(`Inbound message received from ${from}: ${content}`);
@@ -165,17 +196,18 @@ export async function POST(request: Request) {
 
     if (existingMessage && existingMessage.status === status) {
       console.log(`Duplicate event detected for message ${messageId}`);
-      return NextResponse.json({ success: true, message: "Duplicate event ignored" });
+      return;
     }
 
     if (existingMessage && new Date(existingMessage.updatedAt) > new Date(timestamp)) {
       console.log(`Out-of-order update detected for message ${messageId}`);
-      return NextResponse.json({ success: true, message: "Out-of-order update ignored" });
+      return;
     }
 
     const timestampDate = new Date(timestamp);
     if (isNaN(timestampDate.getTime())) {
-      return NextResponse.json({ error: "Invalid timestamp format" }, { status: 400 });
+      console.log("[WhatsApp Webhook] Invalid timestamp format");
+      return;
     }
 
     const currentTime = new Date();
@@ -184,7 +216,7 @@ export async function POST(request: Request) {
 
     if (timeDifference > MAX_TIME_DIFFERENCE) {
       console.warn(`Potential replay attack detected for message ${messageId}`);
-      return NextResponse.json({ error: "Invalid timestamp" }, { status: 400 });
+      return;
     }
 
     // Find contact - don't create if not exists
@@ -194,7 +226,7 @@ export async function POST(request: Request) {
 
     if (!contact) {
       console.log(`Contact not found for status update: ${recipient}`);
-      return NextResponse.json({ success: true, message: "Contact not found, ignoring status update" });
+      return;
     }
 
     // Update or create message
@@ -253,14 +285,9 @@ export async function POST(request: Request) {
         data: { status: campaignStatus }
       });
     }
-
-    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error in WhatsApp webhook:", error);
-    return NextResponse.json(
-      { error: "Failed to process webhook" },
-      { status: 500 }
-    );
+    console.error("[WhatsApp Webhook] Error processing webhook async:", error);
+    throw error; // Re-throw to ensure error is caught by caller
   }
 }
 
@@ -337,7 +364,7 @@ async function handleMetaWebhook(payload: any): Promise<NextResponse> {
 async function processIncomingMessage(
   value: any,
   message: WhatsAppIncomingMessage
-): Promise<{ success: boolean; messageId?: string; type?: string }> {
+): Promise<{ success: boolean; messageId?: string; type?: string; error?: string }> {
   const { from, id, timestamp } = message;
 
   console.log(`[WhatsApp Webhook] Processing incoming message: ${id} from ${from}`);
@@ -347,6 +374,24 @@ async function processIncomingMessage(
     throw new Error("Missing required message fields: from, id, or timestamp");
   }
 
+  // Extract organization ID from webhook metadata
+  let organizationId: string | null = null;
+  if (value.metadata?.phone_number_id) {
+    // Look up the organization that owns this phone number
+    const phoneNumber = await prisma.whatsAppPhoneNumber.findUnique({
+      where: { id: value.metadata.phone_number_id },
+      include: { credential: true }
+    });
+    organizationId = phoneNumber?.credential?.organizationId || null;
+  }
+
+  if (!organizationId) {
+    console.error(`[WhatsApp Webhook] Could not determine organization for phone number ${value.metadata?.phone_number_id}`);
+    return { success: false, error: "Could not determine organization" };
+  }
+
+  console.log(`[WhatsApp Webhook] Message belongs to organization: ${organizationId}`);
+
   // Check for duplicate messages (replay protection)
   const { isDuplicate, existingMessage } = await checkDuplicateMessage(id);
   if (isDuplicate) {
@@ -355,10 +400,28 @@ async function processIncomingMessage(
   }
 
   // Parse the message content based on type
-  const parsedContent = await parseIncomingMessage(message);
+  const parsedContent = await parseIncomingMessage(message, organizationId);
 
-  // Find or create the contact
-  const contact = await findOrCreateContact(from);
+  // Check for opt-out keywords in text messages
+  if (parsedContent.text && parsedContent.text.match(/stop|unsubscribe|opt.?out|quit|cancel/i)) {
+    console.log(`[WhatsApp Webhook] Opt-out detected from ${from}: ${parsedContent.text}`);
+    await prisma.contact.updateMany({
+      where: { phoneNumber: from, organizationId },
+      data: { optInStatus: 'opted_out' }
+    });
+  }
+
+  // Check for system messages indicating opt-out
+  if (message.type === 'system' && message.system?.type === 'user_changed_number') {
+    console.log(`[WhatsApp Webhook] System opt-out detected from ${from}`);
+    await prisma.contact.updateMany({
+      where: { phoneNumber: from, organizationId },
+      data: { optInStatus: 'opted_out' }
+    });
+  }
+
+  // Find or create the contact with organization context
+  const contact = await findOrCreateContact(from, organizationId);
 
   // Store the message in the database
   const storedMessage = await storeIncomingMessage(
@@ -369,7 +432,7 @@ async function processIncomingMessage(
   );
 
   // Send acknowledgment (read receipt) to Meta
-  await sendMessageAck(id, "delivered");
+  await sendMessageAck(id, "delivered", organizationId);
 
   console.log(`[WhatsApp Webhook] Successfully stored incoming message: ${id}`);
 

@@ -244,15 +244,11 @@ export async function updateSettings(
   return updated
 }
 
-// DEPRECATED: Get default organization ID
-// WARNING: This function exists for backward compatibility only.
-// Using a hardcoded default orgId is a security risk - it allows
-// unauthenticated access to a single organization's data.
-// Callers should instead get orgId from the authenticated session.
-export function getDefaultOrgId(): string {
-  console.warn('WARNING: getDefaultOrgId() is deprecated. Use session organizationId instead.')
-  return '000000000000000000000001' // Kept for backward compatibility only
-}
+// BACKWARD COMPATIBILITY NOTE:
+// The getDefaultOrgId() function has been removed because using a hardcoded
+// default orgId was a security risk. All callers now MUST provide a valid
+// organizationId from the authenticated session. If orgId is missing, operations
+// should fail with 401 Unauthorized rather than silently using a default.
 
 // For backward compatibility - sync version that only uses memory
 // Deprecated: Use async version above

@@ -4,6 +4,19 @@ import { prisma } from '@/lib/prisma';
 import { getToken } from 'next-auth/jwt';
 import { submitTemplateToMeta, checkTemplateStatusFromMeta, deleteTemplateFromMeta } from '@/lib/whatsapp-template-service';
 
+function extractVariables(translations: any[]): string[] {
+  const vars = new Set<string>();
+  if (!translations || !Array.isArray(translations)) return [];
+  translations.forEach(t => {
+    const text = typeof t === 'string' ? t : (t.body || JSON.stringify(t.components || {}));
+    const matches = text.match(/\{\{([^}]+)\}\}/g);
+    if (matches) {
+      matches.forEach((m: string) => vars.add(m.replace(/[{}]/g, '')));
+    }
+  });
+  return Array.from(vars);
+}
+
 // Types for query parameters
 type SortField = 'name' | 'category' | 'status' | 'updatedAt' | 'createdAt';
 type SortOrder = 'asc' | 'desc';
@@ -216,26 +229,46 @@ export async function POST(request: NextRequest) {
       }
     } catch (metaError: any) {
       console.error('Failed to submit template to Meta:', metaError);
-      // Continue - local template is still valid
+      // Mark the template as pending so user can retry Meta submission
+      await prisma.messageTemplate.update({
+        where: { id: newTemplate.id },
+        data: { status: 'pending' }
+      });
+
+      return NextResponse.json({
+        success: false,
+        message: 'Template created locally but failed to submit to Meta. Please retry.',
+        metaSubmitted: false,
+        error: 'Meta submission failed: ' + (metaError.message || 'Unknown error'),
+        template: {
+          id: newTemplate.id,
+          name: newTemplate.name,
+          category: newTemplate.category,
+          status: 'pending',
+        }
+      }, { status: 500 });
     }
 
     console.log('Template created:', newTemplate.name);
 
     return NextResponse.json({
+      success: true,
       template: {
         id: newTemplate.id,
         name: newTemplate.name,
         category: newTemplate.category,
         status: newTemplate.status,
         translations: body.translations,
-        metaTemplateId,
-        createdAt: newTemplate.createdAt,
-        updatedAt: newTemplate.updatedAt,
+        whatsappTemplateId: metaTemplateId,
       },
-      message: metaSubmitSuccess
-        ? 'Template created and submitted to Meta for approval'
-        : 'Template created locally. Submission to Meta failed - you can retry later.',
-    }, { status: 201 });
+      metaSubmission: {
+        submitted: metaSubmitSuccess,
+        templateId: metaTemplateId,
+        message: metaSubmitSuccess
+          ? 'Template submitted to WhatsApp successfully'
+          : 'Template created locally but submission to WhatsApp failed. You can retry submission later.',
+      },
+    });
   } catch (error) {
     console.error('Error creating template:', error);
     return NextResponse.json(
@@ -243,23 +276,6 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-// Helper function to extract variables from translations
-function extractVariables(translations: TemplateTranslation[]): string[] {
-  const variables = new Set<string>();
-  
-  for (const translation of translations) {
-    if (translation.body) {
-      // Match {{1}}, {{2}}, etc.
-      const matches = translation.body.match(/\{\{\d+\}\}/g);
-      if (matches) {
-        matches.forEach(m => variables.add(m));
-      }
-    }
-  }
-  
-  return Array.from(variables);
 }
 
 export async function PUT(request: NextRequest) {
@@ -272,7 +288,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body: UpdateTemplateInput = await request.json();
+    const body: UpdateTemplateInput & { id: string } = await request.json();
 
     if (!body.id) {
       return NextResponse.json(
@@ -281,7 +297,6 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Find template in database - only if it belongs to user's organization
     const existingTemplate = await prisma.messageTemplate.findFirst({
       where: { 
         id: body.id,

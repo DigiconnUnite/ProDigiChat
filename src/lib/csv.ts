@@ -1,9 +1,7 @@
 // CSV processing for contacts
 import csv from "csv-parser";
 import fs from "fs";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function processCSV(filePath: string): Promise<Record<string, any>[]> {
   const contacts: Record<string, any>[] = [];

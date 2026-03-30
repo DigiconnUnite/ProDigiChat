@@ -342,17 +342,17 @@ export default function AnalyticsPage() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Click Rate</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  <span title="Click tracking not yet implemented. Will be available when WhatsApp adds click analytics to their webhooks.">
+                    Click Rate
+                    <span className="ml-1 text-xs text-muted-foreground">(N/A)</span>
+                  </span>
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{clickRate.toFixed(1)}%</div>
-                <div className={`flex items-center text-xs mt-1 ${clickRateTrend >= 0 ? "text-primary" : "text-destructive"}`}>
-                  {clickRateTrend >= 0 ? (
-                    <ArrowUpRight className="mr-1 h-3 w-3" />
-                  ) : (
-                    <ArrowDownRight className="mr-1 h-3 w-3" />
-                  )}
-                  {clickRateTrend >= 0 ? "+" : ""}{clickRateTrend}%
+                <div className="text-2xl font-bold text-muted-foreground">N/A</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Click tracking coming soon
                 </div>
               </CardContent>
             </Card>

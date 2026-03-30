@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
-import { getDefaultOrgId } from '@/lib/settings-storage'
 import { rateLimit } from '@/lib/rate-limit'
 
 async function getOrganizationId(request: NextRequest): Promise<string | null> {
@@ -9,22 +8,22 @@ async function getOrganizationId(request: NextRequest): Promise<string | null> {
   if (!token) {
     return null
   }
-  
+
   // Try to get orgId from query params first
   const { searchParams } = new URL(request.url)
   const orgIdParam = searchParams.get('orgId')
-  
+
   if (orgIdParam) {
     return orgIdParam
   }
-  
+
   // Try to get from token
-  if (token.orgId) {
-    return token.orgId as string
+  if (token.organizationId) {
+    return token.organizationId as string
   }
-  
-  // Fallback to default org
-  return getDefaultOrgId()
+
+  // No fallback - require explicit organization context
+  return null
 }
 
 async function validateSession(request: NextRequest) {

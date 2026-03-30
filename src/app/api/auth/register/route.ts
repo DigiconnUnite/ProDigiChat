@@ -56,75 +56,76 @@ export async function POST(request: Request) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12)
 
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role: "user",
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-      },
-    })
+    // Create user, organization, membership, and settings in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create user
+      const user = await tx.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          role: "user",
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          createdAt: true,
+        },
+      })
 
-    // ============================================================
-    // FIX: Create organization (Team) and link user to it
-    // This fixes the "Unauthorized - no organization" error
-    // ============================================================
-    
-    // Generate unique slug for the organization
-    const slug = email.split('@')[0].toLowerCase() + '-' + Date.now()
-    
-    // 1. Create the organization (Team)
-    const organization = await prisma.team.create({
-      data: {
-        name: name + "'s Organization",
-      },
+      // Generate unique slug for the organization
+      const slug = email.split('@')[0].toLowerCase() + '-' + Date.now()
+
+      // 1. Create the organization (Team)
+      const organization = await tx.team.create({
+        data: {
+          name: name + "'s Organization",
+        },
+      })
+
+      // 2. Create organization membership (links user to org with owner role)
+      await tx.organizationMember.create({
+        data: {
+          userId: user.id,
+          organizationId: organization.id,
+          role: 'owner',
+          isActive: true,
+          acceptedAt: new Date(),
+        },
+      })
+
+      // 3. Create default organization settings
+      await tx.organizationSettings.create({
+        data: {
+          organizationId: organization.id,
+          general: JSON.stringify({
+            timezone: 'UTC',
+            language: 'en',
+            dateFormat: 'YYYY-MM-DD',
+            currency: 'USD',
+            companyName: name + "'s Organization",
+            companyEmail: email,
+          }),
+          notifications: JSON.stringify({
+            email: { enabled: true, frequency: 'instant', events: ['campaign.completed', 'campaign.failed', 'message.failed'] },
+            push: { enabled: false, events: [] },
+            slack: { enabled: false, webhookUrl: null, events: [] },
+          }),
+          security: JSON.stringify({}),
+          messaging: JSON.stringify({}),
+          integrations: JSON.stringify({}),
+          whatsapp: JSON.stringify({}),
+          compliance: JSON.stringify({}),
+          branding: JSON.stringify({}),
+        },
+      })
+
+      return { user, organization };
     })
     
-    // 2. Create organization membership (links user to org with owner role)
-    await prisma.organizationMember.create({
-      data: {
-        userId: user.id,
-        organizationId: organization.id,
-        role: 'owner',
-        isActive: true,
-        acceptedAt: new Date(),
-      },
-    })
-    
-    // 3. Create default organization settings
-    await prisma.organizationSettings.create({
-      data: {
-        organizationId: organization.id,
-        general: JSON.stringify({
-          timezone: 'UTC',
-          language: 'en',
-          dateFormat: 'YYYY-MM-DD',
-          currency: 'USD',
-          companyName: name + "'s Organization",
-          companyEmail: email,
-        }),
-        notifications: JSON.stringify({
-          email: { enabled: true, frequency: 'instant', events: ['campaign.completed', 'campaign.failed', 'message.failed'] },
-          push: { enabled: false, events: [] },
-          slack: { enabled: false, webhookUrl: null, events: [] },
-        }),
-        security: JSON.stringify({}),
-        messaging: JSON.stringify({}),
-        integrations: JSON.stringify({}),
-        whatsapp: JSON.stringify({}),
-        compliance: JSON.stringify({}),
-        branding: JSON.stringify({}),
-      },
-    })
-    
+    const { user, organization } = result;
     console.log('[DEBUG] Created organization:', organization.id, 'for user:', user.id)
 
     return NextResponse.json({

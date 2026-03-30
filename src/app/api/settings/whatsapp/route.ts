@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSettings, getDefaultOrgId } from "@/lib/settings-storage";
+import { getSettings } from "@/lib/settings-storage";
 import { prisma } from "@/lib/prisma";
 import { getToken } from "next-auth/jwt";
 import crypto from "crypto";
 import axios from "axios";
 import { encryptWhatsAppCredential } from "@/lib/encryption";
 import { META_API_BASE } from "@/lib/meta-config";
+import { requireRole } from '@/lib/rbac'
 
 // Meta API base URL
 const META_API_BASE_URL = META_API_BASE;
@@ -188,12 +189,8 @@ export async function GET(request: NextRequest) {
           accountReviewStatus: c.accountReviewStatus,
           businessType: c.businessType,
           businessLocation: c.businessLocation,
-          // Include owner business info
-          ownerBusinessId: c.ownerBusinessId,
+          // Include owner business info (excluding sensitive data)
           ownerBusinessName: c.ownerBusinessName,
-          ownerBusinessPhone: c.ownerBusinessPhone,
-          ownerBusinessEmail: c.ownerBusinessEmail,
-          ownerBusinessAddress: c.ownerBusinessAddress,
           phoneNumberId: cred.phoneNumberId,
           isActive: cred.isActive,
           isDefault: cred.isDefault,
@@ -312,6 +309,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized - no organization' }, { status: 401 });
   }
 
+  // RBAC: Require admin role for WhatsApp settings management
+  const roleCheck = await requireRole(request, 'admin')
+  if (roleCheck) {
+    return roleCheck
+  }
+
   try {
     const body = await request.json();
     const { phoneNumber, apiCredentials, action, accountId, accountName } = body;
@@ -416,6 +419,12 @@ export async function PUT(request: NextRequest) {
 
   if (!orgId) {
     return NextResponse.json({ error: 'Unauthorized - no organization' }, { status: 401 });
+  }
+
+  // RBAC: Require admin role for WhatsApp settings management
+  const roleCheck = await requireRole(request, 'admin')
+  if (roleCheck) {
+    return roleCheck
   }
 
   try {
@@ -567,6 +576,12 @@ export async function DELETE(request: NextRequest) {
 
   if (!orgId) {
     return NextResponse.json({ error: 'Unauthorized - no organization' }, { status: 401 });
+  }
+
+  // RBAC: Require admin role for WhatsApp settings management
+  const roleCheck = await requireRole(request, 'admin')
+  if (roleCheck) {
+    return roleCheck
   }
   
   try {

@@ -1,5 +1,4 @@
 import axios from "axios";
-import { getDefaultOrgId } from "@/lib/settings-storage";
 import { prisma } from "@/lib/prisma";
 import { META_API_BASE } from "./meta-config";
 
@@ -77,6 +76,14 @@ export interface WhatsAppIncomingMessage {
     name?: string;
     address?: string;
   };
+  system?: {
+    body?: string;
+    identity?: string;
+    new_wa_id?: string;
+    wa_id?: string;
+    type?: string;
+    customer?: string;
+  };
   contacts?: any[];
 }
 
@@ -108,7 +115,7 @@ export interface ParsedMessageContent {
 /**
  * Download media from WhatsApp Meta API
  */
-export async function downloadMedia(mediaId: string): Promise<{ url: string; mimeType: string } | null> {
+export async function downloadMedia(mediaId: string, organizationId?: string): Promise<{ url: string; mimeType: string } | null> {
   try {
     const getCreds = await loadAuth();
     if (!getCreds) {
@@ -116,7 +123,8 @@ export async function downloadMedia(mediaId: string): Promise<{ url: string; mim
       return null;
     }
     
-    const orgId = getDefaultOrgId();
+    const orgId = organizationId;
+    if (!orgId) throw new Error("No organization Id provided for media download");
     const credentials = await getCreds(orgId);
     
     if (!credentials?.apiKey) {
@@ -170,7 +178,8 @@ export async function downloadMedia(mediaId: string): Promise<{ url: string; mim
  * Parse incoming WhatsApp message based on type
  */
 export async function parseIncomingMessage(
-  message: WhatsAppIncomingMessage
+  message: WhatsAppIncomingMessage,
+  organizationId?: string
 ): Promise<ParsedMessageContent> {
   const baseContent: ParsedMessageContent = {
     type: message.type,
@@ -186,7 +195,7 @@ export async function parseIncomingMessage(
 
     case "image":
       if (message.image?.id) {
-        const media = await downloadMedia(message.image.id);
+        const media = await downloadMedia(message.image.id, organizationId);
         return {
           ...baseContent,
           mediaId: message.image.id,
@@ -202,7 +211,7 @@ export async function parseIncomingMessage(
 
     case "audio":
       if (message.audio?.id) {
-        const media = await downloadMedia(message.audio.id);
+        const media = await downloadMedia(message.audio.id, organizationId);
         return {
           ...baseContent,
           mediaId: message.audio.id,
@@ -214,7 +223,7 @@ export async function parseIncomingMessage(
 
     case "video":
       if (message.video?.id) {
-        const media = await downloadMedia(message.video.id);
+        const media = await downloadMedia(message.video.id, organizationId);
         return {
           ...baseContent,
           mediaId: message.video.id,
@@ -230,7 +239,7 @@ export async function parseIncomingMessage(
 
     case "document":
       if (message.document?.id) {
-        const media = await downloadMedia(message.document.id);
+        const media = await downloadMedia(message.document.id, organizationId);
         return {
           ...baseContent,
           mediaId: message.document.id,
@@ -329,7 +338,7 @@ export async function checkDuplicateMessage(
 /**
  * Find or create contact from phone number
  */
-export async function findOrCreateContact(phoneNumber: string): Promise<any> {
+export async function findOrCreateContact(phoneNumber: string, organizationId?: string): Promise<any> {
   // Normalize phone number (remove any non-digit characters except +)
   const normalizedPhone = phoneNumber.replace(/[^\d+]/g, "");
   
@@ -352,8 +361,9 @@ export async function findOrCreateContact(phoneNumber: string): Promise<any> {
   }
 
   if (!contact) {
-    // Get the default organization ID
-    const orgId = getDefaultOrgId();
+    // Get the organization ID
+    const orgId = organizationId;
+    if (!orgId) throw new Error("No organization Id provided for contact creation");
     
     // Get a user ID for this org
     const user = await prisma.user.findFirst({
@@ -451,7 +461,8 @@ export async function storeIncomingMessage(
  */
 export async function sendMessageAck(
   messageId: string,
-  status: "read" | "delivered"
+  status: "read" | "delivered",
+  organizationId?: string
 ): Promise<boolean> {
   try {
     const getCreds = await loadAuth();
@@ -460,7 +471,11 @@ export async function sendMessageAck(
       return false;
     }
     
-    const orgId = getDefaultOrgId();
+    const orgId = organizationId;
+    if (!orgId) {
+      console.error("[WhatsApp] No organization Id provided for ack");
+      return false;
+    }
     const credentials = await getCreds(orgId);
 
     if (!credentials?.apiKey || !credentials?.phoneNumberId) {

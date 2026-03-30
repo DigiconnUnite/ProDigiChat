@@ -68,9 +68,9 @@ export default function LandingPage() {
     <>
       <Header variant="public" className="fixed top-0 left-0 right-0 z-50" />
       
-      <main className="bg-background">
+      <main className=" bg-background rounded-b-2xl md:rounded-b-4xl">
         {/* Hero Section - Simple & Clean */}
-        <section className="pt-32 pb-20 bg-background rounded-b-[3rem]">
+        <section className="pt-32 pb-20  ">
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center">
               <h1 className="text-4xl md:text-5xl font-bold text-foreground leading-tight">
@@ -107,30 +107,6 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
-
-        {/* Features Section - Simple Grid */}
-        <section className="py-20 bg-muted/30">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold">Powerful Features</h2>
-              <p className="mt-2 text-muted-foreground">Everything you need for WhatsApp marketing success</p>
-            </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {features.map((feature, index) => (
-                <Card key={index} className="border-border">
-                  <CardContent className="p-6">
-                    <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                      <feature.icon className="h-6 w-6 text-primary" />
-                    </div>
-                    <h3 className="text-lg font-semibold">{feature.title}</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">{feature.description}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </section>  
-
 
         {/* Simple CTA */}
         <PublicCTA

@@ -1,5 +1,5 @@
 import { WhatsAppClient } from "./client";
-import { getSettings, getDefaultOrgId } from "@/lib/settings-storage";
+import { getSettings } from "@/lib/settings-storage";
 import { prisma } from "@/lib/prisma";
 import { decryptWhatsAppCredential, encryptField } from "@/lib/encryption";
 import { META_API_BASE } from "@/lib/meta-config";
@@ -12,19 +12,17 @@ let cachedOrgId: string | null = null;
 let cachedAccountId: string | null = null; // BUG FIX: Track account ID in cache
 const CACHE_TTL = 60000; // 1 minute cache
 
-// Get credentials from Prisma database or fall back to legacy settings
-async function getWhatsAppCredentials(orgId?: string, accountId?: string) {
-  const defaultOrgId = getDefaultOrgId();
-  const targetOrgId = orgId || defaultOrgId;
+// Get credentials from Prisma database
+async function getWhatsAppCredentials(orgId: string, accountId?: string) {
   
-  console.log('[WhatsAppAuth] Getting credentials for orgId:', targetOrgId, 'accountId:', accountId);
+  console.log('[WhatsAppAuth] Getting credentials for orgId:', orgId, 'accountId:', accountId);
   
   // If accountId is provided, get that specific account
   if (accountId) {
     const dbCredential = await prisma.whatsAppCredential.findFirst({
       where: { 
         id: accountId,
-        organizationId: targetOrgId,
+        organizationId: orgId,
         isActive: true
       },
       include: {
@@ -38,7 +36,7 @@ async function getWhatsAppCredentials(orgId?: string, accountId?: string) {
       
       return {
         apiKey: decryptedCredential?.accessToken,
-        phoneNumberId: dbCredential.phoneNumberId || dbCredential.phoneNumbers?.find(p => p.isDefault)?.phoneNumber || '',
+        phoneNumberId: dbCredential.phoneNumberId || dbCredential.phoneNumbers?.find(p => p.isDefault)?.metaPhoneNumberId || '',
         businessAccountId: dbCredential.businessAccountId,
         tokenExpiresAt: dbCredential.tokenExpiresAt,
         organizationId: dbCredential.organizationId,
@@ -51,7 +49,7 @@ async function getWhatsAppCredentials(orgId?: string, accountId?: string) {
   // First, try to get credentials from Prisma (new way) - prioritize default account
   const dbCredential = await prisma.whatsAppCredential.findFirst({
     where: { 
-      organizationId: targetOrgId,
+      organizationId: orgId,
       isActive: true
     },
     orderBy: [
@@ -76,7 +74,7 @@ async function getWhatsAppCredentials(orgId?: string, accountId?: string) {
     
     return {
       apiKey: decryptedCredential?.accessToken,
-      phoneNumberId: dbCredential.phoneNumberId || defaultPhone?.phoneNumber || '',
+      phoneNumberId: dbCredential.phoneNumberId || defaultPhone?.metaPhoneNumberId || '',
       businessAccountId: dbCredential.businessAccountId,
       tokenExpiresAt: dbCredential.tokenExpiresAt,
       organizationId: dbCredential.organizationId,
@@ -87,7 +85,7 @@ async function getWhatsAppCredentials(orgId?: string, accountId?: string) {
   
   // Fall back to legacy settings
   console.log('[WhatsAppAuth] Falling back to legacy settings');
-  const settings = await getSettings(targetOrgId);
+  const settings = await getSettings(orgId);
   const whatsappSettings = settings.whatsapp;
   
   console.log('[WhatsAppAuth] Legacy settings:', {
@@ -113,22 +111,20 @@ async function getWhatsAppCredentials(orgId?: string, accountId?: string) {
 async function refreshAccessToken(organizationId: string, currentAccessToken: string, businessAccountId: string): Promise<string | null> {
   try {
     console.log('[WhatsAppAuth] Attempting to refresh access token...');
-    
-    // Meta provides a token refresh endpoint
-    const response = await fetch(`${META_API_BASE}/${businessAccountId}/refresh_token`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${currentAccessToken}`,
-        'Content-Type': 'application/json'
-      }
+
+    // Use the correct Meta token refresh endpoint
+    const refreshUrl = `https://graph.facebook.com/v22.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${process.env.META_APP_ID}&client_secret=${process.env.META_APP_SECRET}&fb_exchange_token=${currentAccessToken}`;
+
+    const response = await fetch(refreshUrl, {
+      method: 'GET',
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       console.error('[WhatsAppAuth] Token refresh failed:', error);
       return null;
     }
-    
+
     const data = await response.json();
     console.log('[WhatsAppAuth] Token refresh successful');
     return data.access_token;
@@ -184,15 +180,13 @@ function clearClientCache(): void {
   console.log('[WhatsAppAuth] Cleared client cache');
 }
 
-export async function getWhatsAppClient(orgId?: string, accountId?: string): Promise<WhatsAppClient> {
-  const now = Date.now();
-  const targetOrgId = orgId || getDefaultOrgId();
+export async function getWhatsAppClient(orgId: string, accountId?: string): Promise<WhatsAppClient> {
   const targetAccountId = accountId || null;
   
   // BUG FIX: Return cached instance only if both orgId AND accountId match
   // This prevents cross-account contamination in multi-account scenarios
-  if (whatsappClientInstance && (now - lastSettingsFetch) < CACHE_TTL && cachedOrgId === targetOrgId && cachedAccountId === targetAccountId) {
-    console.log('[WhatsAppAuth] Returning cached client for org:', targetOrgId, 'account:', targetAccountId);
+  if (whatsappClientInstance && (Date.now() - lastSettingsFetch) < CACHE_TTL && cachedOrgId === orgId && cachedAccountId === targetAccountId) {
+    console.log('[WhatsAppAuth] Returning cached client for org:', orgId, 'account:', targetAccountId);
     return whatsappClientInstance;
   }
 
@@ -211,10 +205,10 @@ export async function getWhatsAppClient(orgId?: string, accountId?: string): Pro
       apiKey: credentials.apiKey,
       phoneNumberId: credentials.phoneNumberId,
       businessAccountId: credentials.businessAccountId,
-      organizationId: credentials.organizationId || targetOrgId,
+      organizationId: credentials.organizationId || orgId,
       onTokenRefresh: async (newToken: string) => {
         console.log('[WhatsAppAuth] Token refresh callback triggered');
-        const orgIdForUpdate = credentials.organizationId || targetOrgId;
+        const orgIdForUpdate = credentials.organizationId || orgId;
         const accountIdForUpdate = (credentials as any).accountId;
         await updateCredentialToken(orgIdForUpdate, newToken, accountIdForUpdate);
         clearClientCache();
@@ -222,10 +216,10 @@ export async function getWhatsAppClient(orgId?: string, accountId?: string): Pro
     });
 
     whatsappClientInstance = client;
-    lastSettingsFetch = now;
-    cachedOrgId = targetOrgId;
+    lastSettingsFetch = Date.now();
+    cachedOrgId = orgId;
     cachedAccountId = targetAccountId; // BUG FIX: Store account ID in cache
-    console.log('[WhatsAppAuth] Created new WhatsApp client for org:', targetOrgId, 'account:', targetAccountId);
+    console.log('[WhatsAppAuth] Created new WhatsApp client for org:', orgId, 'account:', targetAccountId);
     return client;
   } catch (error) {
     console.error("[WhatsAppAuth] Error fetching WhatsApp settings:", error);
@@ -234,9 +228,9 @@ export async function getWhatsAppClient(orgId?: string, accountId?: string): Pro
 }
 
 // Force refresh the token (can be called manually)
-export async function forceRefreshToken(orgId?: string, accountId?: string): Promise<boolean> {
+export async function forceRefreshToken(orgId: string, accountId?: string): Promise<boolean> {
   try {
-    const targetOrgId = orgId || getDefaultOrgId();
+    const targetOrgId = orgId;
     const credentials = await getWhatsAppCredentials(orgId, accountId);
     
     if (!credentials || !credentials.fromDb) {
@@ -266,37 +260,38 @@ export async function forceRefreshToken(orgId?: string, accountId?: string): Pro
 
 // Export the client getter (for backward compatibility)
 export const whatsappClient = {
-  async submitTemplate(template: any, orgId?: string, accountId?: string) {
+  async submitTemplate(template: any, orgId: string, accountId?: string) {
     const client = await getWhatsAppClient(orgId, accountId);
     return client.submitTemplate(template);
   },
   
-  async getTemplateStatus(templateId: string, orgId?: string, accountId?: string) {
+  async getTemplateStatus(templateId: string, orgId: string, accountId?: string) {
     const client = await getWhatsAppClient(orgId, accountId);
     return client.getTemplateStatus(templateId);
   },
   
   async getAllTemplates(status?: string, orgId?: string, accountId?: string) {
+    if (!orgId) throw new Error("Organization ID is required");
     const client = await getWhatsAppClient(orgId, accountId);
     return client.getAllTemplates(status);
   },
   
-  async deleteTemplate(templateId: string, orgId?: string, accountId?: string) {
+  async deleteTemplate(templateId: string, orgId: string, accountId?: string) {
     const client = await getWhatsAppClient(orgId, accountId);
     return client.deleteTemplate(templateId);
   },
   
-  async sendMessage(payload: any, orgId?: string, accountId?: string) {
+  async sendMessage(payload: any, orgId: string, accountId?: string) {
     const client = await getWhatsAppClient(orgId, accountId);
     return client.sendMessage(payload);
   },
   
-  async refreshToken(orgId?: string, accountId?: string) {
+  async refreshToken(orgId: string, accountId?: string) {
     return await forceRefreshToken(orgId, accountId);
   },
 };
 
-export async function refreshToken(orgId?: string, accountId?: string): Promise<string> {
+export async function refreshToken(orgId: string, accountId?: string): Promise<string> {
   try {
     const success = await forceRefreshToken(orgId, accountId);
     if (!success) {

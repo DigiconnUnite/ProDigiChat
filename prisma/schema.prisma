@@ -16,7 +16,7 @@ model User {
   email     String   @unique
   password  String
   name      String?
-  role      String   @default("user") // "admin", "managser", "user"
+  role      String   @default("user") // "admin", "manager", "user"
   isActive  Boolean  @default(true)
   avatarUrl String?
   createdAt DateTime @default(now())
@@ -30,6 +30,7 @@ model User {
   createdSegments Segment[]
   organizationMemberships OrganizationMember[]
   settings UserSettings?
+  uploadedFiles File[]
 
   @@map("users")
 }
@@ -48,6 +49,7 @@ model Team {
   segments Segment[]
   campaigns Campaign[]
   messages Message[]
+  files File[]
 
   @@map("teams")
 }
@@ -76,8 +78,8 @@ model Contact {
   segmentMemberships SegmentMember[]
   queueMessages     WhatsAppMessageQueue[]
 
-  // Composite unique constraint - phoneNumber must be unique per user
-  @@unique([phoneNumber, userId])
+  // Composite unique constraint - phoneNumber must be unique per organization
+  @@unique([phoneNumber, organizationId])
   @@index([organizationId])
   @@map("contacts")
 }
@@ -166,7 +168,7 @@ model AutomationWorkflow {
 // Message Template model
 model MessageTemplate {
   id               String   @id @default(auto()) @map("_id") @db.ObjectId
-  name             String   @unique
+  name             String
   category         String   // "marketing", "utility", "authentication"
   content          String
   variables        String   // JSON array of variable names
@@ -178,6 +180,7 @@ model MessageTemplate {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  @@unique([name, organizationId])
   @@map("messageTemplates")
 }
 
@@ -276,7 +279,8 @@ model WhatsAppPhoneNumber {
   id                 String   @id @default(auto()) @map("_id") @db.ObjectId
   credentialId       String   @db.ObjectId  // Link to WhatsAppCredential instead of organizationId
   displayName        String
-  phoneNumber        String
+  phoneNumber        String   // E.164 display number like "+919123456789"
+  metaPhoneNumberId  String?  // META'S NUMERIC ID like "101553158498XXXX"
   
   // Verification status
   verificationStatus String   @default("PENDING") // "PENDING", "IN_PROGRESS", "VERIFIED", "FLAGGED"
@@ -446,6 +450,28 @@ model UserSettings {
   @@map("userSettings")
 }
 
+// File model for uploaded files
+model File {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  filename    String
+  originalName String
+  mimeType    String
+  size        Int
+  url         String   // URL to access the file
+  key         String   // Storage key (e.g., S3 key)
+  uploadedBy  String   @db.ObjectId
+  organizationId String @db.ObjectId
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  uploader User @relation(fields: [uploadedBy], references: [id])
+  organization Team @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+  @@map("files")
+}
+
 // WhatsApp Message Queue model for reliable message sending with retry logic
 model WhatsAppMessageQueue {
   id               String    @id @default(auto()) @map("_id") @db.ObjectId
@@ -453,41 +479,44 @@ model WhatsAppMessageQueue {
   campaignId       String?   @db.ObjectId
   contactId        String?   @db.ObjectId
   whatsappAccountId String?  @db.ObjectId  // Which WhatsApp account to use
-  
+  batchId          String?   // Batch identifier for reliable record identification
+
   // Message content
   recipientPhone   String
   messageContent   String    // JSON object with text, templateId, variables, mediaUrl
   messageType      String    @default("text") // "text", "template", "media"
-  
+
   // Status tracking
   status           String    @default("pending") // "pending", "queued", "sending", "sent", "failed", "delivered"
-  
+
   // Retry tracking
   attempts         Int       @default(0)
   maxAttempts      Int       @default(3)
   nextRetryAt      DateTime?
   lastAttemptAt    DateTime?
-  
+
   // Scheduling
   scheduledAt      DateTime?
-  
+
   // Response tracking
   whatsappMessageId String?
   errorMessage     String?
   errorCode        String?
-  
+
   // Timestamps
   sentAt           DateTime?
   deliveredAt      DateTime?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
-  
+
   // Relations
   campaign Campaign? @relation(fields: [campaignId], references: [id])
   contact  Contact?  @relation(fields: [contactId], references: [id])
-  
+
   @@index([organizationId, status])
   @@index([campaignId, status])
+  @@index([whatsappAccountId])
+  @@index([batchId])
   @@index([nextRetryAt])
   @@index([scheduledAt])
   @@map("whatsappMessageQueue")

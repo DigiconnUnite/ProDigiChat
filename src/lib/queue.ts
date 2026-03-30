@@ -5,11 +5,9 @@
  * with retry logic, scheduled sending, and bulk operations support.
  */
 
-import { PrismaClient, WhatsAppMessageQueue, Prisma } from '@prisma/client';
+import { WhatsAppMessageQueue, Prisma } from '@prisma/client';
 import { sendTextMessage, sendMediaMessage, sendTemplateMessage } from '@/app/api/whatsapp/messages';
-
-// Initialize Prisma client
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 // Queue status constants
 export const QueueStatus = {
@@ -103,8 +101,10 @@ export async function addBulkToQueue(
   }
 
   const now = new Date();
+  // Generate a unique batch ID for this bulk insert
+  const batchId = `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-  console.log(`[Queue:addBulkToQueue] orgId: "${organizationId}", messageCount: ${messages.length}, accountId: ${whatsappAccountId}`);
+  console.log(`[Queue:addBulkToQueue] orgId: "${organizationId}", messageCount: ${messages.length}, accountId: ${whatsappAccountId}, batchId: ${batchId}`);
   console.log(`[Queue:addBulkToQueue] First message sample:`, JSON.stringify(messages[0]).substring(0, 200));
 
   // Use createMany for bulk insert - much faster than sequential inserts
@@ -117,6 +117,7 @@ export async function addBulkToQueue(
       campaignId: msg.campaignId,
       contactId: msg.contactId,
       whatsappAccountId: msg.whatsappAccountId || whatsappAccountId, // BUG FIX: Store account ID
+      batchId, // Add batch ID for reliable identification
       scheduledAt: msg.scheduledAt,
       maxAttempts: RetryConfig.MAX_ATTEMPTS,
       status: msg.scheduledAt && msg.scheduledAt > now
@@ -125,22 +126,10 @@ export async function addBulkToQueue(
     })),
   });
 
-  // BUG FIX: Fetch the created records using the IDs from the insert response
-  // This avoids the race condition with concurrent campaigns
-  // Since createMany doesn't return IDs, we use a more precise query
-  const campaignId = messages[0]?.campaignId;
-  
-  // Get the max ID created in this batch to ensure we get only the items we just created
-  // This is a more reliable approach than time-based filtering
+  // Fetch the created records using the batchId for reliable identification
   const queueItems = await prisma.whatsAppMessageQueue.findMany({
-    where: campaignId
-      ? { campaignId, organizationId, createdAt: { gte: new Date(now.getTime() - 5000) } } // Last 5 seconds for this campaign
-      : {
-          organizationId,
-          createdAt: { gte: new Date(now.getTime() - 5000) }, // Last 5 seconds
-        },
+    where: { batchId },
     orderBy: { createdAt: 'asc' },
-    take: messages.length,
   });
 
   console.log(`[Queue] Added ${queueItems.length} messages to queue`);
@@ -382,8 +371,26 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
     let errorCode = error.code || error.response?.data?.error?.code || 'UNKNOWN';
 
     if (canRetry) {
-      // Calculate next retry with exponential backoff
-      const delay = calculateBackoffDelay(attempts);
+      let delay = calculateBackoffDelay(attempts);
+
+      // Special handling for Meta API rate limits (error code 130429)
+      if (errorCode === '130429' || errorCode === 130429) {
+        // Meta rate limit - pause ALL messages for this account for 1 hour
+        delay = 60 * 60 * 1000; // 1 hour
+        console.log(`[Queue] Meta rate limit detected for account ${queueItem.whatsappAccountId}, pausing all messages for 1 hour`);
+
+        // Update all queued messages for this account with longer delay
+        await prisma.whatsAppMessageQueue.updateMany({
+          where: {
+            whatsappAccountId: queueItem.whatsappAccountId,
+            status: { in: [QueueStatus.QUEUED, QueueStatus.PENDING] }
+          },
+          data: {
+            nextRetryAt: new Date(Date.now() + delay)
+          }
+        });
+      }
+
       nextRetryAt = new Date(Date.now() + delay);
       console.log(`[Queue] Message ${id} will retry at ${nextRetryAt} (attempt ${newAttempts + 1})`);
     }
@@ -408,6 +415,7 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
 
 /**
  * Process all pending messages in the queue
+ * Includes cooldown check for rate-limited accounts (130429)
  */
 export async function processQueue(
   organizationId: string,
@@ -416,12 +424,14 @@ export async function processQueue(
   processed: number;
   succeeded: number;
   failed: number;
+  skipped: number;
   results: Array<{ queueItemId: string; success: boolean; error?: string }>;
 }> {
   const result = {
     processed: 0,
     succeeded: 0,
     failed: 0,
+    skipped: 0,
     results: [] as Array<{ queueItemId: string; success: boolean; error?: string }>,
   };
 
@@ -429,16 +439,42 @@ export async function processQueue(
   const messages = await getReadyMessages(organizationId, limit);
   console.log(`[Queue] Found ${messages.length} messages to process`);
 
+  // Check for rate-limited accounts and skip their messages
+  const now = new Date();
+  const rateLimitedAccounts = new Set<string>();
+  
   for (const message of messages) {
+    if (message.whatsappAccountId && message.nextRetryAt && message.nextRetryAt > now) {
+      rateLimitedAccounts.add(message.whatsappAccountId);
+    }
+  }
+
+  if (rateLimitedAccounts.size > 0) {
+    console.log(`[Queue] Rate-limited accounts detected: ${Array.from(rateLimitedAccounts).join(', ')} - skipping messages for 60 minutes`);
+  }
+
+  for (const message of messages) {
+    // Skip messages from rate-limited accounts (130429 cooldown)
+    if (message.whatsappAccountId && rateLimitedAccounts.has(message.whatsappAccountId)) {
+      console.log(`[Queue] Skipping message ${message.id} - account ${message.whatsappAccountId} is in rate limit cooldown`);
+      result.skipped++;
+      result.results.push({
+        queueItemId: message.id,
+        success: false,
+        error: 'Account rate limited (130429) - skipped for cooldown period',
+      });
+      continue;
+    }
+
     const processResult = await processQueueItem(message);
     result.processed++;
-    
+
     if (processResult.success) {
       result.succeeded++;
     } else {
       result.failed++;
     }
-    
+
     result.results.push({
       queueItemId: message.id,
       success: processResult.success,
@@ -446,7 +482,77 @@ export async function processQueue(
     });
   }
 
+  // Roll up campaign stats from queue processing results
+  await updateCampaignStatsFromQueue(messages, result.results);
+
   return result;
+}
+
+/**
+ * Update campaign stats based on queue processing results
+ */
+async function updateCampaignStatsFromQueue(
+  processedMessages: WhatsAppMessageQueue[],
+  results: Array<{ queueItemId: string; success: boolean; error?: string }>
+): Promise<void> {
+  // Group results by campaignId
+  const campaignResults = new Map<string, { succeeded: number; failed: number }>();
+
+  processedMessages.forEach((message, index) => {
+    if (!message.campaignId) return;
+
+    const result = results[index];
+    const campaignId = message.campaignId;
+
+    if (!campaignResults.has(campaignId)) {
+      campaignResults.set(campaignId, { succeeded: 0, failed: 0 });
+    }
+
+    const stats = campaignResults.get(campaignId)!;
+    if (result.success) {
+      stats.succeeded++;
+    } else {
+      stats.failed++;
+    }
+  });
+
+  // Update each campaign's stats
+  for (const [campaignId, stats] of campaignResults) {
+    try {
+      // Get current campaign stats
+      const campaign = await prisma.campaign.findUnique({
+        where: { id: campaignId },
+        select: { stats: true }
+      });
+
+      if (!campaign) continue;
+
+      let currentStats = { totalSent: 0, delivered: 0, read: 0, failed: 0, clicked: 0 };
+      try {
+        currentStats = JSON.parse(campaign.stats || '{}');
+      } catch (e) {
+        // Keep default stats
+      }
+
+      // Update stats with new results
+      const updatedStats = {
+        ...currentStats,
+        totalSent: currentStats.totalSent + stats.succeeded,
+        failed: currentStats.failed + stats.failed,
+      };
+
+      await prisma.campaign.update({
+        where: { id: campaignId },
+        data: {
+          stats: JSON.stringify(updatedStats)
+        }
+      });
+
+      console.log(`[Queue] Updated campaign ${campaignId} stats: +${stats.succeeded} sent, +${stats.failed} failed`);
+    } catch (error) {
+      console.error(`[Queue] Error updating campaign ${campaignId} stats:`, error);
+    }
+  }
 }
 
 /**

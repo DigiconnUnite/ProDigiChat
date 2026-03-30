@@ -111,11 +111,11 @@ export async function POST(request: NextRequest) {
           ? [...new Set([...defaultTags, ...rowTags.split(',').map((t) => t.trim())])]
           : defaultTags
 
-        // Check if contact already exists for this user
+        // Check if contact already exists for this organization
         const existingContact = await prisma.contact.findFirst({
-          where: { 
+          where: {
             phoneNumber,
-            userId: userId
+            organizationId: organizationId
           }
         })
 

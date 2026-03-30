@@ -2,13 +2,13 @@
  * Centralized Meta API configuration
  * 
  * Meta deprecated v17.0, v18.0 in early 2025.
- * Current supported versions: v21.0, v22.0
- * 
+ * Current supported versions: v21.0, v22.0, v23.0
+ *
  * Use META_API_VERSION environment variable to override,
- * defaults to v21.0 (latest stable as of early 2025)
+ * defaults to v22.0 (latest stable as of early 2026)
  */
 
-export const META_API_VERSION = process.env.META_API_VERSION || 'v21.0';
+export const META_API_VERSION = process.env.META_API_VERSION || 'v22.0';
 export const META_API_BASE = `https://graph.facebook.com/${META_API_VERSION}`;
 
 /**

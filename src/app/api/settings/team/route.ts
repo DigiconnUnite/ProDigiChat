@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getToken } from "next-auth/jwt"
 import { getSettings, updateSettings } from "@/lib/settings-storage"
+import { requireRole } from '@/lib/rbac'
 
 // GET: Fetch team members
 export async function GET(request: NextRequest) {
@@ -34,6 +35,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized - no organization' }, { status: 401 });
   }
 
+  // RBAC: Require owner/admin role to manage team
+  const roleCheck = await requireRole(request, 'admin')
+  if (roleCheck) {
+    return roleCheck
+  }
+
   const body = await request.json()
   const { email, role } = body
   
@@ -45,6 +52,12 @@ export async function POST(request: NextRequest) {
 
 // PUT: Update member role
 export async function PUT(request: NextRequest) {
+  // RBAC: Require owner/admin role to manage team
+  const roleCheck = await requireRole(request, 'admin')
+  if (roleCheck) {
+    return roleCheck
+  }
+
   const body = await request.json()
   
   return NextResponse.json({
@@ -54,6 +67,12 @@ export async function PUT(request: NextRequest) {
 
 // DELETE: Remove member
 export async function DELETE(request: NextRequest) {
+  // RBAC: Require owner/admin role to manage team
+  const roleCheck = await requireRole(request, 'admin')
+  if (roleCheck) {
+    return roleCheck
+  }
+
   return NextResponse.json({
     message: "Team member removed successfully",
   })
