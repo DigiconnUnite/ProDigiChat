@@ -66,7 +66,8 @@ const publicNavigation: NavItem[] = [
   { name: "Home", href: "/landing", icon: Home },
   { name: "Features", href: "/features", icon: LayoutDashboard },
   { name: "Pricing", href: "/pricing", icon: Megaphone },
-  { name: "Templates", href: "#templates", icon: FileText },
+  { name: "Blog", href: "/blog", icon: FileText },
+  { name: "Support", href: "/support", icon: Users },
 ]
 
 export type HeaderVariant = "dashboard" | "public"
