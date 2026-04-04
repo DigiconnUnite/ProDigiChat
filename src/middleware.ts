@@ -4,23 +4,38 @@ import { getToken } from "next-auth/jwt";
 
 export async function middleware(request: NextRequest) {
   const token = await getToken({ req: request });
+  const { pathname } = request.nextUrl;
   
   // Public routes that don't require authentication
-  const publicRoutes = ["/login", "/signup", "/api/auth"];
+  const publicRoutes = [
+    "/login",
+    "/signup",
+    "/landing",
+    "/blog",
+    "/features",
+    "/pricing",
+    "/support",
+    "/privacy",
+    "/terms",
+    "/api/auth",
+  ];
   const isPublicRoute = publicRoutes.some(route => 
-    request.nextUrl.pathname.startsWith(route)
+    pathname.startsWith(route)
   );
 
+  // Allow direct requests for static files in /public to pass through.
+  const isStaticAsset = /\.[a-zA-Z0-9]+$/.test(pathname);
+
   // Check if user is trying to access the landing page or root
-  const isLandingPage = request.nextUrl.pathname === "/landing" || request.nextUrl.pathname === "/";
+  const isLandingPage = pathname === "/landing" || pathname === "/";
 
   // If trying to access protected route without token (and not on public/landing routes)
-  if (!token && !isPublicRoute && !isLandingPage) {
+  if (!token && !isPublicRoute && !isLandingPage && !isStaticAsset) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
   // If already logged in and trying to access login page, redirect to dashboard
-  if (token && request.nextUrl.pathname === "/login") {
+  if (token && pathname === "/login") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
