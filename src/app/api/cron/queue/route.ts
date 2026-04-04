@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { processQueue, retryAllFailed, getQueueStats } from '@/lib/queue';
+import { processQueue } from '@/lib/queue';
 import { prisma } from '@/lib/prisma';
+
+const MAX_RETRY_ATTEMPTS = 3;
+const RETRY_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Background job endpoint for processing WhatsApp message queue
@@ -27,22 +30,32 @@ export async function GET(request: NextRequest) {
     const startTime = Date.now();
     console.log('[Cron Queue] Starting queue processing...');
 
-    // Get all organizations with active queues
+    // Get all organizations with queued/pending work or retryable failures
+    const retryCutoff = new Date(Date.now() - RETRY_WINDOW_MS);
     const organizationsWithQueues = await prisma.whatsAppMessageQueue.findMany({
       where: {
-        status: { in: ['queued', 'pending'] },
-        AND: [
+        OR: [
           {
-            OR: [
-              { scheduledAt: null },
-              { scheduledAt: { lte: new Date() } },
+            status: { in: ['queued', 'pending'] },
+            AND: [
+              {
+                OR: [
+                  { scheduledAt: null },
+                  { scheduledAt: { lte: new Date() } },
+                ],
+              },
+              {
+                OR: [
+                  { nextRetryAt: null },
+                  { nextRetryAt: { lte: new Date() } },
+                ],
+              },
             ],
           },
           {
-            OR: [
-              { nextRetryAt: null },
-              { nextRetryAt: { lte: new Date() } },
-            ],
+            status: 'failed',
+            attempts: { lt: MAX_RETRY_ATTEMPTS },
+            updatedAt: { gte: retryCutoff },
           },
         ],
       },
@@ -56,6 +69,7 @@ export async function GET(request: NextRequest) {
       processed: 0,
       succeeded: 0,
       failed: 0,
+      retried: 0,
       organizationsProcessed: 0,
       errors: [] as string[],
     };
@@ -63,8 +77,20 @@ export async function GET(request: NextRequest) {
     // Process each organization's queue
     for (const org of organizationsWithQueues) {
       try {
-        // First retry any failed messages
-        await retryAllFailed(org.organizationId);
+        // Retry only recent failures that still have attempts remaining.
+        const retried = await prisma.whatsAppMessageQueue.updateMany({
+          where: {
+            organizationId: org.organizationId,
+            status: 'failed',
+            attempts: { lt: MAX_RETRY_ATTEMPTS },
+            updatedAt: { gte: retryCutoff },
+          },
+          data: {
+            status: 'queued',
+            nextRetryAt: null,
+          },
+        });
+        results.retried += retried.count;
 
         // Then process the queue
         const processResult = await processQueue(org.organizationId, 50);

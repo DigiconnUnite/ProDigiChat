@@ -112,7 +112,7 @@ export const META_CONFIG = {
   redirectUri: process.env.NEXT_PUBLIC_OAUTH_REDIRECT_URI || 'http://localhost:3000/api/meta/callback',
   scopes: META_WHATSAPP_SCOPES,
   apiVersion: META_API_VERSION,
-  configurationId: process.env.NEXT_PUBLIC_META_CONFIG_ID || 'YOUR_CONFIG_ID',
+  configurationId: process.env.NEXT_PUBLIC_META_CONFIG_ID || '',
 };
 
 // =============================================================================

@@ -194,6 +194,23 @@ async function processWebhookAsync(rawBody: string): Promise<void> {
       where: { whatsappMessageId: messageId }
     });
 
+    // Resolve organization context so status updates never cross tenant boundaries.
+    let organizationIdForLookup: string | null = existingMessage?.organizationId || null;
+    if (!organizationIdForLookup && campaignId) {
+      const campaign = await prisma.campaign.findUnique({
+        where: { id: campaignId },
+        select: { organizationId: true },
+      });
+      organizationIdForLookup = campaign?.organizationId || null;
+    }
+    if (!organizationIdForLookup) {
+      const queueItem = await prisma.whatsAppMessageQueue.findFirst({
+        where: { whatsappMessageId: messageId },
+        select: { organizationId: true },
+      });
+      organizationIdForLookup = queueItem?.organizationId || null;
+    }
+
     if (existingMessage && existingMessage.status === status) {
       console.log(`Duplicate event detected for message ${messageId}`);
       return;
@@ -221,7 +238,9 @@ async function processWebhookAsync(rawBody: string): Promise<void> {
 
     // Find contact - don't create if not exists
     const contact = await prisma.contact.findFirst({
-      where: { phoneNumber: recipient }
+      where: organizationIdForLookup
+        ? { phoneNumber: recipient, organizationId: organizationIdForLookup }
+        : { phoneNumber: recipient }
     });
 
     if (!contact) {

@@ -221,7 +221,7 @@ export function PublicFooter() {
               © {currentYear} <span className="text-orange-400 font-bold">Prodigichat</span>. All rights reserved.
             </p>
 
-            <p className="text-sm text-green-300 order-first sm:order-none mb-2 sm:mb-0">
+            <p className="text-sm text-green-300 order-first sm:order-0 mb-2 sm:mb-0">
               Developed by{" "}
               <Link
                 href="https://digiconnunite.com"

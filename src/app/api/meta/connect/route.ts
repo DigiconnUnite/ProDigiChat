@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { buildOAuthUrl, buildEmbeddedSignupUrl, generateState, META_CONFIG } from '@/lib/meta-oauth';
+import { buildEmbeddedSignupUrl, generateState, META_CONFIG } from '@/lib/meta-oauth';
 
 /**
  * Meta OAuth Connect API Route
@@ -14,18 +14,21 @@ import { buildOAuthUrl, buildEmbeddedSignupUrl, generateState, META_CONFIG } fro
 
 export async function GET() {
   try {
+    if (!META_CONFIG.configurationId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Missing NEXT_PUBLIC_META_CONFIG_ID environment variable',
+        },
+        { status: 500 }
+      );
+    }
+
     // Generate a secure state parameter for CSRF protection
     const state = generateState();
 
-    // Determine if we should use embedded signup based on configuration
-    // Use embedded signup if configurationId exists and is not the default placeholder
-    const hasValidConfigId = META_CONFIG.configurationId && 
-                            META_CONFIG.configurationId !== 'YOUR_CONFIG_ID';
-
-    // Build the appropriate OAuth URL
-    const authUrl = hasValidConfigId 
-      ? buildEmbeddedSignupUrl(state)
-      : buildOAuthUrl(state);
+    // Always use Embedded Signup for WhatsApp onboarding when config_id is provided.
+    const authUrl = buildEmbeddedSignupUrl(state);
 
     // Return the OAuth configuration and URL
     return NextResponse.json({

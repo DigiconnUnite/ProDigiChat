@@ -358,6 +358,23 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
       },
     });
 
+    // Persist outgoing message row so webhook status updates can be matched by whatsappMessageId.
+    if (whatsappMessageId && queueItem.contactId && queueItem.campaignId) {
+      await prisma.message.create({
+        data: {
+          contactId: queueItem.contactId,
+          campaignId: queueItem.campaignId,
+          organizationId: queueItem.organizationId,
+          direction: 'outgoing',
+          status: 'sent',
+          content: JSON.stringify({ text: queueItem.messageContent }),
+          whatsappMessageId,
+        },
+      }).catch((e) => {
+        console.error('[Queue] Failed to create Message record:', e);
+      });
+    }
+
     console.log(`[Queue] Message ${id} sent successfully`);
     return { success: true, whatsappMessageId };
 

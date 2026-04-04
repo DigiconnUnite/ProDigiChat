@@ -61,7 +61,7 @@ export default function BlogPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {featuredPosts.map((post) => (
                   <Card key={post.id} className="group hover:shadow-lg transition-shadow duration-300 overflow-hidden">
-                    <div className="aspect-video relative overflow-hidden bg-gradient-to-br from-primary/10 to-primary/5">
+                    <div className="aspect-video relative overflow-hidden bg-linear-to-br from-primary/10 to-primary/5">
                       {post.image ? (
                         <Image
                           src={post.image}
