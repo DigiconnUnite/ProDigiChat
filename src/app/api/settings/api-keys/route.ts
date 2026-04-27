@@ -106,3 +106,54 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Failed to revoke key" }, { status: 500 })
   }
 }
+
+// POST: Regenerate API key
+export async function PATCH(request: NextRequest) {
+  const token = await getToken({ req: request });
+  const orgId = (token?.organizationId || token?.orgId) as string;
+
+  if (!orgId) {
+    return NextResponse.json({ error: 'Unauthorized - no organization' }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url)
+  const keyId = searchParams.get("id")
+  
+  if (!keyId) {
+    return NextResponse.json({ error: "API key ID required" }, { status: 400 })
+  }
+  
+  try {
+    const settings = await getSettings(orgId)
+    const keyIndex = settings.apiKeys.findIndex((k: any) => k.id === keyId)
+    
+    if (keyIndex === -1) {
+      return NextResponse.json({ error: "API key not found" }, { status: 404 })
+    }
+    
+    // Generate new key
+    const fullKey = `wa_${crypto.randomBytes(32).toString("hex")}`
+    const prefix = fullKey.substring(0, 12)
+    
+    // Update the key
+    const updatedKeys = [...settings.apiKeys]
+    updatedKeys[keyIndex] = {
+      ...updatedKeys[keyIndex],
+      prefix,
+      fullKey,
+      lastUsedAt: null,
+      requestCount: 0,
+      updatedAt: new Date().toISOString(),
+    }
+    
+    await updateSettings(orgId, { apiKeys: updatedKeys })
+    
+    return NextResponse.json({
+      message: "API key regenerated successfully",
+      apiKey: updatedKeys[keyIndex],
+    })
+  } catch (error) {
+    console.error("Error regenerating API key:", error)
+    return NextResponse.json({ error: "Failed to regenerate key" }, { status: 500 })
+  }
+}

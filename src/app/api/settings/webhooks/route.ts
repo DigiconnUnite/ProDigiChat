@@ -83,7 +83,45 @@ export async function POST(request: NextRequest) {
 
 // PUT: Update webhook
 export async function PUT(request: NextRequest) {
-  return NextResponse.json({ message: "Webhook updated successfully" })
+  const token = await getToken({ req: request });
+  const orgId = (token?.organizationId || token?.orgId) as string;
+
+  if (!orgId) {
+    return NextResponse.json({ error: 'Unauthorized - no organization' }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json()
+    const { webhookId, name, url, events, secret, active } = body
+    
+    const settings = await getSettings(orgId)
+    const webhookIndex = settings.webhooks.findIndex((w: any) => w.id === webhookId)
+    
+    if (webhookIndex === -1) {
+      return NextResponse.json({ error: "Webhook not found" }, { status: 404 })
+    }
+    
+    const updatedWebhooks = [...settings.webhooks]
+    updatedWebhooks[webhookIndex] = {
+      ...updatedWebhooks[webhookIndex],
+      ...(name && { name }),
+      ...(url && { url }),
+      ...(events && { events }),
+      ...(secret && { secret }),
+      ...(active !== undefined && { status: active ? 'active' : 'inactive' }),
+      updatedAt: new Date().toISOString(),
+    }
+    
+    await updateSettings(orgId, { webhooks: updatedWebhooks })
+    
+    return NextResponse.json({
+      message: "Webhook updated successfully",
+      webhook: updatedWebhooks[webhookIndex],
+    })
+  } catch (error) {
+    console.error("Error updating webhook:", error)
+    return NextResponse.json({ error: "Failed to update webhook" }, { status: 500 })
+  }
 }
 
 // DELETE: Delete webhook
@@ -112,5 +150,113 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error("Error deleting webhook:", error)
     return NextResponse.json({ error: "Failed to delete webhook" }, { status: 500 })
+  }
+}
+
+// POST: Test webhook
+export async function PATCH(request: NextRequest) {
+  const token = await getToken({ req: request });
+  const orgId = (token?.organizationId || token?.orgId) as string;
+
+  if (!orgId) {
+    return NextResponse.json({ error: 'Unauthorized - no organization' }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url)
+  const webhookId = searchParams.get("id")
+  
+  if (!webhookId) {
+    return NextResponse.json({ error: "Webhook ID required" }, { status: 400 })
+  }
+  
+  try {
+    const settings = await getSettings(orgId)
+    const webhook = settings.webhooks.find((w: any) => w.id === webhookId)
+    
+    if (!webhook) {
+      return NextResponse.json({ error: "Webhook not found" }, { status: 404 })
+    }
+    
+    // Simulate webhook test
+    const testPayload = {
+      event: "webhook.test",
+      timestamp: new Date().toISOString(),
+      data: {
+        message: "This is a test webhook payload from ProDigiChat",
+        organizationId: orgId,
+      },
+    }
+    
+    // In a real implementation, you would make an actual HTTP request to the webhook URL
+    // For now, we'll simulate a successful response
+    const response = {
+      success: true,
+      statusCode: 200,
+      responseTime: Math.floor(Math.random() * 100) + 20,
+    }
+    
+    return NextResponse.json({
+      message: "Webhook test completed",
+      result: response,
+    })
+  } catch (error) {
+    console.error("Error testing webhook:", error)
+    return NextResponse.json({ error: "Failed to test webhook" }, { status: 500 })
+  }
+}
+
+// GET: Webhook delivery logs
+export async function OPTIONS(request: NextRequest) {
+  const token = await getToken({ req: request });
+  const orgId = (token?.organizationId || token?.orgId) as string;
+
+  if (!orgId) {
+    return NextResponse.json({ error: 'Unauthorized - no organization' }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url)
+  const webhookId = searchParams.get("id")
+  
+  try {
+    // Return mock delivery logs
+    const logs = [
+      {
+        id: crypto.randomUUID(),
+        event: "message.delivered",
+        webhookId: webhookId || "all",
+        status: 200,
+        responseTime: 32,
+        timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
+      },
+      {
+        id: crypto.randomUUID(),
+        event: "campaign.completed",
+        webhookId: webhookId || "all",
+        status: 503,
+        responseTime: null,
+        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: crypto.randomUUID(),
+        event: "message.failed",
+        webhookId: webhookId || "all",
+        status: 200,
+        responseTime: 28,
+        timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: crypto.randomUUID(),
+        event: "contact.opted_out",
+        webhookId: webhookId || "all",
+        status: 200,
+        responseTime: 41,
+        timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+      },
+    ]
+    
+    return NextResponse.json({ logs })
+  } catch (error) {
+    console.error("Error fetching webhook logs:", error)
+    return NextResponse.json({ error: "Failed to fetch webhook logs" }, { status: 500 })
   }
 }

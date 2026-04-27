@@ -21,6 +21,8 @@ import {
   MessageSquare,
   Check,
   Settings2,
+  Download as DownloadIcon,
+  AlertTriangle as AlertTriangleIcon,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -49,14 +51,27 @@ import {
 
 // Types
 import { WhatsAppSettingsTab } from "@/components/settings/WhatsAppSettingsTab"
+import { TeamSettingsTab } from "@/components/settings/TeamSettingsTab"
+import { ApiKeysTab } from "@/components/settings/ApiKeysTab"
+import { ProfileSettingsTab } from "@/components/settings/ProfileSettingsTab"
+import { WebhooksTab } from "@/components/settings/WebhooksTab"
+import { PrivacySettingsTab } from "@/components/settings/PrivacySettingsTab"
 
 interface GeneralSettings {
   companyName: string
   companyEmail: string
+  website: string
+  supportEmail: string
+  address: string
   timezone: string
   language: string
   dateFormat: string
   currency: string
+  businessHours: {
+    startTime: string
+    endTime: string
+    workingDays: string[]
+  }
 }
 
 interface NotificationSettings {
@@ -67,11 +82,13 @@ interface NotificationSettings {
   }
   push: {
     enabled: boolean
+    soundEnabled: boolean
     events: string[]
   }
   slack: {
     enabled: boolean
     webhookUrl: string | null
+    channel: string | null
     events: string[]
   }
 }
@@ -132,10 +149,18 @@ function SettingsPageContent() {
   const [generalSettings, setGeneralSettings] = useState<GeneralSettings>({
     companyName: "",
     companyEmail: "",
+    website: "",
+    supportEmail: "",
+    address: "",
     timezone: "UTC",
     language: "en",
     dateFormat: "YYYY-MM-DD",
     currency: "USD",
+    businessHours: {
+      startTime: "09:00",
+      endTime: "18:00",
+      workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+    },
   })
 
   // Validation errors
@@ -149,13 +174,15 @@ function SettingsPageContent() {
       events: ["campaign.completed", "campaign.failed", "message.failed"],
     },
     push: {
-      enabled: false,
-      events: [],
+      enabled: true,
+      soundEnabled: true,
+      events: ["new.message", "campaign.status"],
     },
     slack: {
       enabled: false,
       webhookUrl: null,
-      events: [],
+      channel: null,
+      events: ["campaign.completed", "campaign.failed"],
     },
   })
 
@@ -186,10 +213,18 @@ function SettingsPageContent() {
         setGeneralSettings({
           companyName: data.general?.companyName || "",
           companyEmail: data.general?.companyEmail || "",
+          website: data.general?.website || "",
+          supportEmail: data.general?.supportEmail || "",
+          address: data.general?.address || "",
           timezone: data.general?.timezone || "UTC",
           language: data.general?.language || "en",
           dateFormat: data.general?.dateFormat || "YYYY-MM-DD",
           currency: data.general?.currency || "USD",
+          businessHours: data.general?.businessHours || {
+            startTime: "09:00",
+            endTime: "18:00",
+            workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+          },
         })
       }
     } catch (error) {
@@ -366,9 +401,14 @@ function SettingsPageContent() {
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-4">
+        <TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-3 md:grid-cols-6 lg:grid-cols-9">
           <TabsTrigger value={SETTINGS_TABS.GENERAL}>General</TabsTrigger>
+          <TabsTrigger value={SETTINGS_TABS.PROFILE}>Profile</TabsTrigger>
           <TabsTrigger value={SETTINGS_TABS.WHATSAPP}>WhatsApp</TabsTrigger>
+          <TabsTrigger value={SETTINGS_TABS.TEAM}>Team</TabsTrigger>
+          <TabsTrigger value={SETTINGS_TABS.API}>API Keys</TabsTrigger>
+          <TabsTrigger value={SETTINGS_TABS.WEBHOOKS}>Webhooks</TabsTrigger>
+          <TabsTrigger value={SETTINGS_TABS.PRIVACY}>Privacy</TabsTrigger>
           <TabsTrigger value={SETTINGS_TABS.NOTIFICATIONS}>Notifications</TabsTrigger>
           <TabsTrigger value={SETTINGS_TABS.BILLING}>Billing</TabsTrigger>
         </TabsList>
@@ -427,6 +467,50 @@ function SettingsPageContent() {
                       {errors.companyEmail && (
                         <p className="text-sm text-destructive">{errors.companyEmail}</p>
                       )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="website">Website</Label>
+                      <Input
+                        id="website"
+                        type="url"
+                        value={generalSettings.website}
+                        onChange={(e) =>
+                          setGeneralSettings({
+                            ...generalSettings,
+                            website: e.target.value,
+                          })
+                        }
+                        placeholder="https://yourcompany.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="supportEmail">Support Email</Label>
+                      <Input
+                        id="supportEmail"
+                        type="email"
+                        value={generalSettings.supportEmail}
+                        onChange={(e) =>
+                          setGeneralSettings({
+                            ...generalSettings,
+                            supportEmail: e.target.value,
+                          })
+                        }
+                        placeholder="support@company.com"
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="address">Company Address</Label>
+                      <Input
+                        id="address"
+                        value={generalSettings.address}
+                        onChange={(e) =>
+                          setGeneralSettings({
+                            ...generalSettings,
+                            address: e.target.value,
+                          })
+                        }
+                        placeholder="123 Business St, City, Country"
+                      />
                     </div>
                   </div>
 
@@ -533,6 +617,82 @@ function SettingsPageContent() {
                     </div>
                   </div>
 
+                  <Separator />
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Business Hours</h3>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="startTime">Start Time</Label>
+                        <Input
+                          id="startTime"
+                          type="time"
+                          value={generalSettings.businessHours.startTime}
+                          onChange={(e) =>
+                            setGeneralSettings({
+                              ...generalSettings,
+                              businessHours: {
+                                ...generalSettings.businessHours,
+                                startTime: e.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="endTime">End Time</Label>
+                        <Input
+                          id="endTime"
+                          type="time"
+                          value={generalSettings.businessHours.endTime}
+                          onChange={(e) =>
+                            setGeneralSettings({
+                              ...generalSettings,
+                              businessHours: {
+                                ...generalSettings.businessHours,
+                                endTime: e.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Working Days</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day) => (
+                          <label
+                            key={day}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-md border cursor-pointer text-sm ${
+                              generalSettings.businessHours.workingDays.includes(day)
+                                ? "bg-green-100 border-green-300 text-green-800"
+                                : "bg-muted border-border"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={generalSettings.businessHours.workingDays.includes(day)}
+                              onChange={(e) => {
+                                const newDays = e.target.checked
+                                  ? [...generalSettings.businessHours.workingDays, day]
+                                  : generalSettings.businessHours.workingDays.filter((d) => d !== day);
+                                setGeneralSettings({
+                                  ...generalSettings,
+                                  businessHours: {
+                                    ...generalSettings.businessHours,
+                                    workingDays: newDays,
+                                  },
+                                });
+                              }}
+                              className="sr-only"
+                            />
+                            {day}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="flex justify-end">
                     <Button
                       onClick={saveGeneralSettings}
@@ -558,9 +718,34 @@ function SettingsPageContent() {
           </Card>
         </TabsContent>
 
+        {/* ==================== Profile Settings Tab ==================== */}
+        <TabsContent value={SETTINGS_TABS.PROFILE} className="space-y-6">
+          <ProfileSettingsTab organizationId={organizationId} />
+        </TabsContent>
+
         {/* ==================== WhatsApp Settings Tab ==================== */}
         <TabsContent value={SETTINGS_TABS.WHATSAPP} className="space-y-6">
           <WhatsAppSettingsTab organizationId={organizationId} />
+        </TabsContent>
+
+        {/* ==================== Team Settings Tab ==================== */}
+        <TabsContent value={SETTINGS_TABS.TEAM} className="space-y-6">
+          <TeamSettingsTab organizationId={organizationId} />
+        </TabsContent>
+
+        {/* ==================== API Keys Tab ==================== */}
+        <TabsContent value={SETTINGS_TABS.API} className="space-y-6">
+          <ApiKeysTab organizationId={organizationId} />
+        </TabsContent>
+
+        {/* ==================== Webhooks Tab ==================== */}
+        <TabsContent value={SETTINGS_TABS.WEBHOOKS} className="space-y-6">
+          <WebhooksTab organizationId={organizationId} />
+        </TabsContent>
+
+        {/* ==================== Privacy Tab ==================== */}
+        <TabsContent value={SETTINGS_TABS.PRIVACY} className="space-y-6">
+          <PrivacySettingsTab organizationId={organizationId} />
         </TabsContent>
 
         {/* ==================== Notifications Tab ==================== */}
@@ -607,9 +792,14 @@ function SettingsPageContent() {
                     {[
                       { event: "campaign.completed", label: "Campaign completed", desc: "When a campaign finishes sending" },
                       { event: "campaign.failed", label: "Campaign failed", desc: "When a campaign fails to send" },
+                      { event: "campaign.launched", label: "Campaign launched", desc: "When a campaign starts sending" },
                       { event: "message.failed", label: "Message failed", desc: "When a message fails to deliver" },
+                      { event: "message.read", label: "Message read", desc: "When a message is read by recipient" },
                       { event: "contact.opted_out", label: "Contact opted out", desc: "When a contact unsubscribes" },
+                      { event: "contact.opted_in", label: "Contact opted in", desc: "When a contact subscribes" },
                       { event: "low.balance", label: "Low balance", desc: "When your credits are running low" },
+                      { event: "team.invite", label: "Team invite", desc: "When a new team member is invited" },
+                      { event: "system.update", label: "System update", desc: "When there's a system update" },
                     ].map((item) => (
                       <div key={item.event} className="flex items-center justify-between py-2">
                         <div>
@@ -644,6 +834,38 @@ function SettingsPageContent() {
                   onCheckedChange={(checked) => setNotificationSettings((prev) => ({ ...prev, push: { ...prev.push, enabled: checked } }))}
                 />
               </div>
+              {notificationSettings.push.enabled && (
+                <>
+                  <Separator />
+                  <div className="flex items-center justify-between py-2">
+                    <div>
+                      <p className="font-medium">Sound Alerts</p>
+                      <p className="text-sm text-muted-foreground">Play sound when receiving notifications</p>
+                    </div>
+                    <Switch
+                      checked={notificationSettings.push.soundEnabled || false}
+                      onCheckedChange={(checked) => setNotificationSettings((prev) => ({ ...prev, push: { ...prev.push, soundEnabled: checked } }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Notification Events</Label>
+                    {[
+                      { event: "new.message", label: "New message", desc: "When you receive a new message" },
+                      { event: "campaign.status", label: "Campaign status", desc: "When campaign status changes" },
+                      { event: "team.activity", label: "Team activity", desc: "When team members take actions" },
+                      { event: "system.updates", label: "System updates", desc: "Important system notifications" },
+                    ].map((item) => (
+                      <div key={item.event} className="flex items-center justify-between py-2">
+                        <div>
+                          <p className="font-medium">{item.label}</p>
+                          <p className="text-sm text-muted-foreground">{item.desc}</p>
+                        </div>
+                        <Switch checked={notificationSettings.push.events.includes(item.event)} onCheckedChange={() => toggleNotificationEvent("push", item.event)} />
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -667,10 +889,34 @@ function SettingsPageContent() {
                 />
               </div>
               {notificationSettings.slack.enabled && (
-                <div className="space-y-2">
-                  <Label htmlFor="slackWebhook">Slack Webhook URL</Label>
-                  <Input id="slackWebhook" type="url" placeholder="https://hooks.slack.com/services/..." value={notificationSettings.slack.webhookUrl || ""} onChange={(e) => setNotificationSettings((prev) => ({ ...prev, slack: { ...prev.slack, webhookUrl: e.target.value } }))} />
-                </div>
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="slackWebhook">Slack Webhook URL</Label>
+                    <Input id="slackWebhook" type="url" placeholder="https://hooks.slack.com/services/..." value={notificationSettings.slack.webhookUrl || ""} onChange={(e) => setNotificationSettings((prev) => ({ ...prev, slack: { ...prev.slack, webhookUrl: e.target.value } }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="slackChannel">Slack Channel (optional)</Label>
+                    <Input id="slackChannel" placeholder="#general" value={notificationSettings.slack.channel || ""} onChange={(e) => setNotificationSettings((prev) => ({ ...prev, slack: { ...prev.slack, channel: e.target.value } }))} />
+                  </div>
+                  <Separator />
+                  <div className="space-y-2">
+                    <Label>Notification Events</Label>
+                    {[
+                      { event: "campaign.completed", label: "Campaign completed", desc: "When a campaign finishes" },
+                      { event: "campaign.failed", label: "Campaign failed", desc: "When a campaign fails" },
+                      { event: "message.failed", label: "Message failed", desc: "When message delivery fails" },
+                      { event: "low.balance", label: "Low balance", desc: "When credits are low" },
+                    ].map((item) => (
+                      <div key={item.event} className="flex items-center justify-between py-2">
+                        <div>
+                          <p className="font-medium">{item.label}</p>
+                          <p className="text-sm text-muted-foreground">{item.desc}</p>
+                        </div>
+                        <Switch checked={notificationSettings.slack.events.includes(item.event)} onCheckedChange={() => toggleNotificationEvent("slack", item.event)} />
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
@@ -776,6 +1022,93 @@ function SettingsPageContent() {
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment Method</CardTitle>
+              <CardDescription>Manage your payment details</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between p-4 rounded-lg border bg-secondary/50">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-16 rounded bg-gradient-to-r from-blue-600 to-blue-800 flex items-center justify-center">
+                    <CreditCard className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Visa ending in 4242</p>
+                    <p className="text-sm text-muted-foreground">Expires 12/2025</p>
+                  </div>
+                </div>
+                <Button variant="outline" size="sm">Update</Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Invoices</CardTitle>
+              <CardDescription>View and download your invoices</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {[
+                  { id: "INV-2024-001", date: "March 2024", amount: 79, status: "paid" },
+                  { id: "INV-2024-002", date: "February 2024", amount: 79, status: "paid" },
+                  { id: "INV-2024-003", date: "January 2024", amount: 79, status: "paid" },
+                ].map((invoice) => (
+                  <div key={invoice.id} className="flex items-center justify-between p-4 rounded-lg border">
+                    <div>
+                      <p className="font-medium">{invoice.id}</p>
+                      <p className="text-sm text-muted-foreground">{invoice.date}</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <p className="font-medium">${invoice.amount}</p>
+                      <Badge className="bg-green-100 text-green-800 border-green-200">{invoice.status}</Badge>
+                      <Button variant="ghost" size="sm">
+                        <DownloadIcon className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-red-200 bg-red-50/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangleIcon className="h-5 w-5" />
+                Danger Zone
+              </CardTitle>
+              <CardDescription>
+                Irreversible and destructive actions
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 rounded-lg border bg-background">
+                <div>
+                  <p className="font-medium">Cancel Subscription</p>
+                  <p className="text-sm text-muted-foreground">
+                    Cancel your subscription and downgrade to the free plan
+                  </p>
+                </div>
+                <Button variant="outline" size="sm">
+                  Cancel Subscription
+                </Button>
+              </div>
+              <div className="flex items-center justify-between p-4 rounded-lg border border-destructive bg-destructive/5">
+                <div>
+                  <p className="font-medium text-destructive">Delete Organization</p>
+                  <p className="text-sm text-muted-foreground">
+                    Permanently delete your organization and all its data
+                  </p>
+                </div>
+                <Button variant="destructive" size="sm">
+                  Delete Organization
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
