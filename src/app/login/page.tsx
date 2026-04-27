@@ -46,19 +46,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background p-8">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-background via-green-50 to-background p-8">
      
       <div className="w-full my-auto max-w-md">
-        <Link href="/" className="mb-8 flex justify-center items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <MessageSquare className="h-6 w-6" />
-          </div>
-          <span className="text-2xl font-bold text-foreground">
-            WhatsApp CRM
-          </span>
-        </Link>
+       
 
-        <Card className="shadow-lg">
+        <Card className="shadow-none">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold text-center">
               Welcome Back
@@ -77,7 +70,7 @@ export default function LoginPage() {
                 </div>
               )}
 
-              <div className="space-y-2">
+              <div className="space-y-2 ">
                 <Label htmlFor="email">Email Address</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 mt-2 h-5 w-5 text-muted-foreground" />
@@ -87,7 +80,7 @@ export default function LoginPage() {
                     placeholder="name@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 shadow-none"
                     disabled={isLoading}
                     required
                   />
@@ -104,7 +97,7 @@ export default function LoginPage() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 shadow-none"
                     disabled={isLoading}
                     required
                   />
@@ -165,14 +158,6 @@ export default function LoginPage() {
                 </Link>
               </div>
 
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full h-px bg-border" />
-                </div>
-                <span className="relative bg-background px-4 text-sm text-muted-foreground">
-                  Demo login: admin@company.com / admin123
-                </span>
-              </div>
             </div>
           </CardContent>
         </Card>

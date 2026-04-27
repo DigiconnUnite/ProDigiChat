@@ -216,7 +216,6 @@ export default function DashboardPage() {
   // If no valid orgId exists, the user should not have access to the dashboard
   const organizationId = (session?.user as Record<string, unknown>)?.organizationId as string
   
-  // BUG FIX: Fetch analytics data - useEffect must be called BEFORE any conditional returns
   // Add guard inside useEffect to check session and organizationId before fetching
   useEffect(() => {
     if (!session || !organizationId) {

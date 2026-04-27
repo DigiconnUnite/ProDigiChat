@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Commissioner } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/components/auth-provider";
 import { NotificationProvider } from "@/components/notification-provider";
@@ -76,19 +75,13 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className="scrollbar-hide">
       <body className={`${googleSans.variable} font-sans bg-green-950 antialiased scrollbar-hide`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem
-          disableTransitionOnChange
-        >
+
           <AuthProvider>
             <NotificationProvider>
               {children}
             </NotificationProvider>
             <Toaster />
           </AuthProvider>
-        </ThemeProvider>
       </body>
     </html>
   );

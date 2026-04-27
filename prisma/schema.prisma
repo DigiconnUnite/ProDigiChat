@@ -35,7 +35,8 @@ model User {
   @@map("users")
 }
 
-// Team model (simplified - no complex relations)
+// Team model (represents Organization - kept as Team for DB compatibility)
+// Note: In code, this is referred to as "organization" for clarity
 model Team {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   name      String
@@ -60,12 +61,19 @@ model Contact {
   phoneNumber   String
   firstName     String?
   lastName      String?
+  displayName   String?
   email         String?
+  lifecycleStatus String @default("lead") // "lead", "active", "suppressed", "blocked", "bounced"
   optInStatus   String   @default("pending") // "opted_in", "opted_out", "pending"
+  optInAt       DateTime?
+  optOutAt      DateTime?
+  optInSource   String?
   whatsappNumberId String?
   lastContacted DateTime?
   tags          String   // JSON array of tags
   attributes    String   // JSON object for custom attributes
+  isDeleted     Boolean  @default(false)
+  deletedAt     DateTime?
   userId        String   @db.ObjectId
   organizationId String?  @db.ObjectId
   createdAt     DateTime @default(now())
@@ -81,6 +89,8 @@ model Contact {
   // Composite unique constraint - phoneNumber must be unique per organization
   @@unique([phoneNumber, organizationId])
   @@index([organizationId])
+  @@index([organizationId, lifecycleStatus])
+  @@index([organizationId, isDeleted])
   @@map("contacts")
 }
 
@@ -328,6 +338,7 @@ model Message {
   whatsappMessageId String?
   sentBy           String?  @db.ObjectId
   organizationId   String   @db.ObjectId
+  stats            String   // JSON object with totalSent, delivered, read, failed, clicked
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -335,9 +346,13 @@ model Message {
   contact   Contact   @relation(fields: [contactId], references: [id])
   campaign  Campaign? @relation(fields: [campaignId], references: [id])
   sender    User?     @relation("MessageSender", fields: [sentBy], references: [id])
-  organization Team?  @relation(fields: [organizationId], references: [id])
+  organization Team?   @relation(fields: [organizationId], references: [id])
 
   @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, createdAt])
+  @@index([contactId])
+  @@index([campaignId])
   @@map("messages")
 }
 
@@ -520,4 +535,25 @@ model WhatsAppMessageQueue {
   @@index([nextRetryAt])
   @@index([scheduledAt])
   @@map("whatsappMessageQueue")
+}
+
+// Contact import jobs for async CSV processing with progress polling
+model ContactImportJob {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String   @db.ObjectId
+  userId         String   @db.ObjectId
+  status         String   @default("queued") // "queued", "processing", "completed", "failed"
+  progress       Int      @default(0)
+  totalRows      Int      @default(0)
+  processedRows  Int      @default(0)
+  imported       Int      @default(0)
+  skipped        Int      @default(0)
+  errors         String   @default("[]") // JSON array
+  finishedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId, status])
+  @@index([organizationId, createdAt])
+  @@map("contactImportJobs")
 }

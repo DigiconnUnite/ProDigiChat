@@ -92,7 +92,7 @@ export async function addBulkToQueue(
     contactId?: string;
     messageType?: string;
     scheduledAt?: Date;
-    whatsappAccountId?: string; // BUG FIX: Store the WhatsApp account ID for each message
+    whatsappAccountId?: string;
   }>,
   whatsappAccountId?: string // Default account ID for all messages
 ): Promise<WhatsAppMessageQueue[]> {
@@ -116,7 +116,7 @@ export async function addBulkToQueue(
       messageType: msg.messageType || MessageType.TEXT,
       campaignId: msg.campaignId,
       contactId: msg.contactId,
-      whatsappAccountId: msg.whatsappAccountId || whatsappAccountId, // BUG FIX: Store account ID
+      whatsappAccountId: msg.whatsappAccountId || whatsappAccountId,
       batchId, // Add batch ID for reliable identification
       scheduledAt: msg.scheduledAt,
       maxAttempts: RetryConfig.MAX_ATTEMPTS,
@@ -269,7 +269,6 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
   whatsappMessageId?: string;
   error?: string;
 }> {
-  // BUG FIX: Extract whatsappAccountId from queue item (convert null to undefined)
   const { id, organizationId, recipientPhone, messageContent, messageType, attempts, whatsappAccountId } = queueItem;
   const accountId = whatsappAccountId || undefined;
 
@@ -286,6 +285,47 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
   });
 
   console.log(`[Queue] Processing message ${id} (attempt ${attempts + 1})`);
+
+  async function resolveContact(): Promise<{ id: string; organizationId: string | null } | null> {
+    if (queueItem.contactId) {
+      const contact = await prisma.contact.findFirst({
+        where: {
+          id: queueItem.contactId,
+          organizationId,
+        },
+        select: { id: true, organizationId: true },
+      }) as { id: string; organizationId: string | null } | null;
+
+      if (contact) {
+        return {
+          id: contact.id,
+          organizationId: contact.organizationId || organizationId,
+        };
+      }
+    }
+
+    const normalizedRecipient = recipientPhone.replace(/[^\d+]/g, '');
+    const contact = await prisma.contact.findFirst({
+      where: {
+        organizationId,
+        OR: [
+          { phoneNumber: recipientPhone },
+          { phoneNumber: normalizedRecipient },
+          { phoneNumber: { endsWith: normalizedRecipient.replace(/^\+/, '') } },
+        ],
+      },
+      select: { id: true, organizationId: true },
+    }) as { id: string; organizationId: string | null } | null;
+
+    if (!contact) {
+      return null;
+    }
+
+    return {
+      id: contact.id,
+      organizationId: contact.organizationId || organizationId,
+    };
+  }
 
   try {
     // Parse message content
@@ -307,7 +347,6 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
 
     let result: any;
 
-    // BUG FIX: Pass whatsappAccountId to all send functions
     // Send based on message type
     switch (messageType) {
       case MessageType.TEMPLATE:
@@ -317,7 +356,7 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
           parsedContent.components || [],
           organizationId,
           parsedContent.language || 'en_US',
-          accountId // BUG FIX: Pass account ID
+          accountId
         );
         break;
         
@@ -327,18 +366,17 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
           parsedContent.mediaUrl || '',
           parsedContent.caption || '',
           organizationId,
-          accountId // BUG FIX: Pass account ID
+          accountId
         );
         break;
         
       case MessageType.TEXT:
       default:
-        // BUG FIX: Also check for freeformMessage property
         result = await sendTextMessage(
           recipientPhone,
           parsedContent.text || parsedContent.freeformMessage || messageContent,
           organizationId,
-          accountId // BUG FIX: Pass account ID
+          accountId
         );
         break;
     }
@@ -359,20 +397,33 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
     });
 
     // Persist outgoing message row so webhook status updates can be matched by whatsappMessageId.
-    if (whatsappMessageId && queueItem.contactId && queueItem.campaignId) {
-      await prisma.message.create({
-        data: {
-          contactId: queueItem.contactId,
-          campaignId: queueItem.campaignId,
-          organizationId: queueItem.organizationId,
-          direction: 'outgoing',
-          status: 'sent',
-          content: JSON.stringify({ text: queueItem.messageContent }),
-          whatsappMessageId,
-        },
-      }).catch((e) => {
-        console.error('[Queue] Failed to create Message record:', e);
-      });
+    if (whatsappMessageId) {
+      const contact = await resolveContact();
+
+      if (contact) {
+        const existingMessage = await prisma.message.findFirst({
+          where: { whatsappMessageId },
+          select: { id: true },
+        });
+
+        if (!existingMessage) {
+          await prisma.message.create({
+            data: {
+              contactId: contact.id,
+              campaignId: queueItem.campaignId || undefined,
+              organizationId: contact.organizationId || organizationId,
+              direction: 'outgoing',
+              status: 'sent',
+              content: JSON.stringify({ text: queueItem.messageContent }),
+              whatsappMessageId,
+            },
+          }).catch((e) => {
+            console.error('[Queue] Failed to create Message record:', e);
+          });
+        }
+      } else {
+        console.warn(`[Queue] Could not resolve contact for message ${id}; skipping Message row creation`);
+      }
     }
 
     console.log(`[Queue] Message ${id} sent successfully`);
@@ -465,7 +516,7 @@ export async function processQueue(
   console.log(`[Queue] Processing ${messages.length} ready messages for org ${organizationId}`);
 
   for (const message of messages) {
-    // BUG FIX: Check if nextRetryAt is ACTUALLY in the future. 
+ 
     // getReadyMessages should already filter these out, but we check again for safety.
     if (message.whatsappAccountId && message.nextRetryAt && new Date(message.nextRetryAt).getTime() > now.getTime()) {
       rateLimitedAccounts.add(message.whatsappAccountId);

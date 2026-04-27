@@ -341,10 +341,14 @@ export async function checkDuplicateMessage(
 export async function findOrCreateContact(phoneNumber: string, organizationId?: string): Promise<any> {
   // Normalize phone number (remove any non-digit characters except +)
   const normalizedPhone = phoneNumber.replace(/[^\d+]/g, "");
+  const orgFilter = organizationId ? { organizationId } : undefined;
   
-  // Try to find by phoneNumber - use findFirst since the schema has a composite unique key
+  // Try to find by phoneNumber within the current organization first.
   let contact = await prisma.contact.findFirst({
-    where: { phoneNumber: normalizedPhone },
+    where: {
+      phoneNumber: normalizedPhone,
+      ...(orgFilter || {}),
+    },
   });
 
   if (!contact) {
@@ -352,6 +356,7 @@ export async function findOrCreateContact(phoneNumber: string, organizationId?: 
     const phoneWithoutPlus = normalizedPhone.replace(/^\+/, "");
     contact = await prisma.contact.findFirst({
       where: {
+        ...(orgFilter || {}),
         OR: [
           { phoneNumber: phoneWithoutPlus },
           { phoneNumber: { endsWith: phoneWithoutPlus } },

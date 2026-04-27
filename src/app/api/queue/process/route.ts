@@ -13,7 +13,6 @@ export async function POST(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
     
-    // BUG FIX: Parse body once - request.json() can only be read once in Next.js
     const body = await request.json().catch(() => ({}));
     const action = searchParams.get('action') || body.action;
     

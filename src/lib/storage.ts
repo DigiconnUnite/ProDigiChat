@@ -1,6 +1,12 @@
 // Cloud storage integration
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 
+interface UploadedFile {
+  originalname: string;
+  buffer: Buffer;
+  mimetype: string;
+}
+
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || "ap-south-1",
   credentials: {
@@ -9,7 +15,7 @@ const s3Client = new S3Client({
   },
 });
 
-export async function uploadToS3(file: Express.Multer.File) {
+export async function uploadToS3(file: UploadedFile) {
   if (!process.env.AWS_S3_BUCKET_NAME) {
     throw new Error("AWS_S3_BUCKET_NAME is not defined");
   }

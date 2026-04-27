@@ -41,6 +41,7 @@ const contactFormSchema = z.object({
   lastName: z.string().optional().nullable(),
   phoneNumber: z.string().min(1, "Phone number is required"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
+  lifecycleStatus: z.enum(["lead", "active", "suppressed", "blocked", "bounced"]),
   optInStatus: z.enum(["opted_in", "opted_out", "pending"]),
   tags: z.array(z.string()),
 })
@@ -53,6 +54,7 @@ interface Contact {
   lastName?: string | null
   phoneNumber: string
   email?: string | null
+  lifecycleStatus?: string | null
   optInStatus: string
   tags?: string | null
 }
@@ -77,17 +79,26 @@ export function ContactFormDialog({
     if (!tags || typeof tags !== 'string') {
       return []
     }
-    try {
-      const parsed = JSON.parse(tags)
-      return Array.isArray(parsed) ? parsed : []
-    } catch {
-      return []
-    }
-  }
 
-  // Format tags to JSON string
-  const formatTags = (tags: string[]): string => {
-    return JSON.stringify(tags)
+    let parsed: unknown = tags
+    for (let i = 0; i < 2 && typeof parsed === 'string'; i++) {
+      try {
+        parsed = JSON.parse(parsed)
+      } catch {
+        break
+      }
+    }
+
+    if (Array.isArray(parsed)) {
+      return parsed.map((tag) => String(tag).trim()).filter(Boolean)
+    }
+
+    try {
+      const single = JSON.parse(tags)
+      return Array.isArray(single) ? single : []
+    } catch {
+      return tags.split(',').map((tag) => tag.trim()).filter(Boolean)
+    }
   }
 
   const form = useForm<ContactFormData>({
@@ -97,6 +108,7 @@ export function ContactFormDialog({
       lastName: contact?.lastName ?? "",
       phoneNumber: contact?.phoneNumber ?? "",
       email: contact?.email ?? "",
+      lifecycleStatus: (contact?.lifecycleStatus as "lead" | "active" | "suppressed" | "blocked" | "bounced") ?? "lead",
       optInStatus: (contact?.optInStatus as "opted_in" | "opted_out" | "pending") ?? "pending",
       tags: contact ? parseTags(contact.tags ?? null) : [],
     },
@@ -124,7 +136,7 @@ export function ContactFormDialog({
       const body = {
         ...data,
         id: contact?.id,
-        tags: formatTags(data.tags),
+        tags: data.tags,
       }
 
       const response = await fetch(url, {
@@ -224,6 +236,31 @@ export function ContactFormDialog({
                   <FormControl>
                     <Input placeholder="john@example.com" type="email" {...field} value={field.value ?? ""} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="lifecycleStatus"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Lifecycle Status</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select lifecycle status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="lead">Lead</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="suppressed">Suppressed</SelectItem>
+                      <SelectItem value="blocked">Blocked</SelectItem>
+                      <SelectItem value="bounced">Bounced</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

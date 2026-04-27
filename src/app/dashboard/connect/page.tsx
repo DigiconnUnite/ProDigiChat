@@ -58,7 +58,7 @@ function ConnectPageContent() {
 
     try {
       // Get OAuth URL
-      const response = await fetch(`/api/whatsapp/oauth/url?orgId=${organizationId}`);
+      const response = await fetch('/api/whatsapp/oauth/url');
       const data = await response.json();
 
       if (data.error) {

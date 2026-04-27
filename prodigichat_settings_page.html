@@ -1,0 +1,849 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--green:#25D366;--green-dark:#128C7E;--green-light:#dcfce7;--green-text:#166534;--sidebar-w:220px}
+body{font-family:var(--font-sans,'Segoe UI',sans-serif);background:var(--color-background-tertiary);color:var(--color-text-primary);min-height:100vh}
+.layout{display:grid;grid-template-columns:var(--sidebar-w) 1fr;min-height:100vh;gap:0}
+.sidebar{background:var(--color-background-primary);border-right:0.5px solid var(--color-border-tertiary);padding:1.5rem 0;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sidebar-header{padding:0 1rem 1rem;border-bottom:0.5px solid var(--color-border-tertiary);margin-bottom:0.5rem}
+.sidebar-title{font-size:13px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.05em}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 1rem;cursor:pointer;border-radius:0;font-size:14px;color:var(--color-text-secondary);transition:all .15s;border-left:2px solid transparent;margin:0 0.5rem;border-radius:6px}
+.nav-item:hover{background:var(--color-background-secondary);color:var(--color-text-primary)}
+.nav-item.active{background:var(--green-light);color:var(--green-text);font-weight:500;border-left-color:var(--green)}
+.nav-icon{width:16px;height:16px;flex-shrink:0;opacity:.7}
+.nav-item.active .nav-icon{opacity:1}
+.main{padding:2rem;overflow-y:auto;background:var(--color-background-tertiary)}
+.page-header{margin-bottom:1.5rem}
+.page-title{font-size:22px;font-weight:500;color:var(--color-text-primary)}
+.page-subtitle{font-size:14px;color:var(--color-text-secondary);margin-top:4px}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1.25rem;margin-bottom:1rem}
+.card-title{font-size:15px;font-weight:500;margin-bottom:4px}
+.card-desc{font-size:13px;color:var(--color-text-secondary);margin-bottom:1.25rem}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group.full{grid-column:1/-1}
+label{font-size:13px;font-weight:500;color:var(--color-text-secondary)}
+input[type=text],input[type=email],input[type=url],input[type=password],select,textarea{width:100%;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:8px 12px;font-size:14px;background:var(--color-background-primary);color:var(--color-text-primary);outline:none;transition:border-color .15s;font-family:inherit}
+input:focus,select:focus,textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(37,211,102,.12)}
+textarea{resize:vertical;min-height:80px}
+.hint{font-size:12px;color:var(--color-text-tertiary)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--border-radius-md);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-primary)}
+.btn:hover{background:var(--color-background-secondary)}
+.btn-primary{background:var(--green);color:#fff;border-color:var(--green)}
+.btn-primary:hover{background:var(--green-dark);border-color:var(--green-dark)}
+.btn-danger{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
+.btn-danger:hover{background:#fecaca}
+.btn-sm{padding:5px 12px;font-size:12px}
+.section-divider{border:none;border-top:0.5px solid var(--color-border-tertiary);margin:1.25rem 0}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-info{flex:1}
+.toggle-label{font-size:14px;font-weight:500}
+.toggle-desc{font-size:12px;color:var(--color-text-secondary);margin-top:2px}
+.switch{position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:var(--color-border-secondary);border-radius:11px;transition:.2s;cursor:pointer}
+.slider:before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+input:checked+.slider{background:var(--green)}
+input:checked+.slider:before{transform:translateX(18px)}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:500}
+.badge-green{background:var(--green-light);color:var(--green-text)}
+.badge-amber{background:#fef3c7;color:#92400e}
+.badge-red{background:#fee2e2;color:#991b1b}
+.badge-gray{background:var(--color-background-secondary);color:var(--color-text-secondary)}
+.badge-blue{background:#dbeafe;color:#1e40af}
+.table{width:100%;border-collapse:collapse;font-size:13px}
+.table th{text-align:left;padding:8px 12px;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)}
+.table td{padding:10px 12px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-primary)}
+.table tr:last-child td{border-bottom:none}
+.table tr:hover td{background:var(--color-background-secondary)}
+.usage-bar{height:6px;background:var(--color-border-tertiary);border-radius:3px;overflow:hidden;margin-top:4px}
+.usage-fill{height:100%;background:var(--green);border-radius:3px;transition:width .3s}
+.usage-fill.warn{background:#f59e0b}
+.usage-fill.danger{background:#ef4444}
+.plan-card{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem;cursor:pointer;transition:all .15s;position:relative}
+.plan-card:hover{border-color:var(--green)}
+.plan-card.current{border:2px solid var(--green)}
+.plan-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1rem}
+.plan-name{font-size:14px;font-weight:500}
+.plan-price{font-size:22px;font-weight:500;margin:6px 0;color:var(--color-text-primary)}
+.plan-price span{font-size:13px;font-weight:400;color:var(--color-text-secondary)}
+.plan-feature{font-size:12px;color:var(--color-text-secondary);margin-bottom:3px;display:flex;align-items:center;gap:5px}
+.check-icon{color:var(--green);font-size:14px}
+.waba-card{display:flex;align-items:center;gap:12px;padding:12px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);margin-bottom:8px}
+.waba-avatar{width:40px;height:40px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.waba-info{flex:1}
+.waba-name{font-size:14px;font-weight:500}
+.waba-sub{font-size:12px;color:var(--color-text-secondary)}
+.waba-actions{display:flex;gap:6px}
+.scope-badge{display:inline-flex;padding:2px 8px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:999px;font-size:11px;color:var(--color-text-secondary);margin:2px}
+.privacy-meter{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:1rem;margin-top:12px}
+.retention-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px}
+.retention-row:last-child{border-bottom:none}
+.webhook-event{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.webhook-event:last-child{border-bottom:none}
+.profile-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#25D366,#128C7E);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:500;flex-shrink:0}
+.profile-header{display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem;padding-bottom:1.25rem;border-bottom:0.5px solid var(--color-border-tertiary)}
+.actions-row{display:flex;justify-content:flex-end;gap:8px;margin-top:1rem}
+.notification-group{margin-bottom:1rem}
+.notif-group-title{font-size:13px;font-weight:500;color:var(--color-text-secondary);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em}
+.event-checkbox{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;cursor:pointer}
+.event-checkbox input{width:15px;height:15px;accent-color:var(--green)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.stat-mini{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px 16px}
+.stat-mini-label{font-size:12px;color:var(--color-text-secondary)}
+.stat-mini-val{font-size:20px;font-weight:500;margin-top:4px}
+.copy-btn{background:none;border:none;cursor:pointer;color:var(--color-text-secondary);padding:4px;border-radius:4px}
+.copy-btn:hover{color:var(--color-text-primary);background:var(--color-background-secondary)}
+.api-key-row{font-family:var(--font-mono,'Courier New',monospace);font-size:12px;background:var(--color-background-secondary);padding:8px 12px;border-radius:var(--border-radius-md);display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.health-dot{width:10px;height:10px;border-radius:50%;background:var(--green);display:inline-block;margin-right:6px}
+.health-dot.warn{background:#f59e0b}
+.health-dot.danger{background:#ef4444}
+.tag{display:inline-block;padding:2px 8px;background:var(--color-background-secondary);border-radius:999px;font-size:11px;color:var(--color-text-secondary)}
+.save-bar{position:sticky;bottom:0;background:var(--color-background-primary);border-top:0.5px solid var(--color-border-tertiary);padding:12px 2rem;display:flex;align-items:center;justify-content:space-between;margin:-2rem;margin-top:1rem}
+.save-bar-hint{font-size:13px;color:var(--color-text-secondary)}
+input[type=number]{width:80px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:6px 10px;font-size:13px;background:var(--color-background-primary);color:var(--color-text-primary)}
+.info-box{background:var(--color-background-secondary);border-left:3px solid var(--green);border-radius:0 var(--border-radius-md) var(--border-radius-md) 0;padding:10px 14px;font-size:13px;color:var(--color-text-secondary);margin-bottom:1rem}
+.danger-zone{border:0.5px solid #fca5a5;border-radius:var(--border-radius-lg);padding:1.25rem;background:#fff5f5}
+.danger-zone .card-title{color:#991b1b}
+.tab-selected-indicator{font-size:12px;color:var(--color-text-tertiary);margin-top:2px}
+</style>
+
+<h2 class="sr-only">ProDigiChat Settings — configure your WhatsApp marketing platform</h2>
+
+<div class="layout">
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <div style="font-size:15px;font-weight:500;display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <span style="width:28px;height:28px;background:var(--green);border-radius:6px;display:inline-flex;align-items:center;justify-content:center">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </span>
+      ProDigiChat
+    </div>
+    <div class="sidebar-title">Settings</div>
+  </div>
+
+  <div id="nav-general" class="nav-item active" onclick="switchTab('general')">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 0-14.14 0M4.93 19.07a10 10 0 0 0 14.14 0"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+    General
+  </div>
+  <div id="nav-profile" class="nav-item" onclick="switchTab('profile')">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    Profile
+  </div>
+  <div id="nav-whatsapp" class="nav-item" onclick="switchTab('whatsapp')">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    WhatsApp
+  </div>
+  <div id="nav-team" class="nav-item" onclick="switchTab('team')">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Team
+  </div>
+  <div id="nav-notifications" class="nav-item" onclick="switchTab('notifications')">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    Notifications
+  </div>
+  <div id="nav-api" class="nav-item" onclick="switchTab('api')">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+    API Keys
+  </div>
+  <div id="nav-webhooks" class="nav-item" onclick="switchTab('webhooks')">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 16.98h-5.99c-1.1 0-1.95.68-2.23 1.61A3 3 0 0 1 3 17c0-1.66 1.34-3 3-3h2M6 6.98h6.01c1.09 0 1.94-.67 2.22-1.61A3 3 0 0 1 21 6.98c0 1.66-1.34 3-3 3h-2"/></svg>
+    Webhooks
+  </div>
+  <div id="nav-privacy" class="nav-item" onclick="switchTab('privacy')">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    Privacy & GDPR
+  </div>
+  <div id="nav-billing" class="nav-item" onclick="switchTab('billing')">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+    Billing
+  </div>
+</nav>
+
+<main class="main">
+
+<!-- GENERAL -->
+<div id="tab-general" class="tab-content active">
+  <div class="page-header">
+    <div class="page-title">General Settings</div>
+    <div class="page-subtitle">Configure your organization's basic information and preferences</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Organization</div>
+    <div class="card-desc">Basic information about your company</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Company Name</label><input type="text" value="Digiconn Unite Pvt. Ltd." placeholder="Your company name"/></div>
+      <div class="form-group"><label>Company Email</label><input type="email" value="hello@digiconn.in" placeholder="contact@company.com"/></div>
+      <div class="form-group"><label>Website</label><input type="url" value="https://prodigichat.com" placeholder="https://"/></div>
+      <div class="form-group"><label>Support Email</label><input type="email" value="support@prodigichat.com"/></div>
+      <div class="form-group full"><label>Company Address</label><textarea placeholder="Street, City, State, PIN">Agra, Uttar Pradesh, India</textarea></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Localization</div>
+    <div class="card-desc">Timezone, language, date format and currency preferences</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Timezone</label>
+        <select><option>Asia/Kolkata (IST)</option><option>UTC</option><option>America/New_York (ET)</option><option>Europe/London (GMT)</option></select>
+      </div>
+      <div class="form-group">
+        <label>Language</label>
+        <select><option>English</option><option>Hindi</option><option>Spanish</option><option>French</option></select>
+      </div>
+      <div class="form-group">
+        <label>Date Format</label>
+        <select><option>DD/MM/YYYY</option><option>MM/DD/YYYY</option><option>YYYY-MM-DD</option></select>
+      </div>
+      <div class="form-group">
+        <label>Currency</label>
+        <select><option>INR (₹)</option><option>USD ($)</option><option>EUR (€)</option><option>GBP (£)</option></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Business Hours</div>
+    <div class="card-desc">Set your active business hours for auto-replies and campaign scheduling</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Start Time</label><input type="text" value="09:00 AM"/></div>
+      <div class="form-group"><label>End Time</label><input type="text" value="06:00 PM"/></div>
+      <div class="form-group full">
+        <label>Working Days</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+          <span id="day-Mon" class="badge badge-green" style="cursor:pointer" onclick="toggleDay(this)">Mon</span>
+          <span id="day-Tue" class="badge badge-green" style="cursor:pointer" onclick="toggleDay(this)">Tue</span>
+          <span id="day-Wed" class="badge badge-green" style="cursor:pointer" onclick="toggleDay(this)">Wed</span>
+          <span id="day-Thu" class="badge badge-green" style="cursor:pointer" onclick="toggleDay(this)">Thu</span>
+          <span id="day-Fri" class="badge badge-green" style="cursor:pointer" onclick="toggleDay(this)">Fri</span>
+          <span id="day-Sat" class="badge badge-amber" style="cursor:pointer" onclick="toggleDay(this)">Sat</span>
+          <span id="day-Sun" class="badge badge-gray" style="cursor:pointer" onclick="toggleDay(this)">Sun</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="save-bar">
+    <span class="save-bar-hint">Changes will apply to all users in your organization</span>
+    <div style="display:flex;gap:8px"><button class="btn">Discard</button><button class="btn btn-primary" onclick="showSaved(this)">Save General Settings</button></div>
+  </div>
+</div>
+
+<!-- PROFILE -->
+<div id="tab-profile" class="tab-content">
+  <div class="page-header">
+    <div class="page-title">Profile Settings</div>
+    <div class="page-subtitle">Manage your personal account details and password</div>
+  </div>
+
+  <div class="card">
+    <div class="profile-header">
+      <div class="profile-avatar">ST</div>
+      <div>
+        <div style="font-size:17px;font-weight:500">Shivam Thakur</div>
+        <div style="font-size:13px;color:var(--color-text-secondary)">Lead Developer · Owner</div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <span class="badge badge-green">Owner</span>
+          <span class="badge badge-blue">Admin</span>
+        </div>
+      </div>
+      <button class="btn btn-sm" style="margin-left:auto">Change Photo</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Full Name</label><input type="text" value="Shivam Thakur"/></div>
+      <div class="form-group"><label>Email Address</label><input type="email" value="shivam@digiconn.in"/></div>
+      <div class="form-group"><label>Phone Number</label><input type="text" value="+91 9XXXXXXXXX"/></div>
+      <div class="form-group"><label>Role / Designation</label><input type="text" value="Lead Developer"/></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Change Password</div>
+    <div class="card-desc">Use a strong password with at least 8 characters</div>
+    <div class="form-grid">
+      <div class="form-group full"><label>Current Password</label><input type="password" placeholder="Enter current password"/></div>
+      <div class="form-group"><label>New Password</label><input type="password" placeholder="Min 8 characters"/></div>
+      <div class="form-group"><label>Confirm Password</label><input type="password" placeholder="Repeat new password"/></div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <div style="flex:1;height:4px;border-radius:2px;background:#ef4444"></div>
+      <div style="flex:1;height:4px;border-radius:2px;background:#f59e0b"></div>
+      <div style="flex:1;height:4px;border-radius:2px;background:var(--color-border-tertiary)"></div>
+      <div style="flex:1;height:4px;border-radius:2px;background:var(--color-border-tertiary)"></div>
+    </div>
+    <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px">Password strength: Fair</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Two-Factor Authentication</div>
+    <div class="card-desc">Add an extra layer of security to your account</div>
+    <div class="toggle-row">
+      <div class="toggle-info"><div class="toggle-label">Enable 2FA via Authenticator App</div><div class="toggle-desc">Use Google Authenticator or Authy to generate OTP codes</div></div>
+      <label class="switch"><input type="checkbox"/><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info"><div class="toggle-label">SMS OTP Backup</div><div class="toggle-desc">Receive backup codes via SMS if authenticator is unavailable</div></div>
+      <label class="switch"><input type="checkbox"/><span class="slider"></span></label>
+    </div>
+  </div>
+
+  <div class="save-bar">
+    <span class="save-bar-hint">Your profile is visible to your team</span>
+    <div style="display:flex;gap:8px"><button class="btn">Discard</button><button class="btn btn-primary" onclick="showSaved(this)">Save Profile</button></div>
+  </div>
+</div>
+
+<!-- WHATSAPP -->
+<div id="tab-whatsapp" class="tab-content">
+  <div class="page-header">
+    <div class="page-title">WhatsApp Configuration</div>
+    <div class="page-subtitle">Manage your Meta WhatsApp Business API accounts and phone numbers</div>
+  </div>
+
+  <div class="info-box">Connected via Meta Embedded Signup · WABA ID: 1234567890 · Last verified: 25 Apr 2026</div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div><div class="card-title">Connected Accounts</div><div class="card-desc" style="margin:0">Your WhatsApp Business Accounts</div></div>
+      <button class="btn btn-primary btn-sm">+ Add Account</button>
+    </div>
+
+    <div class="waba-card">
+      <div class="waba-avatar">📱</div>
+      <div class="waba-info">
+        <div class="waba-name">Digiconn Primary <span class="badge badge-green" style="margin-left:6px;font-size:11px">Default</span></div>
+        <div class="waba-sub">WABA: 1234567890 · +91 98765 43210 · <span class="health-dot"></span>Healthy</div>
+      </div>
+      <div class="waba-actions">
+        <button class="btn btn-sm">Refresh</button>
+        <button class="btn btn-sm">Edit</button>
+        <button class="btn btn-sm btn-danger">Remove</button>
+      </div>
+    </div>
+
+    <div class="waba-card" style="opacity:.7">
+      <div class="waba-avatar">📱</div>
+      <div class="waba-info">
+        <div class="waba-name">Digiconn Support</div>
+        <div class="waba-sub">WABA: 9876543210 · +91 91234 56789 · <span class="health-dot warn"></span>Token expiring in 12 days</div>
+      </div>
+      <div class="waba-actions">
+        <button class="btn btn-sm">Reconnect</button>
+        <button class="btn btn-sm btn-danger">Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Phone Numbers</div>
+    <div class="card-desc">Manage and configure individual phone numbers within your WABA</div>
+    <table class="table">
+      <thead><tr><th>Display Name</th><th>Number</th><th>Quality</th><th>Status</th><th>Default</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><strong>Primary Support</strong></td><td>+91 98765 43210</td><td><span class="badge badge-green">HIGH</span></td><td><span class="badge badge-green">Active</span></td><td><input type="radio" name="default-phone" checked/></td><td><button class="btn btn-sm">Details</button></td></tr>
+        <tr><td>Marketing Line</td><td>+91 91234 56789</td><td><span class="badge badge-amber">MEDIUM</span></td><td><span class="badge badge-green">Active</span></td><td><input type="radio" name="default-phone"/></td><td><button class="btn btn-sm">Details</button></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">API Settings</div>
+    <div class="card-desc">Configure tokens, webhook, and API behaviour</div>
+    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Auto-refresh Access Token</div><div class="toggle-desc">Automatically renew token before expiry to prevent disruptions</div></div><label class="switch"><input type="checkbox" checked/><span class="slider"></span></label></div>
+    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Webhook Enabled</div><div class="toggle-desc">Receive real-time events for messages and status updates</div></div><label class="switch"><input type="checkbox" checked/><span class="slider"></span></label></div>
+    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Debug Mode</div><div class="toggle-desc">Log all API requests and responses for troubleshooting</div></div><label class="switch"><input type="checkbox"/><span class="slider"></span></label></div>
+    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Notify on Error</div><div class="toggle-desc">Send email alerts when message delivery fails</div></div><label class="switch"><input type="checkbox" checked/><span class="slider"></span></label></div>
+    <hr class="section-divider">
+    <div class="form-group"><label>Webhook URL</label><input type="url" value="https://prodigichat.com/api/webhooks/whatsapp"/><div class="hint">Your Meta webhook endpoint. Must be publicly accessible and use HTTPS.</div></div>
+    <div class="form-group" style="margin-top:12px"><label>Webhook Verify Token</label><input type="password" value="wh_secret_prodigichat_2026"/></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Health Check</div>
+    <div class="card-desc">Current status of your WhatsApp integration</div>
+    <div class="two-col">
+      <div class="stat-mini"><div class="stat-mini-label"><span class="health-dot"></span>API Status</div><div class="stat-mini-val" style="font-size:15px;font-weight:500;color:#166534">Healthy</div></div>
+      <div class="stat-mini"><div class="stat-mini-label">Token Expires</div><div class="stat-mini-val" style="font-size:15px;font-weight:500">48 days</div></div>
+      <div class="stat-mini"><div class="stat-mini-label">Messages Today</div><div class="stat-mini-val">1,240</div></div>
+      <div class="stat-mini"><div class="stat-mini-label">Delivery Rate</div><div class="stat-mini-val">98.4%</div></div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px"><button class="btn btn-sm" onclick="showSaved(this,'Health check passed ✓')">Run Health Check</button><button class="btn btn-sm">View Logs</button></div>
+  </div>
+
+  <div class="save-bar">
+    <span class="save-bar-hint">WhatsApp changes may affect live campaigns</span>
+    <div style="display:flex;gap:8px"><button class="btn">Discard</button><button class="btn btn-primary" onclick="showSaved(this)">Save WhatsApp Settings</button></div>
+  </div>
+</div>
+
+<!-- TEAM -->
+<div id="tab-team" class="tab-content">
+  <div class="page-header">
+    <div class="page-title">Team Management</div>
+    <div class="page-subtitle">Invite members and manage their access roles</div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div><div class="card-title">Team Members</div><div class="card-desc" style="margin:0">3 of 10 seats used on Professional plan</div></div>
+      <button class="btn btn-primary btn-sm" onclick="toggleInvite()">+ Invite Member</button>
+    </div>
+
+    <div id="invite-form" style="display:none;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:1rem;margin-bottom:1rem">
+      <div class="form-grid">
+        <div class="form-group"><label>Email Address</label><input type="email" placeholder="team@company.com"/></div>
+        <div class="form-group"><label>Role</label><select><option>Admin</option><option>Manager</option><option selected>Member</option><option>Viewer</option></select></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-primary btn-sm" onclick="showSaved(this,'Invitation sent!')">Send Invite</button><button class="btn btn-sm" onclick="toggleInvite()">Cancel</button></div>
+    </div>
+
+    <table class="table">
+      <thead><tr><th>Member</th><th>Role</th><th>Status</th><th>Last Active</th><th>Actions</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><div style="display:flex;align-items:center;gap:8px"><div style="width:32px;height:32px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--green-text)">ST</div><div><div style="font-weight:500">Shivam Thakur</div><div style="font-size:12px;color:var(--color-text-secondary)">shivam@digiconn.in</div></div></div></td>
+          <td><span class="badge badge-green">Owner</span></td>
+          <td><span class="badge badge-green">Active</span></td>
+          <td>Today, 4:32 PM</td>
+          <td><span style="font-size:12px;color:var(--color-text-tertiary)">You</span></td>
+        </tr>
+        <tr>
+          <td><div style="display:flex;align-items:center;gap:8px"><div style="width:32px;height:32px;border-radius:50%;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:#1e40af">AK</div><div><div style="font-weight:500">Ankit Kumar</div><div style="font-size:12px;color:var(--color-text-secondary)">ankit@digiconn.in</div></div></div></td>
+          <td><span class="badge badge-blue">Admin</span></td>
+          <td><span class="badge badge-green">Active</span></td>
+          <td>Yesterday</td>
+          <td><button class="btn btn-sm">Edit</button></td>
+        </tr>
+        <tr>
+          <td><div style="display:flex;align-items:center;gap:8px"><div style="width:32px;height:32px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:#92400e">PR</div><div><div style="font-weight:500">Priya Rao</div><div style="font-size:12px;color:var(--color-text-secondary)">priya@digiconn.in</div></div></div></td>
+          <td><span class="badge badge-amber">Manager</span></td>
+          <td><span class="badge badge-amber">Invited</span></td>
+          <td>Pending</td>
+          <td><button class="btn btn-sm">Resend</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Role Permissions</div>
+    <div class="card-desc">What each role can do in ProDigiChat</div>
+    <table class="table">
+      <thead><tr><th>Permission</th><th>Owner</th><th>Admin</th><th>Manager</th><th>Member</th><th>Viewer</th></tr></thead>
+      <tbody>
+        <tr><td>Manage billing</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>Manage team</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>Create campaigns</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td></tr>
+        <tr><td>Launch campaigns</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td></tr>
+        <tr><td>Manage contacts</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td></tr>
+        <tr><td>View analytics</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Manage settings</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- NOTIFICATIONS -->
+<div id="tab-notifications" class="tab-content">
+  <div class="page-header">
+    <div class="page-title">Notification Settings</div>
+    <div class="page-subtitle">Control how and when you receive alerts from ProDigiChat</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Email Notifications</div>
+    <div class="card-desc">Receive updates directly to your inbox</div>
+    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Enable Email Notifications</div><div class="toggle-desc">Master switch for all email alerts</div></div><label class="switch"><input type="checkbox" checked/><span class="slider"></span></label></div>
+    <div class="form-group" style="margin-top:12px"><label>Frequency</label><select><option>Instant</option><option>Hourly Digest</option><option>Daily Digest</option><option>Weekly Digest</option></select></div>
+    <hr class="section-divider">
+    <div class="notif-group-title">Campaign Events</div>
+    <label class="event-checkbox"><input type="checkbox" checked/> Campaign completed successfully</label>
+    <label class="event-checkbox"><input type="checkbox" checked/> Campaign failed or paused</label>
+    <label class="event-checkbox"><input type="checkbox"/> Campaign launched by team member</label>
+    <label class="event-checkbox"><input type="checkbox" checked/> Campaign scheduled</label>
+    <div class="notif-group-title" style="margin-top:12px">Message Events</div>
+    <label class="event-checkbox"><input type="checkbox" checked/> Message delivery failed</label>
+    <label class="event-checkbox"><input type="checkbox"/> Message read by recipient</label>
+    <label class="event-checkbox"><input type="checkbox" checked/> Contact opted out</label>
+    <div class="notif-group-title" style="margin-top:12px">System Events</div>
+    <label class="event-checkbox"><input type="checkbox" checked/> Low account balance</label>
+    <label class="event-checkbox"><input type="checkbox" checked/> WhatsApp token expiring</label>
+    <label class="event-checkbox"><input type="checkbox"/> New team member joined</label>
+    <label class="event-checkbox"><input type="checkbox" checked/> API rate limit warning</label>
+  </div>
+
+  <div class="card">
+    <div class="card-title">In-App Notifications</div>
+    <div class="card-desc">Shown in the notification bell inside the dashboard</div>
+    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Push Notifications</div><div class="toggle-desc">Show real-time alerts in the dashboard</div></div><label class="switch"><input type="checkbox" checked/><span class="slider"></span></label></div>
+    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Sound Alerts</div><div class="toggle-desc">Play a sound for high-priority alerts</div></div><label class="switch"><input type="checkbox"/><span class="slider"></span></label></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Slack Integration</div>
+    <div class="card-desc">Send alerts to your Slack workspace</div>
+    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Enable Slack Notifications</div></div><label class="switch"><input type="checkbox"/><span class="slider"></span></label></div>
+    <div class="form-group" style="margin-top:12px"><label>Slack Webhook URL</label><input type="url" placeholder="https://hooks.slack.com/services/..."/><div class="hint">Create an incoming webhook in your Slack App settings</div></div>
+    <div class="form-group" style="margin-top:12px"><label>Slack Channel</label><input type="text" placeholder="#marketing-alerts"/></div>
+  </div>
+
+  <div class="save-bar">
+    <span class="save-bar-hint">Email notifications are sent to your registered email</span>
+    <div style="display:flex;gap:8px"><button class="btn">Discard</button><button class="btn btn-primary" onclick="showSaved(this)">Save Notifications</button></div>
+  </div>
+</div>
+
+<!-- API KEYS -->
+<div id="tab-api" class="tab-content">
+  <div class="page-header">
+    <div class="page-title">API Keys</div>
+    <div class="page-subtitle">Manage access keys for integrating with external systems</div>
+  </div>
+
+  <div class="info-box">Keep your API keys secret. Never share them publicly or commit them to version control.</div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div><div class="card-title">Active Keys</div><div class="card-desc" style="margin:0">2 of 5 keys used</div></div>
+      <button class="btn btn-primary btn-sm" onclick="toggleNewKey()">+ Generate Key</button>
+    </div>
+
+    <div id="new-key-form" style="display:none;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:1rem;margin-bottom:1rem">
+      <div class="form-grid">
+        <div class="form-group"><label>Key Name</label><input type="text" placeholder="e.g. Production App"/></div>
+        <div class="form-group"><label>Expiry</label><select><option>Never</option><option>30 days</option><option>90 days</option><option>1 year</option></select></div>
+        <div class="form-group full">
+          <label>Scopes</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+            <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" checked/> campaigns:read</label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" checked/> campaigns:write</label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" checked/> contacts:read</label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox"/> contacts:write</label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox"/> messages:read</label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox"/> messages:write</label>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-primary btn-sm" onclick="showSaved(this,'Key generated!')">Generate</button><button class="btn btn-sm" onclick="toggleNewKey()">Cancel</button></div>
+    </div>
+
+    <table class="table">
+      <thead><tr><th>Name</th><th>Key</th><th>Scopes</th><th>Last Used</th><th>Expires</th><th></th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Production</strong></td>
+          <td>
+            <div style="display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:12px">
+              pdgc_••••••••••••••••<button class="copy-btn" onclick="showSaved(this,'Copied!')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </div>
+          </td>
+          <td><span class="scope-badge">campaigns:read</span><span class="scope-badge">contacts:read</span></td>
+          <td>2 hours ago</td>
+          <td>Never</td>
+          <td><button class="btn btn-sm btn-danger">Revoke</button></td>
+        </tr>
+        <tr>
+          <td><strong>Staging</strong></td>
+          <td><div style="display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:12px">pdgc_••••••••••••••••<button class="copy-btn" onclick="showSaved(this,'Copied!')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div></td>
+          <td><span class="scope-badge">campaigns:read</span><span class="scope-badge">campaigns:write</span><span class="scope-badge">contacts:write</span></td>
+          <td>3 days ago</td>
+          <td>Jun 30, 2026</td>
+          <td><button class="btn btn-sm btn-danger">Revoke</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">API Reference</div>
+    <div class="card-desc">Base URL and quick reference for the REST API</div>
+    <div class="api-key-row">
+      https://prodigichat.com/api/v1
+      <button class="copy-btn" onclick="showSaved(this,'Copied!')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button class="btn btn-sm">View API Docs</button>
+      <button class="btn btn-sm">Postman Collection</button>
+    </div>
+  </div>
+</div>
+
+<!-- WEBHOOKS -->
+<div id="tab-webhooks" class="tab-content">
+  <div class="page-header">
+    <div class="page-title">Webhooks</div>
+    <div class="page-subtitle">Configure HTTP endpoints to receive real-time event notifications</div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div><div class="card-title">Webhook Endpoints</div><div class="card-desc" style="margin:0">2 active endpoints</div></div>
+      <button class="btn btn-primary btn-sm" onclick="toggleWebhookForm()">+ Add Endpoint</button>
+    </div>
+
+    <div id="webhook-form" style="display:none;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:1rem;margin-bottom:1rem">
+      <div class="form-grid">
+        <div class="form-group"><label>Endpoint Name</label><input type="text" placeholder="e.g. CRM Integration"/></div>
+        <div class="form-group"><label>URL</label><input type="url" placeholder="https://yourapp.com/webhook"/></div>
+        <div class="form-group full">
+          <label>Events to Subscribe</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+            <label class="event-checkbox"><input type="checkbox" checked/> message.sent</label>
+            <label class="event-checkbox"><input type="checkbox" checked/> message.delivered</label>
+            <label class="event-checkbox"><input type="checkbox"/> message.read</label>
+            <label class="event-checkbox"><input type="checkbox" checked/> message.failed</label>
+            <label class="event-checkbox"><input type="checkbox" checked/> campaign.completed</label>
+            <label class="event-checkbox"><input type="checkbox"/> contact.opted_out</label>
+          </div>
+        </div>
+        <div class="form-group"><label>Secret Key (optional)</label><input type="text" placeholder="Used to sign payloads"/></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-primary btn-sm" onclick="showSaved(this,'Webhook added!')">Add Endpoint</button><button class="btn btn-sm" onclick="toggleWebhookForm()">Cancel</button></div>
+    </div>
+
+    <table class="table">
+      <thead><tr><th>Name</th><th>URL</th><th>Events</th><th>Status</th><th>Last Triggered</th><th></th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>CRM Sync</strong></td>
+          <td style="font-size:12px;font-family:var(--font-mono)">https://crm.digiconn.in/wh</td>
+          <td><span class="tag">message.sent</span> <span class="tag">+3</span></td>
+          <td><span class="badge badge-green">Active</span></td>
+          <td>4 mins ago</td>
+          <td><button class="btn btn-sm">Test</button></td>
+        </tr>
+        <tr>
+          <td><strong>Analytics</strong></td>
+          <td style="font-size:12px;font-family:var(--font-mono)">https://analytics.digiconn.in/wh</td>
+          <td><span class="tag">campaign.completed</span> <span class="tag">+1</span></td>
+          <td><span class="badge badge-amber">Failing</span></td>
+          <td>2 hours ago</td>
+          <td><button class="btn btn-sm">Test</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Delivery Logs</div>
+    <div class="card-desc">Recent webhook delivery attempts</div>
+    <table class="table">
+      <thead><tr><th>Event</th><th>Endpoint</th><th>Status</th><th>Response</th><th>Time</th></tr></thead>
+      <tbody>
+        <tr><td>message.delivered</td><td>CRM Sync</td><td><span class="badge badge-green">200 OK</span></td><td>32ms</td><td>2 min ago</td></tr>
+        <tr><td>campaign.completed</td><td>Analytics</td><td><span class="badge badge-red">503</span></td><td>—</td><td>2 hr ago</td></tr>
+        <tr><td>message.failed</td><td>CRM Sync</td><td><span class="badge badge-green">200 OK</span></td><td>28ms</td><td>3 hr ago</td></tr>
+        <tr><td>contact.opted_out</td><td>CRM Sync</td><td><span class="badge badge-green">200 OK</span></td><td>41ms</td><td>5 hr ago</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- PRIVACY -->
+<div id="tab-privacy" class="tab-content">
+  <div class="page-header">
+    <div class="page-title">Privacy & GDPR</div>
+    <div class="page-subtitle">Manage data compliance, consent, and retention policies</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">GDPR Compliance</div>
+    <div class="card-desc">Configure settings required for GDPR compliance</div>
+    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Enable GDPR Mode</div><div class="toggle-desc">Enforce data rights, consent requirements, and DPO assignments</div></div><label class="switch"><input type="checkbox" checked/><span class="slider"></span></label></div>
+    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Require Explicit Consent</div><div class="toggle-desc">Contacts must explicitly opt-in before receiving messages</div></div><label class="switch"><input type="checkbox" checked/><span class="slider"></span></label></div>
+    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Double Opt-In</div><div class="toggle-desc">Send confirmation message before adding contact to campaigns</div></div><label class="switch"><input type="checkbox"/><span class="slider"></span></label></div>
+    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Right to Deletion</div><div class="toggle-desc">Allow contacts to request permanent removal of their data</div></div><label class="switch"><input type="checkbox" checked/><span class="slider"></span></label></div>
+    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Right to Portability</div><div class="toggle-desc">Allow contacts to export their data</div></div><label class="switch"><input type="checkbox" checked/><span class="slider"></span></label></div>
+    <hr class="section-divider">
+    <div class="form-grid">
+      <div class="form-group"><label>Data Protection Officer (DPO) Email</label><input type="email" placeholder="dpo@company.com"/></div>
+      <div class="form-group"><label>GDPR Data Retention (days)</label><input type="number" value="365" min="30"/></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Data Retention Policy</div>
+    <div class="card-desc">Automatically delete data after specified retention period</div>
+    <div class="retention-row"><span>Contacts</span><div style="display:flex;align-items:center;gap:8px"><input type="number" value="365"/><span style="font-size:12px;color:var(--color-text-secondary)">days</span><label class="switch" style="transform:scale(.8)"><input type="checkbox" checked/><span class="slider"></span></label><span style="font-size:12px">Auto-delete</span></div></div>
+    <div class="retention-row"><span>Messages</span><div style="display:flex;align-items:center;gap:8px"><input type="number" value="180"/><span style="font-size:12px;color:var(--color-text-secondary)">days</span><label class="switch" style="transform:scale(.8)"><input type="checkbox"/><span class="slider"></span></label><span style="font-size:12px">Auto-delete</span></div></div>
+    <div class="retention-row"><span>Campaigns</span><div style="display:flex;align-items:center;gap:8px"><input type="number" value="730"/><span style="font-size:12px;color:var(--color-text-secondary)">days</span><label class="switch" style="transform:scale(.8)"><input type="checkbox"/><span class="slider"></span></label><span style="font-size:12px">Auto-delete</span></div></div>
+    <div class="retention-row"><span>Activity Logs</span><div style="display:flex;align-items:center;gap:8px"><input type="number" value="90"/><span style="font-size:12px;color:var(--color-text-secondary)">days</span><label class="switch" style="transform:scale(.8)"><input type="checkbox" checked/><span class="slider"></span></label><span style="font-size:12px">Auto-delete</span></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Third-Party Data Sharing</div>
+    <div class="card-desc">Control how data is shared with external services</div>
+    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Analytics Tracking</div><div class="toggle-desc">Allow anonymized analytics for platform improvement</div></div><label class="switch"><input type="checkbox" checked/><span class="slider"></span></label></div>
+    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Third-Party Integrations</div><div class="toggle-desc">Share data with connected CRM or marketing tools</div></div><label class="switch"><input type="checkbox"/><span class="slider"></span></label></div>
+    <div class="toggle-row"><div class="toggle-info"><div class="toggle-label">Advertising Data</div><div class="toggle-desc">Allow use of data for targeted advertising purposes</div></div><label class="switch"><input type="checkbox"/><span class="slider"></span></label></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Data Export</div>
+    <div class="card-desc">Export all organization data in compliance with portability rights</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Export Format</label><select><option>JSON</option><option>CSV</option><option>XML</option></select></div>
+      <div class="form-group"><label>Include Media</label><select><option>No</option><option>Yes</option></select></div>
+    </div>
+    <div style="margin-top:12px"><button class="btn btn-sm" onclick="showSaved(this,'Export queued — you will receive an email')">Request Data Export</button></div>
+  </div>
+
+  <div class="save-bar">
+    <span class="save-bar-hint">Privacy settings are legally binding — review before saving</span>
+    <div style="display:flex;gap:8px"><button class="btn">Discard</button><button class="btn btn-primary" onclick="showSaved(this)">Save Privacy Settings</button></div>
+  </div>
+</div>
+
+<!-- BILLING -->
+<div id="tab-billing" class="tab-content">
+  <div class="page-header">
+    <div class="page-title">Billing & Plans</div>
+    <div class="page-subtitle">Manage your subscription and monitor usage</div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div>
+        <div class="card-title">Current Plan: Professional</div>
+        <div style="font-size:13px;color:var(--color-text-secondary)">Renews on May 27, 2026 · <span class="badge badge-green">Active</span></div>
+      </div>
+      <div style="text-align:right"><div style="font-size:24px;font-weight:500">₹6,600<span style="font-size:14px;font-weight:400;color:var(--color-text-secondary)">/mo</span></div></div>
+    </div>
+    <div class="two-col" style="margin-top:12px">
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Contacts</span><span style="color:var(--color-text-secondary)">12,500 / 25,000</span></div>
+        <div class="usage-bar"><div class="usage-fill" style="width:50%"></div></div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Messages this month</span><span style="color:var(--color-text-secondary)">38,240 / 50,000</span></div>
+        <div class="usage-bar"><div class="usage-fill warn" style="width:76%"></div></div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Campaigns</span><span style="color:var(--color-text-secondary)">87 / 200</span></div>
+        <div class="usage-bar"><div class="usage-fill" style="width:44%"></div></div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>WhatsApp Numbers</span><span style="color:var(--color-text-secondary)">2 / 10</span></div>
+        <div class="usage-bar"><div class="usage-fill" style="width:20%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Change Plan</div>
+    <div class="card-desc">Upgrade or downgrade at any time</div>
+    <div class="plan-grid">
+      <div class="plan-card">
+        <div class="plan-name">Free</div>
+        <div class="plan-price">₹0<span>/mo</span></div>
+        <div class="plan-feature"><span class="check-icon">✓</span>1,000 contacts</div>
+        <div class="plan-feature"><span class="check-icon">✓</span>10 campaigns</div>
+        <div class="plan-feature"><span class="check-icon">✓</span>1,000 msgs/mo</div>
+        <button class="btn btn-sm" style="margin-top:12px;width:100%">Downgrade</button>
+      </div>
+      <div class="plan-card">
+        <div class="plan-name">Starter</div>
+        <div class="plan-price">₹2,400<span>/mo</span></div>
+        <div class="plan-feature"><span class="check-icon">✓</span>5,000 contacts</div>
+        <div class="plan-feature"><span class="check-icon">✓</span>50 campaigns</div>
+        <div class="plan-feature"><span class="check-icon">✓</span>10,000 msgs/mo</div>
+        <button class="btn btn-sm" style="margin-top:12px;width:100%">Downgrade</button>
+      </div>
+      <div class="plan-card current">
+        <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;font-size:11px;padding:2px 10px;border-radius:999px;white-space:nowrap">Current Plan</div>
+        <div class="plan-name">Professional</div>
+        <div class="plan-price">₹6,600<span>/mo</span></div>
+        <div class="plan-feature"><span class="check-icon">✓</span>25,000 contacts</div>
+        <div class="plan-feature"><span class="check-icon">✓</span>200 campaigns</div>
+        <div class="plan-feature"><span class="check-icon">✓</span>50,000 msgs/mo</div>
+        <button class="btn btn-sm" disabled style="margin-top:12px;width:100%;opacity:.5">Current</button>
+      </div>
+      <div class="plan-card">
+        <div class="plan-name">Enterprise</div>
+        <div class="plan-price">₹16,500<span>/mo</span></div>
+        <div class="plan-feature"><span class="check-icon">✓</span>100,000 contacts</div>
+        <div class="plan-feature"><span class="check-icon">✓</span>Unlimited campaigns</div>
+        <div class="plan-feature"><span class="check-icon">✓</span>200,000 msgs/mo</div>
+        <button class="btn btn-sm btn-primary" style="margin-top:12px;width:100%">Upgrade</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Payment Method</div>
+    <div class="card-desc">Manage your billing information</div>
+    <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+      <div style="width:40px;height:26px;background:#1a1f71;border-radius:4px;display:flex;align-items:center;justify-content:center">
+        <span style="color:#fff;font-size:10px;font-weight:700">VISA</span>
+      </div>
+      <div><div style="font-size:13px;font-weight:500">•••• •••• •••• 4242</div><div style="font-size:12px;color:var(--color-text-secondary)">Expires 09/27</div></div>
+      <button class="btn btn-sm" style="margin-left:auto">Update</button>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px"><button class="btn btn-sm">View Invoices</button><button class="btn btn-sm">Download Receipt</button></div>
+  </div>
+
+  <div class="danger-zone">
+    <div class="card-title">Danger Zone</div>
+    <div class="card-desc" style="color:#991b1b">Destructive actions — cannot be undone</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding:10px;background:#fff;border:0.5px solid #fca5a5;border-radius:var(--border-radius-md)">
+      <div><div style="font-size:13px;font-weight:500">Cancel Subscription</div><div style="font-size:12px;color:#991b1b">Your plan will be downgraded to Free at end of billing period</div></div>
+      <button class="btn btn-danger btn-sm">Cancel Plan</button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding:10px;background:#fff;border:0.5px solid #fca5a5;border-radius:var(--border-radius-md)">
+      <div><div style="font-size:13px;font-weight:500">Delete Organization</div><div style="font-size:12px;color:#991b1b">Permanently delete all data, campaigns, contacts, and accounts</div></div>
+      <button class="btn btn-danger btn-sm">Delete</button>
+    </div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<script>
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('nav-' + tab).classList.add('active');
+}
+function showSaved(btn, msg) {
+  const orig = btn.textContent;
+  btn.textContent = msg || '✓ Saved';
+  btn.style.background = '#dcfce7';
+  btn.style.color = '#166534';
+  btn.style.borderColor = '#86efac';
+  setTimeout(() => {
+    btn.textContent = orig;
+    btn.style.background = '';
+    btn.style.color = '';
+    btn.style.borderColor = '';
+  }, 2000);
+}
+function toggleInvite() {
+  const f = document.getElementById('invite-form');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+function toggleNewKey() {
+  const f = document.getElementById('new-key-form');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+function toggleWebhookForm() {
+  const f = document.getElementById('webhook-form');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+function toggleDay(el) {
+  const isActive = el.classList.contains('badge-green') || el.classList.contains('badge-amber');
+  if (isActive) {
+    el.className = 'badge badge-gray';
+  } else {
+    el.className = 'badge badge-green';
+  }
+}
+</script>

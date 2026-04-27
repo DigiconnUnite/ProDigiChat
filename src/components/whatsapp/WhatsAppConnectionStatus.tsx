@@ -144,7 +144,7 @@ export function WhatsAppConnectionStatus({
     setConnectionError(null);
 
     try {
-      const response = await fetch(`/api/whatsapp/oauth/url?orgId=${organizationId}`);
+      const response = await fetch('/api/whatsapp/oauth/url');
       const data = await response.json();
       const { url, error, redirectUri } = data;
 

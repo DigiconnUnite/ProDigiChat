@@ -63,7 +63,6 @@ export const authOptions: AuthOptions = {
             }
           })
           
-          // BUG FIX: Create organization and membership for new Google users
           // This ensures Google OAuth users get organizationId in their JWT token
           const slug = profile.email.split('@')[0].toLowerCase() + '-' + Date.now()
           

@@ -23,6 +23,10 @@
         "name": "next"
       }
     ],
+    "types": [
+      "node",
+      "jest"
+    ],
     "paths": {
       "@/*": [
         "./src/*"

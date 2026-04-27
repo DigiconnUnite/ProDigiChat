@@ -171,7 +171,6 @@ export async function POST(
         .map((m: any) => m.contact)
         .filter((c: any) => c && c.phoneNumber)
     } else {
-      // BUG FIX: Get all opted-in contacts for the organization, not just the user's contacts
       // This ensures multi-user organizations can send campaigns to contacts created by teammates
       contacts = await prisma.contact.findMany({
         where: { 
@@ -181,7 +180,6 @@ export async function POST(
       })
     }
 
-    // BUG FIX: Count contacts using organizationId instead of userId
     const totalContacts = await prisma.contact.count({
       where: { organizationId: campaign.organizationId }
     })
@@ -254,7 +252,6 @@ export async function POST(
         )
       }
       
-      // BUG FIX: Allow templates that are locally approved (status APPROVED but no whatsappTemplateId)
       // Only check for whatsappTemplateId if the template is in PENDING status on Meta
       // Approved templates can be used even without whatsappTemplateId if they have local approval
       if (!template.whatsappTemplateId && template.status === 'PENDING') {
@@ -264,7 +261,6 @@ export async function POST(
         )
       }
       
-      // Log template info for debugging
       console.log('[CampaignLaunch] Template info:', { name: template.name, whatsappTemplateId: template.whatsappTemplateId, status: template.status });
       
       // Build template components with variables (use default values for now)
@@ -338,7 +334,6 @@ export async function POST(
       }
     })
 
-    // BUG FIX: Get the WhatsApp account ID to use for sending messages
     // Use the campaign's chosen phone number (whatsappNumberId) to find the correct credential
     let whatsappAccountId: string | undefined;
 
@@ -379,8 +374,7 @@ export async function POST(
     // Enqueue all messages - let cron handle processing
     if (queueMessages.length > 0 && orgId) {
       console.log('[CampaignLaunch] Adding messages to queue:', queueMessages.length, 'accountId:', whatsappAccountId)
-      // BUG FIX: Pass whatsappAccountId to the queue
-      await addBulkToQueue(orgId, queueMessages, whatsappAccountId)
+        await addBulkToQueue(orgId, queueMessages, whatsappAccountId)
 
       // Trigger the queue processing immediately in the background
       // This ensures messages start sending right away in local development

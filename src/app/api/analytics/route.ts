@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
+import { get, set, delPattern, generateOrganizationCacheKey } from '@/lib/cache'
 
 export async function GET(request: NextRequest) {
   const token = await getToken({ req: request });
@@ -23,6 +24,15 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const dateRange = searchParams.get('dateRange') || '30d'
+    
+    // Generate cache key
+    const cacheKey = generateOrganizationCacheKey('analytics', orgId, dateRange);
+    
+    // Try to get from cache first
+    const cachedData = await get(cacheKey);
+    if (cachedData) {
+      return NextResponse.json(cachedData);
+    }
     
     // Calculate date range
     const now = new Date()
@@ -357,7 +367,7 @@ export async function GET(request: NextRequest) {
       trend: trends.newContacts
     }
 
-    return NextResponse.json({
+    const responseData = {
       success: true,
       data: {
         overview: {
@@ -381,7 +391,12 @@ export async function GET(request: NextRequest) {
         trends,
         contactGrowth
       }
-    })
+    };
+    
+    // Cache the response for 5 minutes (300 seconds)
+    await set(cacheKey, responseData, 300);
+    
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error('Error fetching analytics:', error)
     return NextResponse.json({

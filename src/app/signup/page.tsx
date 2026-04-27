@@ -105,7 +105,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background p-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background  to-background p-8">
       <div className="w-full max-w-md">
         <Link href="/" className="mb-8 flex justify-center items-center gap-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -114,7 +114,7 @@ export default function SignupPage() {
           <span className="text-2xl font-bold text-foreground">WhatsApp CRM</span>
         </Link>
 
-        <Card className="shadow-lg">
+        <Card className="shadow-none">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold text-center">
               Create Your Account
@@ -143,7 +143,7 @@ export default function SignupPage() {
                     placeholder="John Doe"
                     value={formData.name}
                     onChange={handleChange}
-                    className="pl-10"
+                    className="pl-10 shadow-none"
                     disabled={isLoading}
                     required
                   />
@@ -160,7 +160,7 @@ export default function SignupPage() {
                     placeholder="name@company.com"
                     value={formData.email}
                     onChange={handleChange}
-                    className="pl-10"
+                    className="pl-10 shadow-none"
                     disabled={isLoading}
                     required
                   />
@@ -177,7 +177,7 @@ export default function SignupPage() {
                     placeholder="Min. 8 characters"
                     value={formData.password}
                     onChange={handleChange}
-                    className="pl-10 pr-10"
+                    className="pl-10 shadow-none pr-10"
                     disabled={isLoading}
                     required
                   />
@@ -201,7 +201,7 @@ export default function SignupPage() {
                     placeholder="Confirm your password"
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    className="pl-10"
+                    className="pl-10 shadow-none pr-10"
                     disabled={isLoading}
                     required
                   />

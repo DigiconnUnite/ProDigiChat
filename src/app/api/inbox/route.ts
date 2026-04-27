@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getToken } from "next-auth/jwt";
-import { authOptions } from "../auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
+import { sendTextMessage } from "@/app/api/whatsapp/messages";
+import { parseMessageContent, stringifyMessageContent, parseTags } from "@/types/common";
+import { broadcastToInbox } from "@/lib/websocket";
 
 // GET /api/inbox - Get all conversations
 export async function GET(request: NextRequest) {
@@ -11,12 +12,12 @@ export async function GET(request: NextRequest) {
     const userId = token?.sub;
     const orgId = token?.organizationId || token?.orgId;
 
-    if (!userId && !orgId) {
+    if (!userId || !orgId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Build organization filter for queries
-    const orgFilter: any = orgId ? { organizationId: orgId } : {};
+    const orgFilter: any = { organizationId: orgId };
 
     const { searchParams } = new URL(request.url);
     const contactId = searchParams.get("contactId");
@@ -92,13 +93,7 @@ export async function GET(request: NextRequest) {
       .filter((contact: any) => contact.messages && contact.messages.length > 0)
       .map((contact: any) => {
         const lastMessage = contact.messages[0];
-        let content = { text: "", caption: "", mediaUrl: "" };
-        try {
-          content = JSON.parse(lastMessage.content);
-        } catch (e) {
-          // If not valid JSON, treat as plain text
-          content = { text: lastMessage.content, caption: "", mediaUrl: "" };
-        }
+        const content = parseMessageContent(lastMessage.content);
         
         return {
           id: contact.id,
@@ -114,13 +109,7 @@ export async function GET(request: NextRequest) {
           lastMessage: content.text || content.caption || "Media message",
           lastMessageTime: formatRelativeTime(lastMessage.createdAt),
           lastMessageDate: lastMessage.createdAt,
-          tags: (() => {
-            try {
-              return JSON.parse(contact.tags || "[]");
-            } catch (e) {
-              return [];
-            }
-          })(),
+          tags: parseTags(contact.tags),
         };
       })
       .sort((a, b) => new Date(b.lastMessageDate).getTime() - new Date(a.lastMessageDate).getTime());
@@ -142,7 +131,7 @@ export async function POST(request: NextRequest) {
     const userId = token?.sub;
     const orgId = token?.organizationId || token?.orgId;
 
-    if (!userId && !orgId) {
+    if (!userId || !orgId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -158,7 +147,7 @@ export async function POST(request: NextRequest) {
 
     // Get contact - only if it belongs to organization
     const contact = await prisma.contact.findFirst({
-      where: orgId ? { id: contactId, organizationId: orgId } : { id: contactId }
+      where: { id: contactId, organizationId: orgId }
     });
 
     if (!contact) {
@@ -183,7 +172,7 @@ export async function POST(request: NextRequest) {
         contactId,
         direction: "outgoing",
         status: "sent",
-        content: JSON.stringify({ text: content, type }),
+        content: stringifyMessageContent({ text: content, type }),
         sentBy: userId || undefined,
         organizationId: messageOrgId,
       },
@@ -212,8 +201,53 @@ export async function POST(request: NextRequest) {
       data: { lastContacted: new Date() },
     });
 
-    // TODO: Actually send the message via WhatsApp API
-    // This would require integrating with the WhatsApp API
+    // Send message via WhatsApp API
+    let whatsappMessageId: string | null = null;
+    let deliveryStatus: string = "sent";
+    
+    try {
+      const whatsappResponse = await sendTextMessage(
+        contact.phoneNumber,
+        content,
+        messageOrgId
+      );
+      
+      // Update message with WhatsApp message ID and status
+      if (whatsappResponse?.id) {
+        whatsappMessageId = whatsappResponse.id;
+        deliveryStatus = "sent";
+        
+        await prisma.message.update({
+          where: { id: message.id },
+          data: {
+            whatsappMessageId,
+            status: deliveryStatus
+          }
+        });
+      }
+    } catch (whatsappError) {
+      console.error("[Inbox] Failed to send via WhatsApp API:", whatsappError);
+      // Update message status to failed
+      await prisma.message.update({
+        where: { id: message.id },
+        data: { status: "failed" }
+      });
+      deliveryStatus = "failed";
+    }
+    
+    // Broadcast new message to connected clients
+    broadcastToInbox(messageOrgId, 'new-message', {
+      messageId: message.id,
+      contactId,
+      content: { text: content, type },
+      status: deliveryStatus,
+      whatsappMessageId,
+      sender: {
+        id: userId,
+        name: (await prisma.user.findUnique({ where: { id: userId } }))?.name || 'You'
+      },
+      createdAt: message.createdAt
+    });
     
     return NextResponse.json({ 
       success: true, 
@@ -222,7 +256,8 @@ export async function POST(request: NextRequest) {
         type: "sent",
         text: content,
         time: formatTime(message.createdAt),
-        status: message.status,
+        status: deliveryStatus,
+        whatsappMessageId
       }
     });
   } catch (error) {
@@ -241,7 +276,7 @@ export async function PATCH(request: NextRequest) {
     const userId = token?.sub;
     const orgId = token?.organizationId || token?.orgId;
 
-    if (!userId && !orgId) {
+    if (!userId || !orgId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -256,7 +291,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // First verify the contact belongs to the organization
-    const orgFilter: any = orgId ? { organizationId: orgId } : {};
+    const orgFilter: any = { organizationId: orgId };
     const contact = await prisma.contact.findFirst({
       where: {
         id: contactId,
@@ -272,6 +307,7 @@ export async function PATCH(request: NextRequest) {
     await prisma.message.updateMany({
       where: {
         contactId,
+        organizationId: orgId,
         direction: "incoming",
         status: "sent",
       },

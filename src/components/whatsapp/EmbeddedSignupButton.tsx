@@ -32,7 +32,7 @@ export function EmbeddedSignupButton({
 
     try {
       // Step 1: Initialize embedded signup
-      const initResponse = await fetch(`/api/whatsapp/oauth/url?orgId=${organizationId}&embedded=true`);
+      const initResponse = await fetch('/api/whatsapp/oauth/url?embedded=true');
       const { url, state, error: initError } = await initResponse.json();
 
       if (initError) {

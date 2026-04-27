@@ -5,11 +5,10 @@ import { decryptWhatsAppCredential, encryptField } from "@/lib/encryption";
 import { META_API_BASE } from "@/lib/meta-config";
 
 // Cache for the WhatsApp client
-// BUG FIX: Cache key should include both orgId and accountId to avoid cross-account contamination
 let whatsappClientInstance: WhatsAppClient | null = null;
 let lastSettingsFetch: number = 0;
 let cachedOrgId: string | null = null;
-let cachedAccountId: string | null = null; // BUG FIX: Track account ID in cache
+let cachedAccountId: string | null = null;
 const CACHE_TTL = 60000; // 1 minute cache
 
 // Get credentials from Prisma database
@@ -176,14 +175,14 @@ function clearClientCache(): void {
   whatsappClientInstance = null;
   lastSettingsFetch = 0;
   cachedOrgId = null;
-  cachedAccountId = null; // BUG FIX: Clear account ID cache too
+  cachedAccountId = null;
   console.log('[WhatsAppAuth] Cleared client cache');
 }
 
 export async function getWhatsAppClient(orgId: string, accountId?: string): Promise<WhatsAppClient> {
   const targetAccountId = accountId || null;
   
-  // BUG FIX: Return cached instance only if both orgId AND accountId match
+  // Return cached instance only if both orgId AND accountId match
   // This prevents cross-account contamination in multi-account scenarios
   if (whatsappClientInstance && (Date.now() - lastSettingsFetch) < CACHE_TTL && cachedOrgId === orgId && cachedAccountId === targetAccountId) {
     console.log('[WhatsAppAuth] Returning cached client for org:', orgId, 'account:', targetAccountId);
@@ -218,7 +217,7 @@ export async function getWhatsAppClient(orgId: string, accountId?: string): Prom
     whatsappClientInstance = client;
     lastSettingsFetch = Date.now();
     cachedOrgId = orgId;
-    cachedAccountId = targetAccountId; // BUG FIX: Store account ID in cache
+    cachedAccountId = targetAccountId;
     console.log('[WhatsAppAuth] Created new WhatsApp client for org:', orgId, 'account:', targetAccountId);
     return client;
   } catch (error) {

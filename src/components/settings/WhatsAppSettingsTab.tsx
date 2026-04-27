@@ -335,7 +335,7 @@ export function WhatsAppSettingsTab({ organizationId }: WhatsAppSettingsTabProps
   // Check if OAuth is available
   const checkOauthAvailability = async () => {
     try {
-      const response = await fetch(`/api/whatsapp/oauth/url?orgId=${organizationId}`);
+      const response = await fetch('/api/whatsapp/oauth/url');
       const data = await response.json();
       setOauthAvailable(!data.error && data.url);
       
@@ -686,7 +686,7 @@ export function WhatsAppSettingsTab({ organizationId }: WhatsAppSettingsTabProps
       // Check if embedded signup is supported (show iframe)
       // The EmbeddedSignupButton component will handle this
       // This function is kept for backward compatibility
-      const response = await fetch(`/api/whatsapp/oauth/url?orgId=${organizationId}`);
+      const response = await fetch('/api/whatsapp/oauth/url');
       const data = await response.json();
       
       if (data.error) {
@@ -1326,7 +1326,7 @@ export function WhatsAppSettingsTab({ organizationId }: WhatsAppSettingsTabProps
   
       {/* Connected Account Info Card - Prominent Display */}
       {selectedAccount && (
-        <Card className="border-2 border-green-500 bg-gradient-to-r from-green-50 to-emerald-50">
+        <Card className="border-2 border-green-500 bg-linear-to-r from-green-50 to-emerald-50">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">

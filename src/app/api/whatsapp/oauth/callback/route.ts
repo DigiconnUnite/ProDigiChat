@@ -141,6 +141,24 @@ async function findWABAWithAllStrategies(
   return null;
 }
 
+function decodeSessionInfo(sessionInfo: string): {
+  systemUserToken: string | null;
+  systemUserId: string | null;
+} {
+  try {
+    const decoded = JSON.parse(Buffer.from(sessionInfo, 'base64').toString('utf-8'));
+    return {
+      systemUserToken: decoded.system_user_access_token || decoded.access_token || null,
+      systemUserId: decoded.system_user_id ? String(decoded.system_user_id) : null,
+    };
+  } catch (error) {
+    return {
+      systemUserToken: null,
+      systemUserId: null,
+    };
+  }
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
 
@@ -200,9 +218,14 @@ export async function GET(request: NextRequest) {
     const oauthService = createWhatsAppOAuthService(request.url);
     let accessToken: string;
     let wabaIdFromExchange: string | null = null;
+    let systemUserToken: string | null = null;
+    let systemUserId: string | null = null;
 
     if (sessionInfo) {
       console.log('[OAuth Callback] Embedded Signup flow — exchanging session_info');
+      const decodedSessionInfo = decodeSessionInfo(sessionInfo);
+      systemUserToken = decodedSessionInfo.systemUserToken;
+      systemUserId = decodedSessionInfo.systemUserId;
       accessToken = await oauthService.exchangeSessionInfoForToken(sessionInfo);
     } else {
       console.log('[OAuth Callback] Regular OAuth flow — exchanging code');
@@ -333,6 +356,8 @@ export async function GET(request: NextRequest) {
       lastVerifiedAt: new Date(),
       isActive: true,
       isDefault: existingCount === 0,
+      systemUserToken: systemUserToken || undefined,
+      systemUserId: systemUserId || undefined,
     } as any);
 
     const newCredential = await prisma.whatsAppCredential.create({

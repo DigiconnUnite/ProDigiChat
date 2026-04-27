@@ -30,12 +30,14 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10')
     const skip = (page - 1) * limit
 
-    // Build conditions - support both legacy (createdBy) and new (organizationId) campaigns
-    const conditions: any = {
-      OR: [
-        { createdBy: userId },
-        { organizationId: organizationId }
-      ]
+    // Build conditions - prioritize organizationId for multi-tenant support
+    const conditions: any = {}
+    
+    if (organizationId) {
+      conditions.organizationId = organizationId
+    } else {
+      // Fallback to createdBy for legacy data
+      conditions.createdBy = userId
     }
     
     // Apply status filter if provided and not 'all'
@@ -48,15 +50,11 @@ export async function GET(request: NextRequest) {
       conditions.type = type
     }
     
-    // Apply search filter if provided (AND with existing conditions)
+    // Apply search filter if provided
     if (search) {
-      conditions.AND = [
-        {
-          OR: [
-            { name: { contains: search, mode: 'insensitive' } },
-            { description: { contains: search, mode: 'insensitive' } }
-          ]
-        }
+      conditions.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } }
       ]
     }
     

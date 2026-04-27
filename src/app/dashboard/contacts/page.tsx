@@ -59,6 +59,7 @@ import {
 import { ContactFormDialog } from "@/components/contacts/contact-form-dialog"
 import { ImportContactsDialog } from "@/components/contacts/import-contacts-dialog"
 import { cn } from "@/lib/utils"
+import { parseTags } from "@/types/common"
 
 // Constants
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100]
@@ -68,8 +69,10 @@ interface Contact {
   id: string
   firstName: string
   lastName?: string | null
+  displayName?: string | null
   phoneNumber: string
   email?: string | null
+  lifecycleStatus?: string | null
   optInStatus: string
   tags?: string | null
   attributes: string
@@ -116,27 +119,24 @@ const statusConfig = {
   },
 }
 
-// Parse tags from JSON string
-function parseTags(tags: string | null | undefined): string[] {
-  if (!tags || typeof tags !== 'string') {
-    return []
-  }
-  try {
-    const parsed = JSON.parse(tags)
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
+const lifecycleConfig = {
+  lead: { label: 'Lead', className: 'bg-slate-100 text-slate-700 border-slate-200' },
+  active: { label: 'Active', className: 'bg-blue-100 text-blue-700 border-blue-200' },
+  suppressed: { label: 'Suppressed', className: 'bg-amber-100 text-amber-700 border-amber-200' },
+  blocked: { label: 'Blocked', className: 'bg-rose-100 text-rose-700 border-rose-200' },
+  bounced: { label: 'Bounced', className: 'bg-orange-100 text-orange-700 border-orange-200' },
 }
 
 export default function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isExporting, setIsExporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
   // Filter states
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [lifecycleFilter, setLifecycleFilter] = useState<string>('all')
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
@@ -165,6 +165,7 @@ export default function ContactsPage() {
       params.set('limit', itemsPerPage.toString())
       if (searchQuery) params.set('search', searchQuery)
       if (statusFilter !== 'all') params.set('status', statusFilter)
+      if (lifecycleFilter !== 'all') params.set('lifecycleStatus', lifecycleFilter)
       params.set('sortBy', sortConfig.field)
       params.set('sortOrder', sortConfig.order)
 
@@ -189,7 +190,7 @@ export default function ContactsPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [currentPage, itemsPerPage, searchQuery, statusFilter, sortConfig])
+  }, [currentPage, itemsPerPage, searchQuery, statusFilter, lifecycleFilter, sortConfig])
 
   useEffect(() => {
     const debounce = setTimeout(() => {
@@ -232,6 +233,7 @@ export default function ContactsPage() {
   const resetFilters = useCallback(() => {
     setSearchQuery('')
     setStatusFilter('all')
+    setLifecycleFilter('all')
     setCurrentPage(1)
     setSortConfig({ field: 'createdAt', order: 'desc' })
   }, [])
@@ -269,29 +271,34 @@ export default function ContactsPage() {
   }
 
   // Export contacts as CSV
-  const handleExport = () => {
-    const headers = ["First Name", "Last Name", "Phone", "Email", "Status", "Tags"]
-    const rows = contacts.map(c => [
-      c.firstName,
-      c.lastName || "",
-      c.phoneNumber,
-      c.email || "",
-      c.optInStatus,
-      parseTags(c.tags).join(", "),
-    ])
+  const handleExport = async () => {
+    setIsExporting(true)
+    try {
+      const params = new URLSearchParams()
+      if (searchQuery) params.set('search', searchQuery)
+      if (statusFilter !== 'all') params.set('status', statusFilter)
+      if (lifecycleFilter !== 'all') params.set('lifecycleStatus', lifecycleFilter)
+      params.set('sortBy', sortConfig.field)
+      params.set('sortOrder', sortConfig.order)
 
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(",")),
-    ].join("\n")
+      const response = await fetch(`/api/contacts/export?${params.toString()}`)
+      if (!response.ok) {
+        throw new Error('Failed to export contacts')
+      }
 
-    const blob = new Blob([csvContent], { type: "text/csv" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "contacts.csv"
-    a.click()
-    URL.revokeObjectURL(url)
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `contacts_export_${new Date().toISOString().slice(0, 10)}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('Contacts exported successfully')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to export contacts')
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   // Format date
@@ -313,9 +320,9 @@ export default function ContactsPage() {
             <p className="text-gray-500">Manage your WhatsApp contacts</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" className="gap-2" onClick={handleExport}>
+            <Button variant="outline" className="gap-2" onClick={handleExport} disabled={isExporting}>
               <Download className="w-4 h-4" />
-              Export
+              {isExporting ? 'Exporting...' : 'Export'}
             </Button>
             <ImportContactsDialog onImportComplete={fetchContacts}>
               <Button variant="outline" className="gap-2">
@@ -323,7 +330,7 @@ export default function ContactsPage() {
                 Import
               </Button>
             </ImportContactsDialog>
-            <ContactFormDialog>
+            <ContactFormDialog onSuccess={fetchContacts}>
               <Button className="gap-2">
                 <Plus className="w-4 h-4" />
                 Add Contact
@@ -391,9 +398,9 @@ export default function ContactsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-2" onClick={handleExport}>
+          <Button variant="outline" className="gap-2" onClick={handleExport} disabled={isExporting}>
             <Download className="w-4 h-4" />
-            Export
+            {isExporting ? 'Exporting...' : 'Export'}
           </Button>
           <ImportContactsDialog onImportComplete={fetchContacts}>
             <Button variant="outline" className="gap-2">
@@ -401,7 +408,7 @@ export default function ContactsPage() {
               Import
             </Button>
           </ImportContactsDialog>
-          <ContactFormDialog>
+          <ContactFormDialog onSuccess={fetchContacts}>
             <Button className="gap-2">
               <Plus className="w-4 h-4" />
               Add Contact
@@ -435,7 +442,7 @@ export default function ContactsPage() {
           </Select>
 
           {/* Clear Filters Button */}
-          {(searchQuery || statusFilter !== "all") && (
+          {(searchQuery || statusFilter !== "all" || lifecycleFilter !== 'all') && (
             <Button
               variant="outline"
               size="sm"
@@ -462,6 +469,26 @@ export default function ContactsPage() {
                     {option}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={lifecycleFilter}
+              onValueChange={(v) => {
+                setLifecycleFilter(v)
+                setCurrentPage(1)
+              }}
+            >
+              <SelectTrigger className="w-[120px] sm:w-[170px] bg-green-900 border-green-700 text-white text-xs sm:text-sm">
+                <SelectValue placeholder="Lifecycle" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Lifecycle</SelectItem>
+                <SelectItem value="lead">Lead</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="suppressed">Suppressed</SelectItem>
+                <SelectItem value="blocked">Blocked</SelectItem>
+                <SelectItem value="bounced">Bounced</SelectItem>
               </SelectContent>
             </Select>
             <span className="hidden sm:inline">entries</span>
@@ -497,6 +524,7 @@ export default function ContactsPage() {
                   Phone {renderSortIcon("phoneNumber")}
                 </TableHead>
                 <TableHead>Tags</TableHead>
+                <TableHead>Lifecycle</TableHead>
                 <TableHead
                   className="cursor-pointer hover:bg-gray-100 font-semibold"
                   onClick={() => handleSort("optInStatus")}
@@ -517,11 +545,11 @@ export default function ContactsPage() {
             <TableBody className="bg-white">
               {contacts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     <div className="flex flex-col items-center gap-2">
                       <p className="text-gray-500">No contacts found</p>
                       {stats.total === 0 ? (
-                        <ContactFormDialog>
+                        <ContactFormDialog onSuccess={fetchContacts}>
                           <Button variant="outline">
                             Add your first contact
                           </Button>
@@ -537,6 +565,7 @@ export default function ContactsPage() {
               ) : (
                 contacts.map((contact) => {
                   const status = statusConfig[contact.optInStatus as keyof typeof statusConfig]
+                  const lifecycle = lifecycleConfig[(contact.lifecycleStatus || 'lead') as keyof typeof lifecycleConfig] || lifecycleConfig.lead
                   const StatusIcon = status?.icon || Clock
                   const contactTags = parseTags(contact.tags ?? null)
 
@@ -568,6 +597,11 @@ export default function ContactsPage() {
                             </Badge>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={cn('border', lifecycle.className)}>
+                          {lifecycle.label}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         {status && (
@@ -604,7 +638,7 @@ export default function ContactsPage() {
                           </Button>
 
                           {/* Edit Button */}
-                          <ContactFormDialog contact={contact}>
+                          <ContactFormDialog contact={contact} onSuccess={fetchContacts}>
                             <Button
                               variant="ghost"
                               size="sm"

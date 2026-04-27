@@ -1,0 +1,866 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--g:#25D366;--gd:#128C7E;--gl:#dcfce7;--gt:#166534;--amber:#f59e0b;--red:#ef4444;--blue:#3b82f6}
+body{font-family:var(--font-sans,'Segoe UI',sans-serif);background:var(--color-background-tertiary);color:var(--color-text-primary);min-height:100vh}
+.page{padding:1.5rem;max-width:1200px;margin:0 auto}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;gap:12px;flex-wrap:wrap}
+.ph-left h1{font-size:22px;font-weight:500}
+.ph-left p{font-size:13px;color:var(--color-text-secondary);margin-top:3px}
+.ph-right{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--border-radius-md);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-primary);white-space:nowrap}
+.btn:hover{background:var(--color-background-secondary)}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--g);color:#fff;border-color:var(--g)}
+.btn-primary:hover{background:var(--gd);border-color:var(--gd)}
+.btn-danger{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
+.btn-sm{padding:5px 11px;font-size:12px}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem}
+.stat{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:14px 16px;position:relative;overflow:hidden}
+.stat::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%}
+.stat.total::before{background:var(--color-border-secondary)}
+.stat.optin::before{background:var(--g)}
+.stat.pending::before{background:var(--amber)}
+.stat.optout::before{background:var(--red)}
+.stat-label{font-size:12px;color:var(--color-text-secondary)}
+.stat-val{font-size:24px;font-weight:500;margin:4px 0 2px}
+.stat-sub{font-size:11px;color:var(--color-text-tertiary)}
+.toolbar{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:200px}
+.search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--color-text-tertiary)}
+.search-wrap input{width:100%;padding:7px 10px 7px 32px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);font-size:13px;background:var(--color-background-secondary);color:var(--color-text-primary);outline:none}
+.search-wrap input:focus{border-color:var(--g);background:var(--color-background-primary)}
+select{padding:7px 10px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);font-size:13px;background:var(--color-background-primary);color:var(--color-text-primary);cursor:pointer;outline:none}
+select:focus{border-color:var(--g)}
+.badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:500;gap:4px}
+.badge-green{background:var(--gl);color:var(--gt)}
+.badge-amber{background:#fef3c7;color:#92400e}
+.badge-red{background:#fee2e2;color:#991b1b}
+.badge-gray{background:var(--color-background-secondary);color:var(--color-text-secondary)}
+.badge-blue{background:#dbeafe;color:#1e40af}
+.badge-purple{background:#ede9fe;color:#5b21b6}
+.tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:999px;font-size:11px;color:var(--color-text-secondary);cursor:pointer;transition:.1s}
+.tag:hover{border-color:var(--g);color:var(--g)}
+.tag .x{opacity:.5;font-size:12px}
+.tag .x:hover{opacity:1}
+.card-wrap{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden}
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:10px 14px;text-align:left;font-size:11px;font-weight:500;color:var(--color-text-secondary);background:var(--color-background-secondary);border-bottom:0.5px solid var(--color-border-tertiary);white-space:nowrap;user-select:none}
+th.sortable{cursor:pointer}
+th.sortable:hover{color:var(--color-text-primary)}
+th .sort-arrow{margin-left:4px;opacity:.4}
+th.sorted .sort-arrow{opacity:1;color:var(--g)}
+td{padding:11px 14px;border-bottom:0.5px solid var(--color-border-tertiary);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--color-background-secondary)}
+.contact-avatar{width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;flex-shrink:0;color:#fff}
+.contact-name{font-weight:500;font-size:13px}
+.contact-email{font-size:11px;color:var(--color-text-secondary);margin-top:1px}
+.phone{font-family:var(--font-mono,'Courier New',monospace);font-size:12px}
+.actions-cell{display:flex;gap:4px;justify-content:flex-end}
+.icon-btn{width:28px;height:28px;border-radius:6px;border:none;background:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--color-text-secondary);transition:.1s}
+.icon-btn:hover{background:var(--color-background-secondary);color:var(--color-text-primary)}
+.icon-btn.green:hover{background:var(--gl);color:var(--gt)}
+.icon-btn.red:hover{background:#fee2e2;color:#991b1b}
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:0.5px solid var(--color-border-tertiary);font-size:13px;flex-wrap:wrap;gap:8px}
+.pag-info{color:var(--color-text-secondary);font-size:12px}
+.pag-btns{display:flex;gap:4px}
+.pag-btn{width:30px;height:30px;border-radius:6px;border:0.5px solid var(--color-border-secondary);background:none;cursor:pointer;font-size:12px;color:var(--color-text-primary);transition:.1s}
+.pag-btn:hover:not(:disabled){background:var(--color-background-secondary)}
+.pag-btn.active{background:var(--g);color:#fff;border-color:var(--g)}
+.pag-btn:disabled{opacity:.4;cursor:default}
+.cb{width:15px;height:15px;accent-color:var(--g);cursor:pointer}
+.bulk-bar{background:var(--g);color:#fff;padding:10px 16px;border-radius:var(--border-radius-lg);display:flex;align-items:center;gap:12px;margin-bottom:10px;font-size:13px}
+.bulk-bar .btn{border-color:rgba(255,255,255,.4);color:#fff}
+.bulk-bar .btn:hover{background:rgba(255,255,255,.15)}
+.bulk-bar .btn-danger{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
+.bulk-bar .btn-danger:hover{background:#fecaca}
+/* Overlay + modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:none;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:var(--color-background-primary);border-radius:var(--border-radius-xl,16px);border:0.5px solid var(--color-border-tertiary);width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;padding:1.5rem}
+.modal-lg{width:680px}
+.modal h2{font-size:16px;font-weight:500;margin-bottom:4px}
+.modal .desc{font-size:13px;color:var(--color-text-secondary);margin-bottom:1.25rem}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:1.25rem;padding-top:1.25rem;border-top:0.5px solid var(--color-border-tertiary)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg.full{grid-column:1/-1}
+label{font-size:12px;font-weight:500;color:var(--color-text-secondary)}
+input[type=text],input[type=email],input[type=tel],textarea{width:100%;padding:8px 11px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);font-size:13px;background:var(--color-background-primary);color:var(--color-text-primary);outline:none;transition:.15s;font-family:inherit}
+input:focus,textarea:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(37,211,102,.1)}
+textarea{resize:vertical;min-height:70px}
+.err{font-size:11px;color:var(--red);margin-top:2px}
+/* Tabs in modal */
+.modal-tabs{display:flex;border-bottom:0.5px solid var(--color-border-tertiary);margin:-1.5rem -1.5rem 1.25rem;padding:0 1.5rem}
+.modal-tab{padding:12px 16px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;color:var(--color-text-secondary);transition:.15s;white-space:nowrap}
+.modal-tab.active{color:var(--g);border-bottom-color:var(--g)}
+.modal-tab-content{display:none}
+.modal-tab-content.active{display:block}
+/* Drawer (contact detail) */
+.drawer{position:fixed;top:0;right:-520px;width:500px;height:100vh;background:var(--color-background-primary);border-left:0.5px solid var(--color-border-tertiary);z-index:200;transition:right .25s ease;overflow-y:auto;padding:1.5rem}
+.drawer.open{right:0}
+.drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:199;display:none}
+.drawer-backdrop.open{display:block}
+.drawer-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem}
+.detail-avatar{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:500;color:#fff;flex-shrink:0}
+.timeline-item{display:flex;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.timeline-item:last-child{border-bottom:none}
+.timeline-dot{width:8px;height:8px;border-radius:50%;background:var(--color-border-secondary);flex-shrink:0;margin-top:4px}
+.timeline-dot.sent{background:var(--g)}
+.timeline-dot.received{background:var(--blue)}
+.timeline-dot.event{background:var(--amber)}
+.section-title{font-size:11px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.05em;margin:1rem 0 8px}
+.kv-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px}
+.kv-row:last-child{border-bottom:none}
+.kv-key{color:var(--color-text-secondary)}
+.kv-val{font-weight:500}
+/* Import dropzone */
+.drop-zone{border:2px dashed var(--color-border-secondary);border-radius:var(--border-radius-lg);padding:2rem;text-align:center;cursor:pointer;transition:.15s}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--g);background:var(--gl)}
+.progress-bar{height:6px;background:var(--color-border-tertiary);border-radius:3px;overflow:hidden;margin:8px 0}
+.progress-fill{height:100%;background:var(--g);border-radius:3px;transition:width .4s}
+/* Tag filter chips */
+.filter-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.chip{padding:4px 12px;border-radius:999px;border:0.5px solid var(--color-border-secondary);font-size:12px;cursor:pointer;transition:.15s;background:none;color:var(--color-text-secondary)}
+.chip:hover{border-color:var(--g);color:var(--g)}
+.chip.active{background:var(--gl);color:var(--gt);border-color:var(--g)}
+/* Segment sidebar */
+.layout{display:grid;grid-template-columns:200px 1fr;gap:12px}
+.sidebar{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:12px}
+.seg-item{padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:space-between;transition:.1s}
+.seg-item:hover{background:var(--color-background-secondary)}
+.seg-item.active{background:var(--gl);color:var(--gt)}
+.seg-count{font-size:11px;background:var(--color-background-secondary);border-radius:999px;padding:1px 7px}
+.seg-item.active .seg-count{background:rgba(255,255,255,.6);color:var(--gt)}
+</style>
+
+<h2 class="sr-only">ProDigiChat Contacts Module — manage your WhatsApp audience</h2>
+
+<!-- DETAIL DRAWER -->
+<div class="drawer-backdrop" id="drawerBg" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="detail-avatar" id="dAvatar" style="background:#25D366">SR</div>
+      <div>
+        <div id="dName" style="font-size:17px;font-weight:500">Sanjay Rawat</div>
+        <div id="dPhone" style="font-size:13px;color:var(--color-text-secondary);font-family:var(--font-mono)">+91 98765 43210</div>
+        <div style="margin-top:6px" id="dBadge"><span class="badge badge-green">Opted In</span></div>
+      </div>
+    </div>
+    <button class="icon-btn" onclick="closeDrawer()" style="font-size:18px">✕</button>
+  </div>
+
+  <div style="display:flex;gap:8px;margin-bottom:1rem">
+    <button class="btn btn-primary btn-sm">Send Message</button>
+    <button class="btn btn-sm" onclick="openEdit()">Edit</button>
+    <button class="btn btn-sm btn-danger">Delete</button>
+  </div>
+
+  <div class="section-title">Contact Details</div>
+  <div class="kv-row"><span class="kv-key">Email</span><span class="kv-val" id="dEmail">sanjay@example.com</span></div>
+  <div class="kv-row"><span class="kv-key">Created</span><span class="kv-val" id="dCreated">12 Jan 2026</span></div>
+  <div class="kv-row"><span class="kv-key">Last active</span><span class="kv-val">2 days ago</span></div>
+  <div class="kv-row"><span class="kv-key">Campaigns sent</span><span class="kv-val" id="dCampaigns">4</span></div>
+  <div class="kv-row"><span class="kv-key">Messages received</span><span class="kv-val" id="dMsgs">17</span></div>
+
+  <div class="section-title">Tags</div>
+  <div id="dTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1rem">
+    <span class="tag">VIP</span>
+    <span class="tag">Diwali-offer</span>
+  </div>
+
+  <div class="section-title">Custom Attributes</div>
+  <div class="kv-row"><span class="kv-key">City</span><span class="kv-val">Agra</span></div>
+  <div class="kv-row"><span class="kv-key">Plan</span><span class="kv-val">Pro</span></div>
+  <div class="kv-row"><span class="kv-key">Source</span><span class="kv-val">Web Form</span></div>
+
+  <div class="section-title">Activity</div>
+  <div class="timeline-item"><div class="timeline-dot sent"></div><div><div style="font-size:13px">Message sent: "Diwali offer 30% off"</div><div style="font-size:11px;color:var(--color-text-secondary)">Today 10:30 AM</div></div></div>
+  <div class="timeline-item"><div class="timeline-dot received"></div><div><div style="font-size:13px">Replied "Tell me more"</div><div style="font-size:11px;color:var(--color-text-secondary)">Today 10:35 AM</div></div></div>
+  <div class="timeline-item"><div class="timeline-dot event"></div><div><div style="font-size:13px">Added to segment: VIP Customers</div><div style="font-size:11px;color:var(--color-text-secondary)">Yesterday</div></div></div>
+  <div class="timeline-item"><div class="timeline-dot sent"></div><div><div style="font-size:13px">Campaign: New Year Sale</div><div style="font-size:11px;color:var(--color-text-secondary)">3 Jan 2026</div></div></div>
+</div>
+
+<!-- ADD/EDIT CONTACT MODAL -->
+<div class="overlay" id="contactModal">
+  <div class="modal">
+    <div class="modal-tabs">
+      <div class="modal-tab active" onclick="switchContactTab('basic',this)">Basic Info</div>
+      <div class="modal-tab" onclick="switchContactTab('tags',this)">Tags</div>
+      <div class="modal-tab" onclick="switchContactTab('attrs',this)">Custom Attributes</div>
+    </div>
+    <div id="contactTitle" style="font-size:16px;font-weight:500;margin-bottom:4px">Add New Contact</div>
+    <div class="desc">Fill in the contact's details for your WhatsApp audience</div>
+
+    <div id="ctab-basic" class="modal-tab-content active">
+      <div class="form-grid">
+        <div class="fg"><label>First Name *</label><input type="text" id="cf-fname" placeholder="Sanjay"/><div class="err" id="err-fname"></div></div>
+        <div class="fg"><label>Last Name</label><input type="text" id="cf-lname" placeholder="Rawat"/></div>
+        <div class="fg full"><label>Phone Number * (with country code)</label><input type="tel" id="cf-phone" placeholder="+91 98765 43210"/><div class="err" id="err-phone"></div></div>
+        <div class="fg full"><label>Email Address</label><input type="email" id="cf-email" placeholder="sanjay@example.com"/></div>
+        <div class="fg full"><label>Opt-In Status</label>
+          <select id="cf-status">
+            <option value="pending">Pending</option>
+            <option value="opted_in">Opted In</option>
+            <option value="opted_out">Opted Out</option>
+          </select>
+        </div>
+        <div class="fg full"><label>Notes</label><textarea id="cf-notes" placeholder="Any notes about this contact..."></textarea></div>
+      </div>
+    </div>
+
+    <div id="ctab-tags" class="modal-tab-content">
+      <div style="margin-bottom:12px">
+        <label>Add Tags</label>
+        <div style="display:flex;gap:8px;margin-top:5px">
+          <input type="text" id="tag-input" placeholder="Type a tag and press Enter" style="flex:1"/>
+          <button class="btn btn-sm btn-primary" onclick="addTagToForm()">Add</button>
+        </div>
+      </div>
+      <div class="section-title">Suggested Tags</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px" id="suggested-tags">
+        <span class="chip" onclick="addSuggestedTag(this)">VIP</span>
+        <span class="chip" onclick="addSuggestedTag(this)">Wholesale</span>
+        <span class="chip" onclick="addSuggestedTag(this)">Diwali-offer</span>
+        <span class="chip" onclick="addSuggestedTag(this)">Holi-sale</span>
+        <span class="chip" onclick="addSuggestedTag(this)">Newsletter</span>
+        <span class="chip" onclick="addSuggestedTag(this)">New-customer</span>
+        <span class="chip" onclick="addSuggestedTag(this)">Repeat-buyer</span>
+        <span class="chip" onclick="addSuggestedTag(this)">Premium</span>
+      </div>
+      <div class="section-title">Applied Tags</div>
+      <div id="form-tags" style="display:flex;flex-wrap:wrap;gap:6px;min-height:32px;padding:8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+        <span style="font-size:12px;color:var(--color-text-tertiary)" id="no-tags-hint">No tags added yet</span>
+      </div>
+    </div>
+
+    <div id="ctab-attrs" class="modal-tab-content">
+      <div class="section-title">Custom Fields</div>
+      <div id="attr-rows">
+        <div class="form-grid" style="margin-bottom:8px">
+          <div class="fg"><label>Key</label><input type="text" placeholder="e.g. city"/></div>
+          <div class="fg"><label>Value</label><input type="text" placeholder="e.g. Agra"/></div>
+        </div>
+        <div class="form-grid" style="margin-bottom:8px">
+          <div class="fg"><input type="text" placeholder="e.g. plan"/></div>
+          <div class="fg"><input type="text" placeholder="e.g. Pro"/></div>
+        </div>
+      </div>
+      <button class="btn btn-sm" onclick="addAttrRow()" style="margin-top:4px">+ Add Field</button>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('contactModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveContact()" id="saveContactBtn">Create Contact</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="overlay" id="importModal">
+  <div class="modal modal-lg">
+    <h2>Import Contacts</h2>
+    <div class="desc">Upload a CSV file to bulk-import contacts into your audience</div>
+
+    <div id="import-step-1">
+      <div class="drop-zone" id="dropzone" onclick="document.getElementById('csv-file').click()" ondragover="this.classList.add('drag')" ondragleave="this.classList.remove('drag')">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--g)" stroke-width="1.5" style="margin:0 auto 10px;display:block"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <div style="font-size:14px;font-weight:500;margin-bottom:4px">Drop your CSV here or click to browse</div>
+        <div style="font-size:12px;color:var(--color-text-secondary)">Supports .csv files up to 50MB · Max 100,000 contacts</div>
+        <input type="file" id="csv-file" accept=".csv" style="display:none" onchange="handleFileSelect(this)"/>
+      </div>
+
+      <div style="margin-top:1rem">
+        <div style="font-size:12px;font-weight:500;margin-bottom:6px">Required CSV Format</div>
+        <div style="font-family:var(--font-mono);font-size:11px;background:var(--color-background-secondary);padding:10px;border-radius:var(--border-radius-md);color:var(--color-text-secondary)">firstName, lastName, phoneNumber, email, tags<br>Sanjay, Rawat, +919876543210, sanjay@ex.com, "VIP,Diwali"<br>Priya, Sharma, +918765432109, priya@ex.com, Newsletter</div>
+      </div>
+
+      <div class="form-grid" style="margin-top:1rem">
+        <div class="fg"><label>Default Opt-In Status</label><select><option>Pending</option><option>Opted In</option><option>Opted Out</option></select></div>
+        <div class="fg"><label>Apply Tags to All</label><input type="text" placeholder="e.g. ImportBatch-April"/></div>
+        <div class="fg full"><label>Duplicate Handling</label><select><option>Skip duplicates</option><option>Update existing contacts</option><option>Create new (allow duplicates)</option></select></div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center">
+        <button class="btn btn-sm" onclick="downloadTemplate()">⬇ Download Sample CSV</button>
+        <div id="file-name-display" style="font-size:12px;color:var(--color-text-secondary)"></div>
+      </div>
+    </div>
+
+    <div id="import-step-2" style="display:none">
+      <div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:500;margin-bottom:8px">Preview (first 5 rows)</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:var(--color-background-primary)"><th style="padding:6px 10px;text-align:left;font-weight:500;border-bottom:0.5px solid var(--color-border-tertiary)">Name</th><th style="padding:6px 10px;text-align:left;font-weight:500;border-bottom:0.5px solid var(--color-border-tertiary)">Phone</th><th style="padding:6px 10px;text-align:left;font-weight:500;border-bottom:0.5px solid var(--color-border-tertiary)">Email</th><th style="padding:6px 10px;text-align:left;font-weight:500;border-bottom:0.5px solid var(--color-border-tertiary)">Tags</th></tr></thead>
+          <tbody id="csv-preview-body"></tbody>
+        </table>
+      </div>
+
+      <div id="import-progress-wrap" style="display:none">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Importing...</span><span id="prog-pct">0%</span></div>
+        <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+      </div>
+
+      <div id="import-result" style="display:none;background:var(--gl);border-radius:var(--border-radius-md);padding:12px">
+        <div style="font-size:13px;font-weight:500;color:var(--gt);margin-bottom:6px">✓ Import Complete</div>
+        <div style="font-size:13px;color:var(--gt)">Imported: <strong id="res-imported">0</strong> · Skipped: <strong id="res-skipped">0</strong> · Errors: <strong id="res-errors">0</strong></div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('importModal')">Cancel</button>
+      <button class="btn btn-primary" id="importBtn" onclick="startImport()">Import Contacts</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="overlay" id="deleteModal">
+  <div class="modal" style="width:400px">
+    <div style="text-align:center;padding:1rem 0">
+      <div style="width:52px;height:52px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#991b1b" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </div>
+      <h2 style="font-size:16px;margin-bottom:6px">Delete Contact?</h2>
+      <p style="font-size:13px;color:var(--color-text-secondary)" id="delMsg">This will permanently remove <strong>Sanjay Rawat</strong> and all their message history. This cannot be undone.</p>
+    </div>
+    <div class="modal-footer" style="justify-content:center">
+      <button class="btn" onclick="closeModal('deleteModal')">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Yes, Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- BULK ACTION MODAL -->
+<div class="overlay" id="bulkTagModal">
+  <div class="modal" style="width:400px">
+    <h2>Bulk Tag Contacts</h2>
+    <div class="desc" id="bulkModalDesc">Apply tags to selected contacts</div>
+    <div class="fg" style="margin-bottom:10px"><label>Tags to apply</label><input type="text" id="bulk-tag-input" placeholder="VIP, Diwali-offer (comma separated)"/></div>
+    <div class="fg"><label>Action</label><select id="bulk-tag-action"><option value="add">Add these tags</option><option value="remove">Remove these tags</option><option value="replace">Replace all tags</option></select></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('bulkTagModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="applyBulkTag()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN PAGE -->
+<div class="page">
+  <div class="ph">
+    <div class="ph-left">
+      <h1>Contacts</h1>
+      <p id="subtitle-desc">12,500 contacts in your audience</p>
+    </div>
+    <div class="ph-right">
+      <button class="btn" onclick="exportCSV()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export CSV
+      </button>
+      <button class="btn" onclick="openModal('importModal')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Import
+      </button>
+      <button class="btn btn-primary" onclick="openAddContact()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Contact
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat total"><div class="stat-label">Total Contacts</div><div class="stat-val" id="s-total">12,500</div><div class="stat-sub">↑ 240 this month</div></div>
+    <div class="stat optin"><div class="stat-label">Opted In</div><div class="stat-val" id="s-optin">9,840</div><div class="stat-sub">78.7% opt-in rate</div></div>
+    <div class="stat pending"><div class="stat-label">Pending</div><div class="stat-val" id="s-pending">1,930</div><div class="stat-sub">Awaiting confirmation</div></div>
+    <div class="stat optout"><div class="stat-label">Opted Out</div><div class="stat-val" id="s-optout">730</div><div class="stat-sub">5.8% opt-out rate</div></div>
+  </div>
+
+  <div class="layout">
+    <!-- Segment Sidebar -->
+    <div class="sidebar">
+      <div style="font-size:11px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Segments</div>
+      <div class="seg-item active" onclick="filterSeg(this,'all')"><span>All Contacts</span><span class="seg-count">12.5k</span></div>
+      <div class="seg-item" onclick="filterSeg(this,'optin')"><span>Opted In</span><span class="seg-count">9,840</span></div>
+      <div class="seg-item" onclick="filterSeg(this,'pending')"><span>Pending</span><span class="seg-count">1,930</span></div>
+      <div class="seg-item" onclick="filterSeg(this,'optout')"><span>Opted Out</span><span class="seg-count">730</span></div>
+      <div style="height:0.5px;background:var(--color-border-tertiary);margin:10px 0"></div>
+      <div style="font-size:11px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Tags</div>
+      <div class="seg-item" onclick="filterTag(this,'VIP')"><span>VIP</span><span class="seg-count">234</span></div>
+      <div class="seg-item" onclick="filterTag(this,'Newsletter')"><span>Newsletter</span><span class="seg-count">1.2k</span></div>
+      <div class="seg-item" onclick="filterTag(this,'Wholesale')"><span>Wholesale</span><span class="seg-count">89</span></div>
+      <div class="seg-item" onclick="filterTag(this,'Diwali-offer')"><span>Diwali-offer</span><span class="seg-count">3.4k</span></div>
+      <div class="seg-item" onclick="filterTag(this,'Premium')"><span>Premium</span><span class="seg-count">512</span></div>
+      <div style="height:0.5px;background:var(--color-border-tertiary);margin:10px 0"></div>
+      <button class="btn btn-sm" style="width:100%;justify-content:center">+ New Segment</button>
+    </div>
+
+    <!-- Main table area -->
+    <div>
+      <!-- Bulk action bar -->
+      <div class="bulk-bar" id="bulkBar" style="display:none">
+        <span id="bulkCount">0 selected</span>
+        <button class="btn btn-sm" onclick="openModal('bulkTagModal')">Tag</button>
+        <button class="btn btn-sm" onclick="bulkStatusChange('opted_in')">Mark Opted In</button>
+        <button class="btn btn-sm" onclick="bulkStatusChange('opted_out')">Mark Opted Out</button>
+        <button class="btn btn-danger btn-sm" onclick="bulkDelete()">Delete</button>
+        <button class="btn btn-sm" style="margin-left:auto" onclick="clearSelection()">✕ Clear</button>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="searchInput" placeholder="Search by name, phone, email, tag…" oninput="applyFilters()"/>
+        </div>
+        <select id="statusFilter" onchange="applyFilters()">
+          <option value="">All Status</option>
+          <option value="opted_in">Opted In</option>
+          <option value="pending">Pending</option>
+          <option value="opted_out">Opted Out</option>
+        </select>
+        <select id="tagFilter" onchange="applyFilters()">
+          <option value="">All Tags</option>
+          <option>VIP</option>
+          <option>Newsletter</option>
+          <option>Wholesale</option>
+          <option>Diwali-offer</option>
+          <option>Premium</option>
+        </select>
+        <select id="perPage" onchange="applyFilters(true)">
+          <option value="10">10 / page</option>
+          <option value="25">25 / page</option>
+          <option value="50">50 / page</option>
+          <option value="100">100 / page</option>
+        </select>
+        <button class="btn btn-sm" id="clearFiltersBtn" style="display:none" onclick="clearFilters()">Clear Filters</button>
+      </div>
+
+      <!-- Table -->
+      <div class="card-wrap">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:36px"><input type="checkbox" class="cb" id="selectAll" onchange="toggleSelectAll(this)"/></th>
+                <th class="sortable sorted" onclick="sortBy('name',this)">Name <span class="sort-arrow">↑</span></th>
+                <th class="sortable" onclick="sortBy('phone',this)">Phone <span class="sort-arrow">↕</span></th>
+                <th>Tags</th>
+                <th class="sortable" onclick="sortBy('status',this)">Status <span class="sort-arrow">↕</span></th>
+                <th class="sortable" onclick="sortBy('created',this)">Added On <span class="sort-arrow">↕</span></th>
+                <th style="text-align:right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="contactTableBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="paginationBar">
+          <div class="pag-info" id="pagInfo">Showing 1–10 of 50 contacts</div>
+          <div class="pag-btns" id="pagBtns"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const AVATARS=['#25D366','#128C7E','#0ea5e9','#8b5cf6','#f59e0b','#ef4444','#ec4899','#14b8a6','#f97316','#6366f1'];
+function getColor(i){return AVATARS[i%AVATARS.length]}
+const TAGS_ALL=[['VIP'],['Newsletter','Diwali-offer'],['Wholesale'],['Premium'],['VIP','Newsletter'],['Diwali-offer'],['Repeat-buyer'],['New-customer'],['Newsletter'],['Premium','VIP']];
+const NAMES=[['Sanjay','Rawat','sanjay.rawat@gmail.com'],['Priya','Sharma','priya.sharma@outlook.com'],['Rahul','Verma','rahul.v@yahoo.com'],['Anjali','Gupta','anjali.gupta@gmail.com'],['Mohit','Agarwal','mohit.a@company.com'],['Deepa','Singh','deepa.singh@gmail.com'],['Arjun','Patel','arjun.p@gmail.com'],['Kavya','Mishra','kavya.m@gmail.com'],['Vikram','Yadav','vikram.y@yahoo.com'],['Sunita','Joshi','sunita.j@outlook.com'],['Amit','Dubey','amit.dubey@gmail.com'],['Neha','Tiwari','neha.t@gmail.com'],['Ravi','Kumar','ravi.k@gmail.com'],['Pooja','Mehta','pooja.mehta@gmail.com'],['Sachin','Shah','sachin.s@company.com'],['Rekha','Nair','rekha.n@gmail.com'],['Kiran','Jain','kiran.j@gmail.com'],['Suresh','Reddy','suresh.r@outlook.com'],['Meena','Pillai','meena.p@gmail.com'],['Anil','Choudhary','anil.c@gmail.com'],['Sita','Devi','sita.d@gmail.com'],['Ranjit','Bose','ranjit.b@gmail.com'],['Nirmala','Pandey','nirmala.p@outlook.com'],['Vishal','Saxena','vishal.s@gmail.com'],['Lalita','Kapoor','lalita.k@gmail.com'],['Girish','Tripathi','girish.t@gmail.com'],['Champa','Shukla','champa.s@gmail.com'],['Dinesh','Bhatt','dinesh.b@gmail.com'],['Anita','Roy','anita.r@yahoo.com'],['Hemant','Sood','hemant.s@gmail.com'],['Poonam','Arora','poonam.a@gmail.com'],['Manish','Goyal','manish.g@company.com'],['Divya','Srivastava','divya.sri@gmail.com'],['Lalit','Deshpande','lalit.d@gmail.com'],['Saroj','Bhan','saroj.b@gmail.com'],['Tarun','Negi','tarun.n@outlook.com'],['Uma','Datta','uma.d@gmail.com'],['Rakesh','Malhotra','rakesh.m@gmail.com'],['Kavita','Lal','kavita.l@gmail.com'],['Sohan','Chandra','sohan.c@gmail.com'],['Pushpa','Sinha','pushpa.s@gmail.com'],['Naresh','Iyer','naresh.i@gmail.com'],['Smita','Wagh','smita.w@outlook.com'],['Varun','Khatri','varun.k@gmail.com'],['Leela','Batra','leela.b@gmail.com'],['Haresh','Mitra','haresh.m@gmail.com'],['Nanda','Kulkarni','nanda.k@gmail.com'],['Jayesh','Dixit','jayesh.d@gmail.com'],['Geeta','Bajaj','geeta.b@gmail.com'],['Sunil','Desai','sunil.d@gmail.com']];
+const STATUSES=['opted_in','opted_in','opted_in','opted_in','opted_in','opted_in','pending','pending','pending','opted_out'];
+const DATES=['Jan 5, 2026','Jan 12, 2026','Jan 18, 2026','Feb 2, 2026','Feb 14, 2026','Feb 20, 2026','Mar 3, 2026','Mar 11, 2026','Mar 19, 2026','Apr 1, 2026','Apr 7, 2026','Apr 15, 2026','Apr 20, 2026','Apr 22, 2026','Apr 25, 2026'];
+const PHONES=['+91 98765 43210','+91 87654 32109','+91 76543 21098','+91 65432 10987','+91 54321 09876','+91 91234 56789','+91 92345 67890','+91 93456 78901','+91 94567 89012','+91 95678 90123'];
+
+let allContacts=NAMES.map((n,i)=>({id:i+1,firstName:n[0],lastName:n[1],email:n[2],phone:PHONES[i%PHONES.length],status:STATUSES[i%STATUSES.length],tags:TAGS_ALL[i%TAGS_ALL.length],created:DATES[i%DATES.length],campaigns:Math.floor(Math.random()*8)+1,msgs:Math.floor(Math.random()*30)+5}));
+let filtered=[...allContacts];
+let currentPage=1;
+let perPage=10;
+let selected=new Set();
+let sortField='name';
+let sortDir='asc';
+let activeSegFilter='all';
+
+function statusBadge(s){const m={opted_in:'badge-green',pending:'badge-amber',opted_out:'badge-red'};const l={opted_in:'Opted In',pending:'Pending',opted_out:'Opted Out'};return`<span class="badge ${m[s]||'badge-gray'}">${l[s]||s}</span>`}
+
+function initials(f,l){return(f[0]+(l?l[0]:'')).toUpperCase()}
+
+function renderTable(){
+  const start=(currentPage-1)*perPage;
+  const page=filtered.slice(start,start+perPage);
+  const tbody=document.getElementById('contactTableBody');
+  if(page.length===0){tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--color-text-secondary)"><div style="font-size:32px;margin-bottom:10px">👥</div><div style="font-size:14px;font-weight:500;margin-bottom:6px">No contacts found</div><div style="font-size:13px">Try adjusting your search or filters</div></td></tr>`;renderPagination();return;}
+  tbody.innerHTML=page.map((c,i)=>{
+    const colorIdx=(c.id-1)%AVATARS.length;
+    const isSelected=selected.has(c.id);
+    return`<tr id="row-${c.id}" style="${isSelected?'background:rgba(37,211,102,.06)':''}">
+      <td><input type="checkbox" class="cb row-cb" data-id="${c.id}" onchange="toggleSelect(${c.id},this)" ${isSelected?'checked':''}></td>
+      <td onclick="openDrawer(${c.id})" style="cursor:pointer">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="contact-avatar" style="background:${getColor(c.id-1)}">${initials(c.firstName,c.lastName)}</div>
+          <div>
+            <div class="contact-name">${c.firstName} ${c.lastName}</div>
+            <div class="contact-email">${c.email}</div>
+          </div>
+        </div>
+      </td>
+      <td><span class="phone">${c.phone}</span></td>
+      <td>${c.tags.slice(0,2).map(t=>`<span class="tag">${t}</span>`).join(' ')}${c.tags.length>2?`<span class="badge badge-gray">+${c.tags.length-2}</span>`:''}</td>
+      <td>${statusBadge(c.status)}</td>
+      <td style="color:var(--color-text-secondary);font-size:12px">${c.created}</td>
+      <td>
+        <div class="actions-cell">
+          <button class="icon-btn green" title="Send Message" onclick="event.stopPropagation()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+          <button class="icon-btn" title="View Details" onclick="openDrawer(${c.id});event.stopPropagation()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+          <button class="icon-btn" title="Edit" onclick="openEditContact(${c.id});event.stopPropagation()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="icon-btn red" title="Delete" onclick="openDelete(${c.id});event.stopPropagation()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          </button>
+        </div>
+      </td>
+    </tr>`}).join('');
+  renderPagination();
+}
+
+function renderPagination(){
+  const total=filtered.length;
+  const totalPages=Math.ceil(total/perPage);
+  const start=(currentPage-1)*perPage+1;
+  const end=Math.min(currentPage*perPage,total);
+  document.getElementById('pagInfo').textContent=total===0?'No contacts found':`Showing ${start}–${end} of ${total} contacts`;
+  const btns=document.getElementById('pagBtns');
+  let html=`<button class="pag-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>`;
+  let pages=[];
+  if(totalPages<=7){for(let i=1;i<=totalPages;i++)pages.push(i);}
+  else{pages=[1];if(currentPage>3)pages.push('...');const s=Math.max(2,currentPage-1);const e=Math.min(totalPages-1,currentPage+1);for(let i=s;i<=e;i++)pages.push(i);if(currentPage<totalPages-2)pages.push('...');pages.push(totalPages);}
+  pages.forEach(p=>{if(p==='...')html+=`<button class="pag-btn" disabled>…</button>`;else html+=`<button class="pag-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;});
+  html+=`<button class="pag-btn" onclick="goPage(${currentPage+1})" ${currentPage===totalPages||totalPages===0?'disabled':''}>›</button>`;
+  btns.innerHTML=html;
+}
+
+function goPage(p){const max=Math.ceil(filtered.length/perPage);if(p<1||p>max)return;currentPage=p;renderTable();}
+
+function applyFilters(reset){
+  if(reset)currentPage=1;
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  const st=document.getElementById('statusFilter').value;
+  const tg=document.getElementById('tagFilter').value;
+  perPage=parseInt(document.getElementById('perPage').value);
+  filtered=allContacts.filter(c=>{
+    const matchQ=!q||(c.firstName+' '+c.lastName).toLowerCase().includes(q)||c.phone.includes(q)||c.email.toLowerCase().includes(q)||c.tags.some(t=>t.toLowerCase().includes(q));
+    const matchSt=!st||c.status===st;
+    const matchTg=!tg||c.tags.includes(tg);
+    const matchSeg=activeSegFilter==='all'||(activeSegFilter==='optin'&&c.status==='opted_in')||(activeSegFilter==='pending'&&c.status==='pending')||(activeSegFilter==='optout'&&c.status==='opted_out');
+    return matchQ&&matchSt&&matchTg&&matchSeg;
+  });
+  // Sort
+  filtered.sort((a,b)=>{
+    let av,bv;
+    if(sortField==='name'){av=a.firstName;bv=b.firstName;}
+    else if(sortField==='phone'){av=a.phone;bv=b.phone;}
+    else if(sortField==='status'){av=a.status;bv=b.status;}
+    else{av=a.created;bv=b.created;}
+    return sortDir==='asc'?av.localeCompare(bv):bv.localeCompare(av);
+  });
+  document.getElementById('clearFiltersBtn').style.display=(q||st||tg)?'':'none';
+  currentPage=1;
+  renderTable();
+}
+
+function sortBy(field,th){
+  if(sortField===field){sortDir=sortDir==='asc'?'desc':'asc';}else{sortField=field;sortDir='asc';}
+  document.querySelectorAll('th.sortable').forEach(t=>{t.classList.remove('sorted');t.querySelector('.sort-arrow').textContent='↕';});
+  th.classList.add('sorted');
+  th.querySelector('.sort-arrow').textContent=sortDir==='asc'?'↑':'↓';
+  applyFilters();
+}
+
+function clearFilters(){
+  document.getElementById('searchInput').value='';
+  document.getElementById('statusFilter').value='';
+  document.getElementById('tagFilter').value='';
+  document.getElementById('clearFiltersBtn').style.display='none';
+  activeSegFilter='all';
+  document.querySelectorAll('.seg-item').forEach(s=>s.classList.remove('active'));
+  document.querySelector('.seg-item').classList.add('active');
+  applyFilters(true);
+}
+
+function toggleSelect(id,cb){
+  if(cb.checked)selected.add(id);else selected.delete(id);
+  updateBulkBar();
+  const row=document.getElementById('row-'+id);
+  if(row)row.style.background=cb.checked?'rgba(37,211,102,.06)':'';
+}
+
+function toggleSelectAll(cb){
+  const start=(currentPage-1)*perPage;
+  const page=filtered.slice(start,start+perPage);
+  page.forEach(c=>{
+    if(cb.checked)selected.add(c.id);else selected.delete(c.id);
+    const r=document.getElementById('row-'+c.id);
+    if(r)r.style.background=cb.checked?'rgba(37,211,102,.06)':'';
+  });
+  document.querySelectorAll('.row-cb').forEach(c=>c.checked=cb.checked);
+  updateBulkBar();
+}
+
+function updateBulkBar(){
+  const bar=document.getElementById('bulkBar');
+  const cnt=document.getElementById('bulkCount');
+  bar.style.display=selected.size>0?'flex':'none';
+  cnt.textContent=`${selected.size} contact${selected.size>1?'s':''} selected`;
+}
+
+function clearSelection(){selected.clear();updateBulkBar();document.querySelectorAll('.row-cb,.cb').forEach(c=>c.checked=false);renderTable();}
+
+function bulkStatusChange(s){
+  selected.forEach(id=>{const c=allContacts.find(x=>x.id===id);if(c)c.status=s;});
+  clearSelection();applyFilters();
+}
+
+function bulkDelete(){
+  if(!confirm(`Delete ${selected.size} contacts? This cannot be undone.`))return;
+  allContacts=allContacts.filter(c=>!selected.has(c.id));
+  clearSelection();applyFilters();
+}
+
+function filterSeg(el,seg){
+  document.querySelectorAll('.seg-item').forEach(s=>s.classList.remove('active'));
+  el.classList.add('active');
+  activeSegFilter=seg;
+  document.getElementById('statusFilter').value='';
+  applyFilters(true);
+}
+
+function filterTag(el,tag){
+  document.querySelectorAll('.seg-item').forEach(s=>s.classList.remove('active'));
+  el.classList.add('active');
+  activeSegFilter='all';
+  document.getElementById('tagFilter').value=tag;
+  applyFilters(true);
+}
+
+let deleteTargetId=null;
+function openDelete(id){
+  deleteTargetId=id;
+  const c=allContacts.find(x=>x.id===id);
+  if(c)document.getElementById('delMsg').innerHTML=`This will permanently remove <strong>${c.firstName} ${c.lastName}</strong> and all their message history. This cannot be undone.`;
+  openModal('deleteModal');
+}
+
+function confirmDelete(){
+  if(deleteTargetId){allContacts=allContacts.filter(c=>c.id!==deleteTargetId);deleteTargetId=null;}
+  closeModal('deleteModal');applyFilters();
+}
+
+function openDrawer(id){
+  const c=allContacts.find(x=>x.id===id);
+  if(!c)return;
+  document.getElementById('dAvatar').textContent=initials(c.firstName,c.lastName);
+  document.getElementById('dAvatar').style.background=getColor(id-1);
+  document.getElementById('dName').textContent=c.firstName+' '+c.lastName;
+  document.getElementById('dPhone').textContent=c.phone;
+  document.getElementById('dEmail').textContent=c.email;
+  document.getElementById('dCreated').textContent=c.created;
+  document.getElementById('dCampaigns').textContent=c.campaigns;
+  document.getElementById('dMsgs').textContent=c.msgs;
+  document.getElementById('dBadge').innerHTML=statusBadge(c.status);
+  document.getElementById('dTags').innerHTML=c.tags.map(t=>`<span class="tag">${t}</span>`).join('');
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawerBg').classList.add('open');
+}
+
+function closeDrawer(){
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerBg').classList.remove('open');
+}
+
+// Contact modal
+let editingContactId=null;
+let formTags=[];
+
+function openAddContact(){
+  editingContactId=null;formTags=[];
+  document.getElementById('contactTitle').textContent='Add New Contact';
+  document.getElementById('saveContactBtn').textContent='Create Contact';
+  document.getElementById('cf-fname').value='';
+  document.getElementById('cf-lname').value='';
+  document.getElementById('cf-phone').value='';
+  document.getElementById('cf-email').value='';
+  document.getElementById('cf-notes').value='';
+  document.getElementById('cf-status').value='pending';
+  renderFormTags();
+  switchContactTab('basic',document.querySelector('.modal-tab'));
+  openModal('contactModal');
+}
+
+function openEditContact(id){
+  const c=allContacts.find(x=>x.id===id);
+  if(!c)return;
+  editingContactId=id;formTags=[...c.tags];
+  document.getElementById('contactTitle').textContent='Edit Contact';
+  document.getElementById('saveContactBtn').textContent='Update Contact';
+  document.getElementById('cf-fname').value=c.firstName;
+  document.getElementById('cf-lname').value=c.lastName;
+  document.getElementById('cf-phone').value=c.phone;
+  document.getElementById('cf-email').value=c.email;
+  document.getElementById('cf-status').value=c.status;
+  renderFormTags();
+  switchContactTab('basic',document.querySelector('.modal-tab'));
+  openModal('contactModal');
+}
+
+function openEdit(){closeDrawer();openEditContact(document.getElementById('dName').textContent);}
+
+function switchContactTab(tab,el){
+  document.querySelectorAll('.modal-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.modal-tab-content').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');else document.querySelector('.modal-tab').classList.add('active');
+  document.getElementById('ctab-'+tab).classList.add('active');
+}
+
+function addTagToForm(){
+  const v=document.getElementById('tag-input').value.trim();
+  if(v&&!formTags.includes(v)){formTags.push(v);renderFormTags();}
+  document.getElementById('tag-input').value='';
+}
+
+function addSuggestedTag(el){
+  const t=el.textContent.trim();
+  if(!formTags.includes(t)){formTags.push(t);renderFormTags();}
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.activeElement.id==='tag-input'){e.preventDefault();addTagToForm();}});
+
+function renderFormTags(){
+  const c=document.getElementById('form-tags');
+  const hint=document.getElementById('no-tags-hint');
+  if(formTags.length===0){c.innerHTML='';c.appendChild(hint);hint.style.display='';return;}
+  hint.style.display='none';
+  c.innerHTML=formTags.map((t,i)=>`<span class="tag">${t}<span class="x" onclick="removeFormTag(${i})">×</span></span>`).join('');
+}
+
+function removeFormTag(i){formTags.splice(i,1);renderFormTags();}
+
+function saveContact(){
+  const fname=document.getElementById('cf-fname').value.trim();
+  const phone=document.getElementById('cf-phone').value.trim();
+  let valid=true;
+  document.getElementById('err-fname').textContent='';
+  document.getElementById('err-phone').textContent='';
+  if(!fname){document.getElementById('err-fname').textContent='First name is required';valid=false;}
+  if(!phone){document.getElementById('err-phone').textContent='Phone number is required';valid=false;}
+  else if(!/^\+?[\d\s\-]{8,}$/.test(phone)){document.getElementById('err-phone').textContent='Enter a valid phone number';valid=false;}
+  if(!valid)return;
+  if(editingContactId){
+    const c=allContacts.find(x=>x.id===editingContactId);
+    if(c){c.firstName=fname;c.lastName=document.getElementById('cf-lname').value.trim();c.phone=phone;c.email=document.getElementById('cf-email').value.trim();c.status=document.getElementById('cf-status').value;c.tags=[...formTags];}
+  }else{
+    const newId=Math.max(...allContacts.map(c=>c.id))+1;
+    allContacts.unshift({id:newId,firstName:fname,lastName:document.getElementById('cf-lname').value.trim(),email:document.getElementById('cf-email').value.trim(),phone,status:document.getElementById('cf-status').value,tags:[...formTags],created:'Apr 27, 2026',campaigns:0,msgs:0});
+  }
+  closeModal('contactModal');applyFilters();
+}
+
+// Import
+let csvData=[];
+function handleFileSelect(input){
+  const file=input.files[0];
+  if(!file)return;
+  document.getElementById('file-name-display').textContent='📄 '+file.name;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const lines=e.target.result.split('\n').filter(l=>l.trim());
+    if(lines.length<2)return;
+    const headers=lines[0].split(',').map(h=>h.trim().replace(/"/g,''));
+    csvData=lines.slice(1,6).map(line=>{const vals=line.split(',').map(v=>v.trim().replace(/"/g,''));const row={};headers.forEach((h,i)=>row[h]=vals[i]||'');return row;});
+    document.getElementById('import-step-1').style.display='none';
+    document.getElementById('import-step-2').style.display='block';
+    const tbody=document.getElementById('csv-preview-body');
+    tbody.innerHTML=csvData.map(r=>`<tr><td style="padding:6px 10px;border-bottom:0.5px solid var(--color-border-tertiary)">${r.firstName||r.first_name||'—'} ${r.lastName||r.last_name||''}</td><td style="padding:6px 10px;border-bottom:0.5px solid var(--color-border-tertiary);font-family:var(--font-mono);font-size:11px">${r.phoneNumber||r.phone||'—'}</td><td style="padding:6px 10px;border-bottom:0.5px solid var(--color-border-tertiary)">${r.email||'—'}</td><td style="padding:6px 10px;border-bottom:0.5px solid var(--color-border-tertiary)">${r.tags||'—'}</td></tr>`).join('');
+  };
+  reader.readAsText(file);
+}
+
+function startImport(){
+  const pw=document.getElementById('import-progress-wrap');
+  const res=document.getElementById('import-result');
+  pw.style.display='block';res.style.display='none';
+  document.getElementById('importBtn').disabled=true;
+  let pct=0;
+  const interval=setInterval(()=>{
+    pct+=Math.random()*15;
+    if(pct>=100){pct=100;clearInterval(interval);
+      document.getElementById('prog-pct').textContent='100%';
+      document.getElementById('prog-fill').style.width='100%';
+      setTimeout(()=>{
+        pw.style.display='none';res.style.display='block';
+        const imported=Math.floor(Math.random()*400)+80;
+        document.getElementById('res-imported').textContent=imported;
+        document.getElementById('res-skipped').textContent=Math.floor(Math.random()*15);
+        document.getElementById('res-errors').textContent=0;
+        document.getElementById('importBtn').textContent='Done';
+        document.getElementById('importBtn').disabled=false;
+        document.getElementById('importBtn').onclick=()=>closeModal('importModal');
+      },400);
+      return;
+    }
+    document.getElementById('prog-pct').textContent=Math.round(pct)+'%';
+    document.getElementById('prog-fill').style.width=pct+'%';
+  },120);
+}
+
+function downloadTemplate(){
+  const csv='firstName,lastName,phoneNumber,email,tags\nSanjay,Rawat,+919876543210,sanjay@example.com,"VIP,Newsletter"\nPriya,Sharma,+918765432109,priya@example.com,Diwali-offer';
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='contacts-template.csv';a.click();
+}
+
+function exportCSV(){
+  const headers='firstName,lastName,phone,email,status,tags';
+  const rows=allContacts.map(c=>`"${c.firstName}","${c.lastName}","${c.phone}","${c.email}","${c.status}","${c.tags.join(';')}"`);
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent([headers,...rows].join('\n'));a.download='prodigichat-contacts.csv';a.click();
+}
+
+function applyBulkTag(){
+  const tags=document.getElementById('bulk-tag-input').value.split(',').map(t=>t.trim()).filter(Boolean);
+  const action=document.getElementById('bulk-tag-action').value;
+  selected.forEach(id=>{
+    const c=allContacts.find(x=>x.id===id);
+    if(!c)return;
+    if(action==='add'){tags.forEach(t=>{if(!c.tags.includes(t))c.tags.push(t);});}
+    else if(action==='remove'){c.tags=c.tags.filter(t=>!tags.includes(t));}
+    else{c.tags=[...tags];}
+  });
+  closeModal('bulkTagModal');clearSelection();applyFilters();
+}
+
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){
+  document.getElementById(id).classList.remove('open');
+  if(id==='importModal'){document.getElementById('import-step-1').style.display='';document.getElementById('import-step-2').style.display='none';document.getElementById('file-name-display').textContent='';document.getElementById('importBtn').textContent='Import Contacts';document.getElementById('importBtn').onclick=startImport;document.getElementById('importBtn').disabled=false;document.getElementById('import-progress-wrap').style.display='none';document.getElementById('import-result').style.display='none';csvData=[];}
+}
+
+function addAttrRow(){
+  const d=document.getElementById('attr-rows');
+  const r=document.createElement('div');
+  r.className='form-grid';r.style.marginBottom='8px';
+  r.innerHTML='<div class="fg"><input type="text" placeholder="key"/></div><div class="fg"><input type="text" placeholder="value"/></div>';
+  d.appendChild(r);
+}
+
+// Keyboard close
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDrawer();document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));}});
+
+// Init
+applyFilters();
+</script>

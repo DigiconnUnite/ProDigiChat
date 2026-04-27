@@ -34,6 +34,12 @@ export type RateLimitEndpoint = keyof typeof RATE_LIMITS;
 
 // Check if Redis is configured
 const isRedisConfigured = !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Only throw at runtime, not during build
+if (typeof window === 'undefined' && isProduction && !isRedisConfigured) {
+  console.warn('UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are not configured. Rate limiting will use in-memory fallback.');
+}
 
 // Initialize Redis
 const redis = isRedisConfigured ? Redis.fromEnv() : null;

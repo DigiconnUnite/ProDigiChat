@@ -66,9 +66,8 @@ export async function GET(request: NextRequest) {
     // Get verify token from env
     const verifyToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
     
-    // Debug: Log what we received
-    console.log("[Webhook Verification] Received:", { mode, token, challenge });
-    console.log("[Webhook Verification] Checking token...");
+    // Avoid logging the verify token or challenge payload in production logs.
+    console.log("[Webhook Verification] Received verification request", { mode });
 
     // Security fix: Only allow exact token match - no development bypass
     const tokenMatches = token === verifyToken;

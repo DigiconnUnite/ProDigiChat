@@ -50,6 +50,15 @@ interface ImportResult {
   errors: string[]
 }
 
+interface ImportJob {
+  id: string
+  status: "queued" | "processing" | "completed" | "failed"
+  progress: number
+  imported: number
+  skipped: number
+  errors: string[]
+}
+
 interface ImportContactsDialogProps {
   children?: React.ReactNode
   onImportComplete?: () => void
@@ -65,6 +74,7 @@ export function ImportContactsDialog({
   const [progress, setProgress] = useState(0)
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
   const [preview, setPreview] = useState<any[]>([])
+  const [importJobId, setImportJobId] = useState<string | null>(null)
 
   const form = useForm<CsvImportFormData>({
     resolver: zodResolver(csvImportSchema),
@@ -140,6 +150,41 @@ export function ImportContactsDialog({
   }
 
   // Handle CSV import
+  const pollImportJob = async (jobId: string) => {
+    let attempts = 0
+    while (attempts < 300) {
+      const response = await fetch(`/api/contacts/import?jobId=${jobId}`)
+      const result = await response.json()
+
+      if (!result.success || !result.job) {
+        throw new Error(result.error || "Failed to fetch import progress")
+      }
+
+      const job: ImportJob = result.job
+      setProgress(job.progress || 0)
+
+      if (job.status === "completed") {
+        setImportResult({
+          success: true,
+          imported: job.imported || 0,
+          skipped: job.skipped || 0,
+          errors: job.errors || [],
+        })
+        return job
+      }
+
+      if (job.status === "failed") {
+        const reason = (job.errors && job.errors[0]) || "Import job failed"
+        throw new Error(reason)
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 1200))
+      attempts++
+    }
+
+    throw new Error("Import is taking too long. Please try again.")
+  }
+
   const handleImport = async (data: CsvImportFormData) => {
     if (!file) {
       toast.error("Please select a CSV file")
@@ -157,6 +202,7 @@ export function ImportContactsDialog({
       if (data.tags) {
         formData.append("tags", JSON.stringify(data.tags.split(",").map((t) => t.trim())))
       }
+      formData.append("async", "true")
 
       const response = await fetch("/api/contacts/import", {
         method: "POST",
@@ -167,6 +213,17 @@ export function ImportContactsDialog({
 
       if (!result.success) {
         throw new Error(result.error || "Failed to import contacts")
+      }
+
+      if (result.async && result.jobId) {
+        setImportJobId(result.jobId)
+        const completedJob = await pollImportJob(result.jobId)
+        toast.success(`Successfully imported ${completedJob.imported || 0} contacts`)
+
+        if (onImportComplete) {
+          onImportComplete()
+        }
+        return
       }
 
       setImportResult({
@@ -201,6 +258,7 @@ export function ImportContactsDialog({
     setPreview([])
     setImportResult(null)
     setProgress(0)
+    setImportJobId(null)
     form.reset()
   }
 
@@ -365,7 +423,7 @@ export function ImportContactsDialog({
                 <div className="space-y-2">
                   <Progress value={progress} className="h-2" />
                   <p className="text-sm text-muted-foreground text-center">
-                    Importing contacts... {progress}%
+                    {importJobId ? "Processing import job" : "Importing contacts"}... {progress}%
                   </p>
                 </div>
               )}

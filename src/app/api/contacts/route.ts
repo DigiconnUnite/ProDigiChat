@@ -1,7 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { getToken } from 'next-auth/jwt'
-import { requireRole } from '@/lib/rbac'
+import { NextRequest, NextResponse } from "next/server"
+import { prisma } from "@/lib/prisma"
+import { getToken } from "next-auth/jwt"
+import { hasRole, getUserOrganizationRole, requireRole } from "@/lib/rbac"
+import { parseTags, stringifyTags, parseAttributes, stringifyAttributes } from "@/types/common"
+
+const MAX_LIMIT = 100
+const ALLOWED_LIFECYCLE_STATUS = new Set(['lead', 'active', 'suppressed', 'blocked', 'bounced'])
 
 async function getUserId(request: NextRequest): Promise<string | null> {
   const token = await getToken({ req: request })
@@ -14,6 +18,30 @@ async function getUserAndOrgId(request: NextRequest): Promise<{ userId: string |
     userId: token?.sub || null,
     organizationId: token?.organizationId as string | null
   }
+}
+
+function normalizePhoneNumber(phoneNumber: string): string {
+  const cleaned = phoneNumber.trim().replace(/[^\d+]/g, '')
+  return cleaned.replace(/(?!^)\+/g, '')
+}
+
+// Use standardized parsing functions from common types
+function parseTagsInput(tags: unknown): string[] {
+  return parseTags(tags as string | string[] | null);
+}
+
+function parseAttributesInput(attributes: unknown): Record<string, unknown> {
+  return parseAttributes(attributes as string | Record<string, unknown> | null);
+}
+
+function normalizeLifecycleStatus(status: unknown): string {
+  const normalized = String(status || 'lead').trim().toLowerCase()
+  return ALLOWED_LIFECYCLE_STATUS.has(normalized) ? normalized : 'lead'
+}
+
+function buildDisplayName(firstName: string, lastName: string, phoneNumber: string): string {
+  const fullName = `${firstName} ${lastName}`.trim()
+  return fullName || phoneNumber
 }
 
 export async function GET(request: NextRequest) {
@@ -29,22 +57,35 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search') || ''
     const status = searchParams.get('status') || ''
+    const lifecycleStatus = searchParams.get('lifecycleStatus') || ''
+    const includeDeleted = searchParams.get('includeDeleted') === 'true'
     const tags = searchParams.get('tags') || ''
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '10')
+    const pageParam = parseInt(searchParams.get('page') || '1', 10)
+    const limitParam = parseInt(searchParams.get('limit') || '10', 10)
+    const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1
+    const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), MAX_LIMIT) : 10
     const skip = (page - 1) * limit
 
     // Sorting parameters
     const sortBy = searchParams.get('sortBy') || 'createdAt'
-    const sortOrder = searchParams.get('sortOrder') || 'desc'
+    const sortOrderParam = searchParams.get('sortOrder') || 'desc'
+    const sortOrder = sortOrderParam === 'asc' ? 'asc' : 'desc'
 
     // Build query conditions - filter by organization
     const conditions: any = {
       organizationId: organizationId
     }
+
+    if (!includeDeleted) {
+      conditions.isDeleted = { not: true }
+    }
     
     if (status && status !== 'all') {
       conditions.optInStatus = status
+    }
+
+    if (lifecycleStatus && lifecycleStatus !== 'all') {
+      conditions.lifecycleStatus = normalizeLifecycleStatus(lifecycleStatus)
     }
     
     if (tags) {
@@ -120,14 +161,27 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  const roleCheck = await requireRole(request, 'member')
+  if (roleCheck) {
+    return roleCheck
+  }
+
   try {
     const body = await request.json()
     const { firstName, lastName, phoneNumber, email, tags, attributes, optInStatus } = body
 
+    const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber || '')
+    if (!normalizedPhoneNumber) {
+      return NextResponse.json({
+        success: false,
+        error: 'Phone number is required'
+      }, { status: 400 })
+    }
+
     // Check if contact already exists for this organization
     const existingContact = await prisma.contact.findFirst({
       where: {
-        phoneNumber: phoneNumber,
+        phoneNumber: normalizedPhoneNumber,
         organizationId: organizationId
       }
     })
@@ -142,13 +196,17 @@ export async function POST(request: NextRequest) {
     // Create new contact - associate with authenticated user
     const contact = await prisma.contact.create({
       data: {
-        firstName: firstName || '',
-        lastName: lastName || '',
-        phoneNumber,
-        email: email || '',
-        tags: JSON.stringify(tags || []),
-        attributes: JSON.stringify(attributes || {}),
+        firstName: firstName?.trim() || '',
+        lastName: lastName?.trim() || '',
+        phoneNumber: normalizedPhoneNumber,
+        email: email?.trim() || '',
+        tags: JSON.stringify(parseTagsInput(tags)),
+        attributes: JSON.stringify(parseAttributesInput(attributes)),
         optInStatus: optInStatus || 'pending',
+        lifecycleStatus: normalizeLifecycleStatus(body.lifecycleStatus),
+        displayName: buildDisplayName(firstName?.trim() || '', lastName?.trim() || '', normalizedPhoneNumber),
+        optInAt: optInStatus === 'opted_in' ? new Date() : null,
+        optOutAt: optInStatus === 'opted_out' ? new Date() : null,
         userId: userId,
         organizationId: organizationId,
       }
@@ -193,7 +251,15 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { id, firstName, lastName, phoneNumber, email, tags, attributes, optInStatus } = body
+    const { id, firstName, lastName, phoneNumber, email, tags, attributes, optInStatus, lifecycleStatus } = body
+
+    const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber || '')
+    if (!normalizedPhoneNumber) {
+      return NextResponse.json({
+        success: false,
+        error: 'Phone number is required'
+      }, { status: 400 })
+    }
 
     if (!id) {
       return NextResponse.json({
@@ -218,16 +284,21 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update contact
+    const nextOptInStatus = optInStatus || existingContact.optInStatus
     const contact = await prisma.contact.update({
       where: { id },
       data: {
-        firstName,
-        lastName,
-        phoneNumber,
-        email,
-        tags: JSON.stringify(tags || []),
-        attributes: JSON.stringify(attributes || {}),
-        optInStatus,
+        firstName: firstName?.trim() || '',
+        lastName: lastName?.trim() || '',
+        displayName: buildDisplayName(firstName?.trim() || '', lastName?.trim() || '', normalizedPhoneNumber),
+        phoneNumber: normalizedPhoneNumber,
+        email: email?.trim() || '',
+        tags: JSON.stringify(parseTagsInput(tags)),
+        attributes: JSON.stringify(parseAttributesInput(attributes)),
+        lifecycleStatus: normalizeLifecycleStatus(lifecycleStatus || 'lead'),
+        optInStatus: nextOptInStatus,
+        optInAt: nextOptInStatus === 'opted_in' ? new Date() : null,
+        optOutAt: nextOptInStatus === 'opted_out' ? new Date() : null,
       }
     })
 
@@ -261,15 +332,16 @@ export async function DELETE(request: NextRequest) {
     )
   }
 
-  // RBAC: Require member role or higher to delete contacts
-  const roleCheck = await requireRole(request, 'member')
-  if (roleCheck) {
-    return roleCheck
-  }
-
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
+    const hardDelete = searchParams.get('hard') === 'true'
+
+    // RBAC: member for soft delete, admin for hard delete
+    const roleCheck = await requireRole(request, hardDelete ? 'admin' : 'member')
+    if (roleCheck) {
+      return roleCheck
+    }
 
     if (!id) {
       return NextResponse.json({
@@ -282,7 +354,8 @@ export async function DELETE(request: NextRequest) {
     const existingContact = await prisma.contact.findFirst({
       where: {
         id,
-        organizationId: organizationId
+        organizationId: organizationId,
+        ...(hardDelete ? {} : { isDeleted: { not: true } }),
       }
     })
 
@@ -293,14 +366,29 @@ export async function DELETE(request: NextRequest) {
       }, { status: 404 })
     }
 
-    // Delete contact
-    await prisma.contact.delete({
-      where: { id }
+    if (hardDelete) {
+      await prisma.contact.delete({
+        where: { id }
+      })
+
+      return NextResponse.json({
+        success: true,
+        message: 'Contact permanently deleted'
+      })
+    }
+
+    await prisma.contact.update({
+      where: { id },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+        lifecycleStatus: 'suppressed',
+      },
     })
 
     return NextResponse.json({
       success: true,
-      message: 'Contact deleted successfully'
+      message: 'Contact archived successfully'
     })
   } catch (error: any) {
     console.error('Error deleting contact:', error)
