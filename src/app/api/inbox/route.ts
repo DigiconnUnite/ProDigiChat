@@ -175,6 +175,7 @@ export async function POST(request: NextRequest) {
         content: stringifyMessageContent({ text: content, type }),
         sentBy: userId || undefined,
         organizationId: messageOrgId,
+        stats: JSON.stringify({ totalSent: 1, delivered: 0, read: 0, failed: 0, clicked: 0 }),
       },
       include: {
         contact: {

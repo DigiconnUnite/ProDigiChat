@@ -416,6 +416,7 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
               status: 'sent',
               content: JSON.stringify({ text: queueItem.messageContent }),
               whatsappMessageId,
+              stats: JSON.stringify({ totalSent: 1, delivered: 0, read: 0, failed: 0, clicked: 0 }),
             },
           }).catch((e) => {
             console.error('[Queue] Failed to create Message record:', e);

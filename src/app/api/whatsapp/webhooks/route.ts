@@ -277,7 +277,8 @@ async function processWebhookAsync(rawBody: string): Promise<void> {
             direction: "outgoing",
             contactId: contact.id,
             campaignId: campaignId || undefined,
-            organizationId: messageOrgId
+            organizationId: messageOrgId,
+            stats: JSON.stringify({ totalSent: 0, delivered: 0, read: 0, failed: 0, clicked: 0 }),
           }
         });
       }

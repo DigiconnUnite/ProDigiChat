@@ -112,7 +112,8 @@ async function processIncomingMessage(message: any, metadata: any) {
         status: 'received',
         content: stringifyMessageContent(content),
         whatsappMessageId: message.id,
-        organizationId: contact.organizationId
+        organizationId: contact.organizationId,
+        stats: JSON.stringify({ totalSent: 0, delivered: 0, read: 0, failed: 0, clicked: 0 }),
       }
     });
 

@@ -439,6 +439,7 @@ export async function storeIncomingMessage(
       status: "delivered", // Incoming messages are considered delivered
       content: JSON.stringify(contentObj),
       organizationId: contact.organizationId || "",
+      stats: JSON.stringify({ totalSent: 0, delivered: 0, read: 0, failed: 0, clicked: 0 }),
     },
     include: {
       contact: {
