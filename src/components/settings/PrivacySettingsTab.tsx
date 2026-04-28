@@ -28,6 +28,10 @@ interface PrivacySettings {
     messages: number;
     campaigns: number;
     logs: number;
+    autoDeleteContacts: boolean;
+    autoDeleteMessages: boolean;
+    autoDeleteCampaigns: boolean;
+    autoDeleteLogs: boolean;
   };
   thirdPartySharing: {
     analytics: boolean;
@@ -49,16 +53,20 @@ export function PrivacySettingsTab({ organizationId }: PrivacySettingsTabProps) 
     gdprMode: false,
     explicitConsent: false,
     doubleOptIn: false,
-    rightToDeletion: true,
-    rightToPortability: true,
+    rightToDeletion: false,
+    rightToPortability: false,
     dataRetention: {
       contacts: 365,
-      messages: 90,
+      messages: 365,
       campaigns: 365,
-      logs: 30,
+      logs: 90,
+      autoDeleteContacts: false,
+      autoDeleteMessages: false,
+      autoDeleteCampaigns: false,
+      autoDeleteLogs: false,
     },
     thirdPartySharing: {
-      analytics: true,
+      analytics: false,
       integrations: false,
       advertising: false,
     },
@@ -84,7 +92,7 @@ export function PrivacySettingsTab({ organizationId }: PrivacySettingsTabProps) 
   const fetchPrivacySettings = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/settings/privacy');
+      const response = await fetch(`/api/settings/privacy?organizationId=${organizationId}`);
       if (response.ok) {
         const data = await response.json();
         if (data.settings) {
@@ -102,7 +110,7 @@ export function PrivacySettingsTab({ organizationId }: PrivacySettingsTabProps) 
   const handleSaveSettings = async () => {
     setIsSaving(true);
     try {
-      const response = await fetch('/api/settings/privacy', {
+      const response = await fetch(`/api/settings/privacy?organizationId=${organizationId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -126,7 +134,7 @@ export function PrivacySettingsTab({ organizationId }: PrivacySettingsTabProps) 
 
   const handleExportData = async () => {
     try {
-      const response = await fetch('/api/settings/privacy', {
+      const response = await fetch(`/api/settings/privacy?organizationId=${organizationId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -151,7 +159,7 @@ export function PrivacySettingsTab({ organizationId }: PrivacySettingsTabProps) 
 
   const handleDeleteData = async () => {
     try {
-      const response = await fetch('/api/settings/privacy', {
+      const response = await fetch(`/api/settings/privacy?organizationId=${organizationId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -185,21 +193,23 @@ export function PrivacySettingsTab({ organizationId }: PrivacySettingsTabProps) 
 
   return (
     <div className="space-y-6">
+      {/* Page Header */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold text-gray-900">Privacy & GDPR</h2>
+        <p className="text-sm text-gray-500 mt-1">Manage data compliance, consent, and retention policies</p>
+      </div>
+
       {/* GDPR Compliance Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5" />
-            GDPR Compliance
-          </CardTitle>
-          <CardDescription>Configure GDPR compliance settings for your organization</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between py-3 border-b">
+      <Card className="border border-gray-200 rounded-lg p-5">
+        <h3 className="text-base font-semibold text-gray-900 mb-1">GDPR Compliance</h3>
+        <p className="text-sm text-gray-500 mb-4">Configure settings required for GDPR compliance</p>
+        
+        <div className="space-y-0">
+          <div className="flex items-center justify-between py-3 border-b border-gray-200">
             <div className="flex-1">
-              <div className="font-medium">Enable GDPR Mode</div>
-              <div className="text-sm text-muted-foreground">
-                Activate GDPR compliance features across the platform
+              <div className="text-sm font-medium text-gray-900">Enable GDPR Mode</div>
+              <div className="text-xs text-gray-500 mt-0.5">
+                Enforce data rights, consent requirements, and DPO assignments
               </div>
             </div>
             <Switch
@@ -209,11 +219,11 @@ export function PrivacySettingsTab({ organizationId }: PrivacySettingsTabProps) 
               }
             />
           </div>
-          <div className="flex items-center justify-between py-3 border-b">
+          <div className="flex items-center justify-between py-3 border-b border-gray-200">
             <div className="flex-1">
-              <div className="font-medium">Explicit Consent Required</div>
-              <div className="text-sm text-muted-foreground">
-                Require explicit consent from contacts before processing their data
+              <div className="text-sm font-medium text-gray-900">Require Explicit Consent</div>
+              <div className="text-xs text-gray-500 mt-0.5">
+                Contacts must explicitly opt-in before receiving messages
               </div>
             </div>
             <Switch
@@ -224,11 +234,11 @@ export function PrivacySettingsTab({ organizationId }: PrivacySettingsTabProps) 
               disabled={!privacySettings.gdprMode}
             />
           </div>
-          <div className="flex items-center justify-between py-3 border-b">
+          <div className="flex items-center justify-between py-3 border-b border-gray-200">
             <div className="flex-1">
-              <div className="font-medium">Double Opt-In</div>
-              <div className="text-sm text-muted-foreground">
-                Require email confirmation for new contact signups
+              <div className="text-sm font-medium text-gray-900">Double Opt-In</div>
+              <div className="text-xs text-gray-500 mt-0.5">
+                Send confirmation message before adding contact to campaigns
               </div>
             </div>
             <Switch
@@ -239,11 +249,11 @@ export function PrivacySettingsTab({ organizationId }: PrivacySettingsTabProps) 
               disabled={!privacySettings.gdprMode}
             />
           </div>
-          <div className="flex items-center justify-between py-3 border-b">
+          <div className="flex items-center justify-between py-3 border-b border-gray-200">
             <div className="flex-1">
-              <div className="font-medium">Right to Deletion</div>
-              <div className="text-sm text-muted-foreground">
-                Allow users to request deletion of their personal data
+              <div className="text-sm font-medium text-gray-900">Right to Deletion</div>
+              <div className="text-xs text-gray-500 mt-0.5">
+                Allow contacts to request permanent removal of their data
               </div>
             </div>
             <Switch
@@ -255,9 +265,9 @@ export function PrivacySettingsTab({ organizationId }: PrivacySettingsTabProps) 
           </div>
           <div className="flex items-center justify-between py-3">
             <div className="flex-1">
-              <div className="font-medium">Right to Portability</div>
-              <div className="text-sm text-muted-foreground">
-                Allow users to export their data in a machine-readable format
+              <div className="text-sm font-medium text-gray-900">Right to Portability</div>
+              <div className="text-xs text-gray-500 mt-0.5">
+                Allow contacts to export their data
               </div>
             </div>
             <Switch
@@ -267,21 +277,51 @@ export function PrivacySettingsTab({ organizationId }: PrivacySettingsTabProps) 
               }
             />
           </div>
-        </CardContent>
+        </div>
+        
+        <div className="border-t border-gray-200 my-4"></div>
+        
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-1">
+            <Label className="text-sm font-medium text-gray-700">Data Protection Officer (DPO) Email</Label>
+            <Input
+              type="email"
+              value={privacySettings.dpoEmail}
+              onChange={(e) =>
+                setPrivacySettings({ ...privacySettings, dpoEmail: e.target.value })
+              }
+              placeholder="dpo@company.com"
+              className="text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-sm font-medium text-gray-700">GDPR Data Retention (days)</Label>
+            <Input
+              type="number"
+              value={privacySettings.retentionPeriod}
+              onChange={(e) =>
+                setPrivacySettings({
+                  ...privacySettings,
+                  retentionPeriod: parseInt(e.target.value) || 0,
+                })
+              }
+              min="30"
+              className="text-sm"
+            />
+          </div>
+        </div>
       </Card>
 
       {/* Data Retention Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Data Retention Policies</CardTitle>
-          <CardDescription>Configure how long different types of data are stored</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="contacts-retention">Contacts (days)</Label>
+      <Card className="border border-gray-200 rounded-lg p-5">
+        <h3 className="text-base font-semibold text-gray-900 mb-1">Data Retention Policy</h3>
+        <p className="text-sm text-gray-500 mb-4">Automatically delete data after specified retention period</p>
+        
+        <div className="space-y-3">
+          <div className="flex items-center justify-between py-2">
+            <span className="text-sm text-gray-900">Contacts</span>
+            <div className="flex items-center gap-2">
               <Input
-                id="contacts-retention"
                 type="number"
                 value={privacySettings.dataRetention.contacts}
                 onChange={(e) =>
@@ -293,12 +333,29 @@ export function PrivacySettingsTab({ organizationId }: PrivacySettingsTabProps) 
                     },
                   })
                 }
+                className="w-20 text-sm h-8"
               />
+              <span className="text-xs text-gray-500">days</span>
+              <Switch
+                checked={privacySettings.dataRetention.autoDeleteContacts}
+                onCheckedChange={(checked) =>
+                  setPrivacySettings({
+                    ...privacySettings,
+                    dataRetention: {
+                      ...privacySettings.dataRetention,
+                      autoDeleteContacts: checked,
+                    },
+                  })
+                }
+                className="scale-75"
+              />
+              <span className="text-xs text-gray-600">Auto-delete</span>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="messages-retention">Messages (days)</Label>
+          </div>
+          <div className="flex items-center justify-between py-2">
+            <span className="text-sm text-gray-900">Messages</span>
+            <div className="flex items-center gap-2">
               <Input
-                id="messages-retention"
                 type="number"
                 value={privacySettings.dataRetention.messages}
                 onChange={(e) =>
@@ -310,12 +367,29 @@ export function PrivacySettingsTab({ organizationId }: PrivacySettingsTabProps) 
                     },
                   })
                 }
+                className="w-20 text-sm h-8"
               />
+              <span className="text-xs text-gray-500">days</span>
+              <Switch
+                checked={privacySettings.dataRetention.autoDeleteMessages}
+                onCheckedChange={(checked) =>
+                  setPrivacySettings({
+                    ...privacySettings,
+                    dataRetention: {
+                      ...privacySettings.dataRetention,
+                      autoDeleteMessages: checked,
+                    },
+                  })
+                }
+                className="scale-75"
+              />
+              <span className="text-xs text-gray-600">Auto-delete</span>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="campaigns-retention">Campaigns (days)</Label>
+          </div>
+          <div className="flex items-center justify-between py-2">
+            <span className="text-sm text-gray-900">Campaigns</span>
+            <div className="flex items-center gap-2">
               <Input
-                id="campaigns-retention"
                 type="number"
                 value={privacySettings.dataRetention.campaigns}
                 onChange={(e) =>
@@ -327,12 +401,29 @@ export function PrivacySettingsTab({ organizationId }: PrivacySettingsTabProps) 
                     },
                   })
                 }
+                className="w-20 text-sm h-8"
               />
+              <span className="text-xs text-gray-500">days</span>
+              <Switch
+                checked={privacySettings.dataRetention.autoDeleteCampaigns}
+                onCheckedChange={(checked) =>
+                  setPrivacySettings({
+                    ...privacySettings,
+                    dataRetention: {
+                      ...privacySettings.dataRetention,
+                      autoDeleteCampaigns: checked,
+                    },
+                  })
+                }
+                className="scale-75"
+              />
+              <span className="text-xs text-gray-600">Auto-delete</span>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="logs-retention">Activity Logs (days)</Label>
+          </div>
+          <div className="flex items-center justify-between py-2">
+            <span className="text-sm text-gray-900">Activity Logs</span>
+            <div className="flex items-center gap-2">
               <Input
-                id="logs-retention"
                 type="number"
                 value={privacySettings.dataRetention.logs}
                 onChange={(e) =>
@@ -344,24 +435,39 @@ export function PrivacySettingsTab({ organizationId }: PrivacySettingsTabProps) 
                     },
                   })
                 }
+                className="w-20 text-sm h-8"
               />
+              <span className="text-xs text-gray-500">days</span>
+              <Switch
+                checked={privacySettings.dataRetention.autoDeleteLogs}
+                onCheckedChange={(checked) =>
+                  setPrivacySettings({
+                    ...privacySettings,
+                    dataRetention: {
+                      ...privacySettings.dataRetention,
+                      autoDeleteLogs: checked,
+                    },
+                  })
+                }
+                className="scale-75"
+              />
+              <span className="text-xs text-gray-600">Auto-delete</span>
             </div>
           </div>
-        </CardContent>
+        </div>
       </Card>
 
       {/* Third-Party Sharing Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Third-Party Data Sharing</CardTitle>
-          <CardDescription>Control how your data is shared with third parties</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between py-3 border-b">
+      <Card className="border border-gray-200 rounded-lg p-5">
+        <h3 className="text-base font-semibold text-gray-900 mb-1">Third-Party Data Sharing</h3>
+        <p className="text-sm text-gray-500 mb-4">Control how data is shared with external services</p>
+        
+        <div className="space-y-0">
+          <div className="flex items-center justify-between py-3 border-b border-gray-200">
             <div className="flex-1">
-              <div className="font-medium">Analytics Services</div>
-              <div className="text-sm text-muted-foreground">
-                Share anonymized usage data with analytics providers
+              <div className="text-sm font-medium text-gray-900">Analytics Tracking</div>
+              <div className="text-xs text-gray-500 mt-0.5">
+                Allow anonymized analytics for platform improvement
               </div>
             </div>
             <Switch
@@ -377,11 +483,11 @@ export function PrivacySettingsTab({ organizationId }: PrivacySettingsTabProps) 
               }
             />
           </div>
-          <div className="flex items-center justify-between py-3 border-b">
+          <div className="flex items-center justify-between py-3 border-b border-gray-200">
             <div className="flex-1">
-              <div className="font-medium">Third-Party Integrations</div>
-              <div className="text-sm text-muted-foreground">
-                Allow data sharing with connected third-party apps
+              <div className="text-sm font-medium text-gray-900">Third-Party Integrations</div>
+              <div className="text-xs text-gray-500 mt-0.5">
+                Share data with connected CRM or marketing tools
               </div>
             </div>
             <Switch
@@ -399,9 +505,9 @@ export function PrivacySettingsTab({ organizationId }: PrivacySettingsTabProps) 
           </div>
           <div className="flex items-center justify-between py-3">
             <div className="flex-1">
-              <div className="font-medium">Advertising</div>
-              <div className="text-sm text-muted-foreground">
-                Allow use of data for personalized advertising
+              <div className="text-sm font-medium text-gray-900">Advertising Data</div>
+              <div className="text-xs text-gray-500 mt-0.5">
+                Allow use of data for targeted advertising purposes
               </div>
             </div>
             <Switch
@@ -417,193 +523,76 @@ export function PrivacySettingsTab({ organizationId }: PrivacySettingsTabProps) 
               }
             />
           </div>
-        </CardContent>
+        </div>
       </Card>
-
-      {/* DPO Contact Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Data Protection Officer</CardTitle>
-          <CardDescription>Contact information for privacy-related inquiries</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="dpo-email">DPO Email</Label>
-              <Input
-                id="dpo-email"
-                type="email"
-                value={privacySettings.dpoEmail}
-                onChange={(e) =>
-                  setPrivacySettings({ ...privacySettings, dpoEmail: e.target.value })
-                }
-                placeholder="dpo@company.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="retention-period">Default Retention Period (days)</Label>
-              <Input
-                id="retention-period"
-                type="number"
-                value={privacySettings.retentionPeriod}
-                onChange={(e) =>
-                  setPrivacySettings({
-                    ...privacySettings,
-                    retentionPeriod: parseInt(e.target.value) || 0,
-                  })
-                }
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <Button onClick={handleSaveSettings} disabled={isSaving}>
-          {isSaving ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            'Save Privacy Settings'
-          )}
-        </Button>
-      </div>
 
       {/* Data Export Card */}
-      <Card className="border-amber-200 bg-amber-50/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Download className="h-5 w-5" />
-            Data Export
-          </CardTitle>
-          <CardDescription>Request a copy of all your organization's data</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Request Data Export
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Request Data Export</DialogTitle>
-                <DialogDescription>
-                  Choose the format and options for your data export
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="export-format">Format</Label>
-                  <Select value={exportFormat} onValueChange={setExportFormat}>
-                    <SelectTrigger id="export-format">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="json">JSON</SelectItem>
-                      <SelectItem value="csv">CSV</SelectItem>
-                      <SelectItem value="xml">XML</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="include-media"
-                    checked={includeMedia}
-                    onChange={(e) => setIncludeMedia(e.target.checked)}
-                  />
-                  <Label htmlFor="include-media">Include media files (images, attachments)</Label>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowExportDialog(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleExportData}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Request Export
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </CardContent>
+      <Card className="border border-gray-200 rounded-lg p-5">
+        <h3 className="text-base font-semibold text-gray-900 mb-1">Data Export</h3>
+        <p className="text-sm text-gray-500 mb-4">Export all organization data in compliance with portability rights</p>
+        
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-1">
+            <Label className="text-sm font-medium text-gray-700">Export Format</Label>
+            <Select value={exportFormat} onValueChange={setExportFormat}>
+              <SelectTrigger className="text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="json">JSON</SelectItem>
+                <SelectItem value="csv">CSV</SelectItem>
+                <SelectItem value="xml">XML</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-sm font-medium text-gray-700">Include Media</Label>
+            <Select value={includeMedia ? 'yes' : 'no'} onValueChange={(v) => setIncludeMedia(v === 'yes')}>
+              <SelectTrigger className="text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="no">No</SelectItem>
+                <SelectItem value="yes">Yes</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="mt-4">
+          <Button onClick={handleExportData} size="sm" className="text-xs px-3 py-1.5">
+            Request Data Export
+          </Button>
+        </div>
       </Card>
 
-      {/* Data Deletion Card */}
-      <Card className="border-red-200 bg-red-50/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-destructive">
-            <AlertTriangle className="h-5 w-5" />
-            Data Deletion
-          </CardTitle>
-          <CardDescription>
-            Permanently delete your organization's data. This action cannot be undone.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-            <DialogTrigger asChild>
-              <Button variant="destructive">
-                <Trash2 className="h-4 w-4 mr-2" />
-                Request Data Deletion
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle className="text-destructive">Confirm Data Deletion</DialogTitle>
-                <DialogDescription>
-                  This will permanently delete all data for your organization. This action cannot be undone.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="delete-entity">Entity Type</Label>
-                  <Select value={deleteEntityType} onValueChange={setDeleteEntityType}>
-                    <SelectTrigger id="delete-entity">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Data</SelectItem>
-                      <SelectItem value="contacts">Contacts Only</SelectItem>
-                      <SelectItem value="messages">Messages Only</SelectItem>
-                      <SelectItem value="campaigns">Campaigns Only</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="delete-confirmation">
-                    Type "DELETE" to confirm
-                  </Label>
-                  <Input
-                    id="delete-confirmation"
-                    value={deleteConfirmation}
-                    onChange={(e) => setDeleteConfirmation(e.target.value)}
-                    placeholder="DELETE"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDeleteData}
-                  disabled={deleteConfirmation !== 'DELETE'}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Data
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </CardContent>
-      </Card>
+      {/* Save Bar */}
+      <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 flex items-center justify-between -mx-6 px-6 mt-6">
+        <span className="text-sm text-gray-500">Privacy settings are legally binding — review before saving</span>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="text-xs px-4 py-2"
+            onClick={() => {
+              fetchPrivacySettings()
+            }}
+          >
+            Discard
+          </Button>
+          <Button 
+            onClick={handleSaveSettings} 
+            disabled={isSaving}
+            className="bg-green-600 hover:bg-green-700 text-white text-xs px-4 py-2"
+          >
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+            ) : (
+              'Save Privacy Settings'
+            )}
+          </Button>
+        </div>
+      </div>
+
     </div>
   );
 }

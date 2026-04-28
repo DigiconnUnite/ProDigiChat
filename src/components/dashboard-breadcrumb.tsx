@@ -56,7 +56,7 @@ export function DashboardBreadcrumb() {
   })
 
   return (
-    <div className="flex container mx-auto items-center justify-between mb-4 md:relative md:top-0 md:left-0 md:right-0 md:bg-transparent md:shadow-none md:z-auto fixed top-14 left-0 right-0 z-40  bg-background md:text-sm text-xs   py-0 px-3 md:px-0">
+    <div className="flex container mx-auto items-center justify-between mb-4 md:hidden fixed top-14 left-0 right-0 z-40 bg-background text-xs py-0 px-3">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>

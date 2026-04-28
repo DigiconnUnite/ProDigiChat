@@ -100,11 +100,10 @@ export function WebhooksTab({ organizationId }: WebhooksTabProps) {
 
     setIsSaving(true);
     try {
-      const response = await fetch('/api/settings/webhooks', {
+      const response = await fetch(`/api/settings/webhooks?organizationId=${organizationId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId,
           name: newWebhookName,
           url: newWebhookUrl,
           events: newWebhookEvents,
@@ -139,7 +138,7 @@ export function WebhooksTab({ organizationId }: WebhooksTabProps) {
     }
 
     try {
-      const response = await fetch(`/api/settings/webhooks?id=${webhookId}`, {
+      const response = await fetch(`/api/settings/webhooks?id=${webhookId}&organizationId=${organizationId}`, {
         method: 'DELETE',
       });
 
@@ -158,7 +157,7 @@ export function WebhooksTab({ organizationId }: WebhooksTabProps) {
 
   const handleTestWebhook = async (webhookId: string) => {
     try {
-      const response = await fetch(`/api/settings/webhooks?id=${webhookId}`, {
+      const response = await fetch(`/api/settings/webhooks?id=${webhookId}&organizationId=${organizationId}`, {
         method: 'PATCH',
       });
 
@@ -219,205 +218,192 @@ export function WebhooksTab({ organizationId }: WebhooksTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Page Header */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold text-gray-900">Webhooks</h2>
+        <p className="text-sm text-gray-500 mt-1">Configure HTTP endpoints to receive real-time event notifications</p>
+      </div>
+
       {/* Webhook Endpoints Card */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Webhook className="h-5 w-5" />
-                Webhook Endpoints
-              </CardTitle>
-              <CardDescription>
-                {webhooks.length} active endpoints
-              </CardDescription>
-            </div>
-            <Button onClick={() => setShowCreateForm(!showCreateForm)} size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Endpoint
-            </Button>
+      <Card className="border border-gray-200 rounded-lg p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-base font-semibold text-gray-900">Webhook Endpoints</h3>
+            <p className="text-sm text-gray-500 mt-0.5">{webhooks.length} active endpoints</p>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Create Webhook Form */}
-          {showCreateForm && (
-            <div className="bg-secondary/50 rounded-lg p-4 space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="webhook-name">Endpoint Name</Label>
-                  <Input
-                    id="webhook-name"
-                    placeholder="e.g. CRM Integration"
-                    value={newWebhookName}
-                    onChange={(e) => setNewWebhookName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="webhook-url">URL</Label>
-                  <Input
-                    id="webhook-url"
-                    type="url"
-                    placeholder="https://yourapp.com/webhook"
-                    value={newWebhookUrl}
-                    onChange={(e) => setNewWebhookUrl(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Events to Subscribe</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {WEBHOOK_EVENTS.map((event) => (
-                    <label
-                      key={event.id}
-                      className="flex items-center gap-2 text-sm cursor-pointer"
-                    >
-                      <Checkbox
-                        checked={newWebhookEvents.includes(event.id)}
-                        onCheckedChange={() => toggleEvent(event.id)}
-                      />
-                      {event.id}
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="webhook-secret">Secret Key (optional)</Label>
+          <Button onClick={() => setShowCreateForm(!showCreateForm)} className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Endpoint
+          </Button>
+        </div>
+
+        {/* Create Webhook Form */}
+        {showCreateForm && (
+          <div className="bg-gray-50 rounded-md p-4 mb-4 space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label className="text-sm font-medium text-gray-700">Endpoint Name</Label>
                 <Input
-                  id="webhook-secret"
-                  type="password"
-                  placeholder="Used to sign payloads"
-                  value={newWebhookSecret}
-                  onChange={(e) => setNewWebhookSecret(e.target.value)}
+                  placeholder="e.g. CRM Integration"
+                  value={newWebhookName}
+                  onChange={(e) => setNewWebhookName(e.target.value)}
+                  className="text-sm"
                 />
               </div>
-              <div className="flex gap-2">
-                <Button onClick={handleCreateWebhook} disabled={isSaving} size="sm">
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Adding...
-                    </>
-                  ) : (
-                    'Add Endpoint'
-                  )}
-                </Button>
-                <Button onClick={() => setShowCreateForm(false)} variant="outline" size="sm">
-                  Cancel
-                </Button>
+              <div className="space-y-1">
+                <Label className="text-sm font-medium text-gray-700">URL</Label>
+                <Input
+                  type="url"
+                  placeholder="https://yourapp.com/webhook"
+                  value={newWebhookUrl}
+                  onChange={(e) => setNewWebhookUrl(e.target.value)}
+                  className="text-sm"
+                />
               </div>
             </div>
-          )}
+            <div className="space-y-1">
+              <Label className="text-sm font-medium text-gray-700">Events to Subscribe</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {WEBHOOK_EVENTS.map((event) => (
+                  <label
+                    key={event.id}
+                    className="flex items-center gap-2 text-sm cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={newWebhookEvents.includes(event.id)}
+                      onCheckedChange={() => toggleEvent(event.id)}
+                    />
+                    {event.id}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-sm font-medium text-gray-700">Secret Key (optional)</Label>
+              <Input
+                type="password"
+                placeholder="Used to sign payloads"
+                value={newWebhookSecret}
+                onChange={(e) => setNewWebhookSecret(e.target.value)}
+                className="text-sm"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleCreateWebhook} disabled={isSaving} size="sm" className="text-xs px-3 py-1.5">
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  'Add Endpoint'
+                )}
+              </Button>
+              <Button onClick={() => setShowCreateForm(false)} variant="outline" size="sm" className="text-xs px-3 py-1.5">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
 
-          {/* Webhooks Table */}
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>URL</TableHead>
-                    <TableHead>Events</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Last Triggered</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {webhooks.map((webhook) => (
-                    <TableRow key={webhook.id}>
-                      <TableCell className="font-medium">{webhook.name}</TableCell>
-                      <TableCell>
-                        <code className="text-sm font-mono">{webhook.url}</code>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {webhook.events.slice(0, 2).map((event) => (
-                            <Badge key={event} variant="outline" className="text-xs">
-                              {event}
-                            </Badge>
-                          ))}
-                          {webhook.events.length > 2 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{webhook.events.length - 2}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{getStatusBadge(webhook.status)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {webhook.lastTriggered ? formatDate(webhook.lastTriggered) : 'Never'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            onClick={() => handleTestWebhook(webhook.id)}
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                          >
-                            <Play className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            onClick={() => handleDeleteWebhook(webhook.id)}
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
+        {/* Webhooks Table */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Name</th>
+                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">URL</th>
+                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Events</th>
+                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Status</th>
+                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Last Triggered</th>
+                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {webhooks.map((webhook) => (
+                <tr key={webhook.id} className="border-b border-gray-200 hover:bg-gray-50">
+                  <td className="py-3 px-3">
+                    <span className="font-medium text-gray-900">{webhook.name}</span>
+                  </td>
+                  <td className="py-3 px-3">
+                    <code className="text-xs font-mono text-gray-600">{webhook.url}</code>
+                  </td>
+                  <td className="py-3 px-3">
+                    <div className="flex flex-wrap gap-1">
+                      {webhook.events.slice(0, 2).map((event) => (
+                        <Badge key={event} variant="outline" className="text-xs bg-gray-100">
+                          {event}
+                        </Badge>
+                      ))}
+                      {webhook.events.length > 2 && (
+                        <Badge variant="outline" className="text-xs bg-gray-100">
+                          +{webhook.events.length - 2}
+                        </Badge>
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-3 px-3">
+                    {getStatusBadge(webhook.status)}
+                  </td>
+                  <td className="py-3 px-3 text-xs text-gray-600">
+                    {webhook.lastTriggered ? formatDate(webhook.lastTriggered) : 'Never'}
+                  </td>
+                  <td className="py-3 px-3">
+                    <Button 
+                      onClick={() => handleTestWebhook(webhook.id)} 
+                      variant="outline" 
+                      size="sm" 
+                      className="text-xs px-3 py-1.5"
+                    >
+                      Test
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </Card>
 
       {/* Delivery Logs Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Delivery Logs</CardTitle>
-          <CardDescription>Recent webhook delivery attempts</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Event</TableHead>
-                  <TableHead>Endpoint</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Response</TableHead>
-                  <TableHead>Time</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {deliveryLogs.map((log) => (
-                  <TableRow key={log.id}>
-                    <TableCell className="font-medium">{log.event}</TableCell>
-                    <TableCell>
-                      {webhooks.find(w => w.id === log.webhookId)?.name || 'Unknown'}
-                    </TableCell>
-                    <TableCell>{getLogStatusBadge(log.status)}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {log.responseTime ? `${log.responseTime}ms` : '—'}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDate(log.timestamp)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
+      <Card className="border border-gray-200 rounded-lg p-5">
+        <h3 className="text-base font-semibold text-gray-900 mb-1">Delivery Logs</h3>
+        <p className="text-sm text-gray-500 mb-4">Recent webhook delivery attempts</p>
+        
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-gray-200">
+              <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Event</th>
+              <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Endpoint</th>
+              <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Status</th>
+              <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Response</th>
+              <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            {deliveryLogs.map((log) => (
+              <tr key={log.id} className="border-b border-gray-200 hover:bg-gray-50">
+                <td className="py-2 px-3 font-medium text-gray-900">{log.event}</td>
+                <td className="py-2 px-3">
+                  {webhooks.find(w => w.id === log.webhookId)?.name || 'Unknown'}
+                </td>
+                <td className="py-2 px-3">
+                  {getLogStatusBadge(log.status)}
+                </td>
+                <td className="py-2 px-3 text-xs text-gray-600">
+                  {log.responseTime ? `${log.responseTime}ms` : '—'}
+                </td>
+                <td className="py-2 px-3 text-xs text-gray-600">
+                  {formatDate(log.timestamp)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </Card>
     </div>
   );

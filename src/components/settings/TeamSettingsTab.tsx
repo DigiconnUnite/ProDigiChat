@@ -173,7 +173,7 @@ export function TeamSettingsTab({ organizationId }: TeamSettingsTabProps) {
     }
 
     try {
-      const response = await fetch(`/api/settings/team?id=${memberId}`, {
+      const response = await fetch(`/api/settings/team?id=${memberId}&organizationId=${organizationId}`, {
         method: 'DELETE',
       });
 
@@ -192,7 +192,7 @@ export function TeamSettingsTab({ organizationId }: TeamSettingsTabProps) {
 
   const handleResendInvite = async (memberId: string) => {
     try {
-      const response = await fetch(`/api/settings/team?id=${memberId}`, {
+      const response = await fetch(`/api/settings/team?id=${memberId}&organizationId=${organizationId}`, {
         method: 'PATCH',
       });
 
@@ -250,303 +250,277 @@ export function TeamSettingsTab({ organizationId }: TeamSettingsTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* Team Members Card */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Team Members
-              </CardTitle>
-              <CardDescription>
-                {members.length} of 10 seats used on Professional plan
-              </CardDescription>
-            </div>
-            <Button onClick={() => setShowInviteForm(!showInviteForm)} size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Invite Member
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Invite Form */}
-          {showInviteForm && (
-            <div className="bg-secondary/50 rounded-lg p-4 space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="invite-email">Email Address</Label>
-                  <Input
-                    id="invite-email"
-                    type="email"
-                    placeholder="team@company.com"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="invite-role">Role</Label>
-                  <Select value={inviteRole} onValueChange={setInviteRole}>
-                    <SelectTrigger id="invite-role">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="owner">Owner</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="manager">Manager</SelectItem>
-                      <SelectItem value="member">Member</SelectItem>
-                      <SelectItem value="viewer">Viewer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={handleInvite} disabled={isSaving} size="sm">
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Mail className="h-4 w-4 mr-2" />
-                      Send Invite
-                    </>
-                  )}
-                </Button>
-                <Button onClick={() => setShowInviteForm(false)} variant="outline" size="sm">
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
+      {/* Page Header */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold text-gray-900">Team Management</h2>
+        <p className="text-sm text-gray-500 mt-1">Invite members and manage their access roles</p>
+      </div>
 
-          {/* Members Table */}
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      {/* Team Members Card */}
+      <Card className="border border-gray-200 rounded-lg p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-base font-semibold text-gray-900">Team Members</h3>
+            <p className="text-sm text-gray-500 mt-0.5">{members.length} of 10 seats used on Professional plan</p>
+          </div>
+          <Button onClick={() => setShowInviteForm(!showInviteForm)} className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2">
+            <Plus className="w-4 h-4 mr-2" />
+            Invite Member
+          </Button>
+        </div>
+
+        {/* Invite Form */}
+        {showInviteForm && (
+          <div className="bg-gray-50 rounded-md p-4 mb-4 space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label className="text-sm font-medium text-gray-700">Email Address</Label>
+                <Input
+                  type="email"
+                  placeholder="team@company.com"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-sm font-medium text-gray-700">Role</Label>
+                <Select value={inviteRole} onValueChange={setInviteRole}>
+                  <SelectTrigger className="text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="owner">Owner</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="manager">Manager</SelectItem>
+                    <SelectItem value="member">Member</SelectItem>
+                    <SelectItem value="viewer">Viewer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Member</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Last Active</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {members.map((member) => (
-                    <TableRow key={member.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center text-green-800 font-medium text-sm">
-                            {member.avatar ? (
-                              <img src={member.avatar} alt={member.name} className="h-8 w-8 rounded-full object-cover" />
-                            ) : (
-                              getInitials(member.name)
-                            )}
-                          </div>
-                          <div>
-                            <div className="font-medium">{member.name}</div>
-                            <div className="text-sm text-muted-foreground">{member.email}</div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getRoleBadgeColor(member.role)} variant="outline">
-                          {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getStatusBadgeColor(member.status)} variant="outline">
-                          {member.status.charAt(0).toUpperCase() + member.status.slice(1)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          {member.lastActive ? formatDate(member.lastActive) : 'Never'}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {member.status === 'invited' && (
-                            <Button
-                              onClick={() => handleResendInvite(member.id)}
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                            >
-                              <RefreshCw className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                                onClick={() => {
-                                  setEditingMember(member);
-                                  setEditRole(member.role);
-                                }}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Edit Member Role</DialogTitle>
-                                <DialogDescription>
-                                  Change the role for {member.name}
-                                </DialogDescription>
-                              </DialogHeader>
-                              <div className="space-y-4 py-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="edit-role">Role</Label>
-                                  <Select value={editRole} onValueChange={setEditRole}>
-                                    <SelectTrigger id="edit-role">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="owner">Owner</SelectItem>
-                                      <SelectItem value="admin">Admin</SelectItem>
-                                      <SelectItem value="manager">Manager</SelectItem>
-                                      <SelectItem value="member">Member</SelectItem>
-                                      <SelectItem value="viewer">Viewer</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </div>
-                              <DialogFooter>
-                                <Button variant="outline" onClick={() => setEditingMember(null)}>
-                                  Cancel
-                                </Button>
-                                <Button onClick={handleUpdateRole} disabled={isSaving}>
-                                  {isSaving ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    'Save Changes'
-                                  )}
-                                </Button>
-                              </DialogFooter>
-                            </DialogContent>
-                          </Dialog>
+            <div className="flex gap-2">
+              <Button onClick={handleInvite} disabled={isSaving} size="sm" className="text-xs px-3 py-1.5">
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  'Send Invite'
+                )}
+              </Button>
+              <Button onClick={() => setShowInviteForm(false)} variant="outline" size="sm" className="text-xs px-3 py-1.5">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Members Table */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Member</th>
+                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Role</th>
+                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Status</th>
+                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Last Active</th>
+                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {members.map((member) => (
+                <tr key={member.id} className="border-b border-gray-200 hover:bg-gray-50">
+                  <td className="py-3 px-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-800 font-medium text-xs">
+                        {member.avatar ? (
+                          <img src={member.avatar} alt={member.name} className="w-8 h-8 rounded-full object-cover" />
+                        ) : (
+                          getInitials(member.name)
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900">{member.name}</div>
+                        <div className="text-xs text-gray-500">{member.email}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-3 px-3">
+                    <Badge className={getRoleBadgeColor(member.role)} variant="outline">
+                      {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                    </Badge>
+                  </td>
+                  <td className="py-3 px-3">
+                    <Badge className={getStatusBadgeColor(member.status)} variant="outline">
+                      {member.status.charAt(0).toUpperCase() + member.status.slice(1)}
+                    </Badge>
+                  </td>
+                  <td className="py-3 px-3 text-xs text-gray-600">
+                    {member.lastActive ? formatDate(member.lastActive) : 'Never'}
+                  </td>
+                  <td className="py-3 px-3">
+                    <div className="flex items-center gap-2">
+                      {member.status === 'invited' && (
+                        <Button
+                          onClick={() => handleResendInvite(member.id)}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs px-3 py-1.5"
+                        >
+                          Resend
+                        </Button>
+                      )}
+                      <Dialog>
+                        <DialogTrigger asChild>
                           <Button
-                            onClick={() => handleRemoveMember(member.id)}
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            className="text-xs px-3 py-1.5"
+                            onClick={() => {
+                              setEditingMember(member);
+                              setEditRole(member.role);
+                            }}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            Edit
                           </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Edit Member Role</DialogTitle>
+                            <DialogDescription>
+                              Change the role for {member.name}
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="edit-role">Role</Label>
+                              <Select value={editRole} onValueChange={setEditRole}>
+                                <SelectTrigger id="edit-role">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="owner">Owner</SelectItem>
+                                  <SelectItem value="admin">Admin</SelectItem>
+                                  <SelectItem value="manager">Manager</SelectItem>
+                                  <SelectItem value="member">Member</SelectItem>
+                                  <SelectItem value="viewer">Viewer</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => setEditingMember(null)}>
+                              Cancel
+                            </Button>
+                            <Button onClick={handleUpdateRole} disabled={isSaving}>
+                              {isSaving ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Saving...
+                                </>
+                              ) : (
+                                'Save Changes'
+                              )}
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </Card>
 
       {/* Role Permissions Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Role Permissions
-          </CardTitle>
-          <CardDescription>What each role can do in ProDigiChat</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {permissions ? (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Permission</TableHead>
-                    <TableHead>Owner</TableHead>
-                    <TableHead>Admin</TableHead>
-                    <TableHead>Manager</TableHead>
-                    <TableHead>Member</TableHead>
-                    <TableHead>Viewer</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow>
-                    <TableCell className="font-medium">Manage billing</TableCell>
-                    <TableCell>{permissions.owner.manageBilling ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.admin.manageBilling ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.manager.manageBilling ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.member.manageBilling ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.viewer.manageBilling ? '✓' : '—'}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">Manage team</TableCell>
-                    <TableCell>{permissions.owner.manageTeam ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.admin.manageTeam ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.manager.manageTeam ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.member.manageTeam ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.viewer.manageTeam ? '✓' : '—'}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">Create campaigns</TableCell>
-                    <TableCell>{permissions.owner.createCampaigns ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.admin.createCampaigns ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.manager.createCampaigns ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.member.createCampaigns ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.viewer.createCampaigns ? '✓' : '—'}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">Launch campaigns</TableCell>
-                    <TableCell>{permissions.owner.launchCampaigns ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.admin.launchCampaigns ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.manager.launchCampaigns ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.member.launchCampaigns ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.viewer.launchCampaigns ? '✓' : '—'}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">Manage contacts</TableCell>
-                    <TableCell>{permissions.owner.manageContacts ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.admin.manageContacts ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.manager.manageContacts ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.member.manageContacts ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.viewer.manageContacts ? '✓' : '—'}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">View analytics</TableCell>
-                    <TableCell>{permissions.owner.viewAnalytics ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.admin.viewAnalytics ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.manager.viewAnalytics ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.member.viewAnalytics ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.viewer.viewAnalytics ? '✓' : '—'}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">Manage settings</TableCell>
-                    <TableCell>{permissions.owner.manageSettings ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.admin.manageSettings ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.manager.manageSettings ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.member.manageSettings ? '✓' : '—'}</TableCell>
-                    <TableCell>{permissions.viewer.manageSettings ? '✓' : '—'}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          )}
-        </CardContent>
+      <Card className="border border-gray-200 rounded-lg p-5">
+        <h3 className="text-base font-semibold text-gray-900 mb-1">Role Permissions</h3>
+        <p className="text-sm text-gray-500 mb-4">What each role can do in ProDigiChat</p>
+        
+        {permissions ? (
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Permission</th>
+                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Owner</th>
+                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Admin</th>
+                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Manager</th>
+                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Member</th>
+                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Viewer</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b border-gray-200">
+                <td className="py-2 px-3 font-medium text-gray-900">Manage billing</td>
+                <td className="py-2 px-3">{permissions.owner.manageBilling ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.admin.manageBilling ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.manager.manageBilling ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.member.manageBilling ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.viewer.manageBilling ? '✓' : '—'}</td>
+              </tr>
+              <tr className="border-b border-gray-200">
+                <td className="py-2 px-3 font-medium text-gray-900">Manage team</td>
+                <td className="py-2 px-3">{permissions.owner.manageTeam ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.admin.manageTeam ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.manager.manageTeam ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.member.manageTeam ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.viewer.manageTeam ? '✓' : '—'}</td>
+              </tr>
+              <tr className="border-b border-gray-200">
+                <td className="py-2 px-3 font-medium text-gray-900">Create campaigns</td>
+                <td className="py-2 px-3">{permissions.owner.createCampaigns ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.admin.createCampaigns ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.manager.createCampaigns ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.member.createCampaigns ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.viewer.createCampaigns ? '✓' : '—'}</td>
+              </tr>
+              <tr className="border-b border-gray-200">
+                <td className="py-2 px-3 font-medium text-gray-900">Launch campaigns</td>
+                <td className="py-2 px-3">{permissions.owner.launchCampaigns ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.admin.launchCampaigns ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.manager.launchCampaigns ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.member.launchCampaigns ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.viewer.launchCampaigns ? '✓' : '—'}</td>
+              </tr>
+              <tr className="border-b border-gray-200">
+                <td className="py-2 px-3 font-medium text-gray-900">Manage contacts</td>
+                <td className="py-2 px-3">{permissions.owner.manageContacts ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.admin.manageContacts ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.manager.manageContacts ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.member.manageContacts ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.viewer.manageContacts ? '✓' : '—'}</td>
+              </tr>
+              <tr className="border-b border-gray-200">
+                <td className="py-2 px-3 font-medium text-gray-900">View analytics</td>
+                <td className="py-2 px-3">{permissions.owner.viewAnalytics ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.admin.viewAnalytics ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.manager.viewAnalytics ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.member.viewAnalytics ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.viewer.viewAnalytics ? '✓' : '—'}</td>
+              </tr>
+              <tr>
+                <td className="py-2 px-3 font-medium text-gray-900">Manage settings</td>
+                <td className="py-2 px-3">{permissions.owner.manageSettings ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.admin.manageSettings ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.manager.manageSettings ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.member.manageSettings ? '✓' : '—'}</td>
+                <td className="py-2 px-3">{permissions.viewer.manageSettings ? '✓' : '—'}</td>
+              </tr>
+            </tbody>
+          </table>
+        ) : (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        )}
       </Card>
     </div>
   );

@@ -336,11 +336,10 @@ function SettingsPageContent() {
   const saveNotificationSettings = async () => {
     setIsSaving(true)
     try {
-      const response = await fetch(`/api/settings/notifications`, {
+      const response = await fetch(`/api/settings/notifications?organizationId=${organizationId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          organizationId: organizationId,
           settings: notificationSettings,
         }),
       })
@@ -417,11 +416,59 @@ function SettingsPageContent() {
         <TabsContent value={SETTINGS_TABS.GENERAL} className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings2 className="h-5 w-5" />
-                Company Information
-              </CardTitle>
-              <CardDescription>Update your company details and preferences</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings2 className="h-5 w-5" />
+                    Company Information
+                  </CardTitle>
+                  <CardDescription>Update your company details and preferences</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      setGeneralSettings({
+                        companyName: "",
+                        companyEmail: "",
+                        website: "",
+                        supportEmail: "",
+                        address: "",
+                        timezone: "UTC",
+                        language: "en",
+                        dateFormat: "YYYY-MM-DD",
+                        currency: "USD",
+                        businessHours: {
+                          startTime: "09:00",
+                          endTime: "18:00",
+                          workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+                        },
+                      })
+                      setErrors({})
+                    }}
+                  >
+                    Discard
+                  </Button>
+                  <Button
+                    onClick={saveGeneralSettings}
+                    disabled={isSaving}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Save
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-6">
               {isLoading ? (
@@ -692,26 +739,6 @@ function SettingsPageContent() {
                       </div>
                     </div>
                   </div>
-
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={saveGeneralSettings}
-                      disabled={isSaving}
-                      className="bg-primary hover:bg-primary/90"
-                    >
-                      {isSaving ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="mr-2 h-4 w-4" />
-                          Save Changes
-                        </>
-                      )}
-                    </Button>
-                  </div>
                 </>
               )}
             </CardContent>
@@ -752,11 +779,60 @@ function SettingsPageContent() {
         <TabsContent value={SETTINGS_TABS.NOTIFICATIONS} className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Mail className="h-5 w-5" />
-                Email Notifications
-              </CardTitle>
-              <CardDescription>Configure email alerts for important events</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Mail className="h-5 w-5" />
+                    Email Notifications
+                  </CardTitle>
+                  <CardDescription>Configure email alerts for important events</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      setNotificationSettings({
+                        email: {
+                          enabled: true,
+                          frequency: "instant",
+                          events: ["campaign.completed", "campaign.failed", "message.failed"],
+                        },
+                        push: {
+                          enabled: true,
+                          soundEnabled: true,
+                          events: ["new.message", "campaign.status"],
+                        },
+                        slack: {
+                          enabled: false,
+                          webhookUrl: null,
+                          channel: null,
+                          events: ["campaign.completed", "campaign.failed"],
+                        },
+                      })
+                    }}
+                  >
+                    Discard
+                  </Button>
+                  <Button
+                    onClick={saveNotificationSettings}
+                    disabled={isSaving}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Save
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between py-2">
@@ -920,11 +996,6 @@ function SettingsPageContent() {
               )}
             </CardContent>
           </Card>
-
-          <Button onClick={saveNotificationSettings} disabled={isSaving} className="bg-primary hover:bg-primary/90">
-            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Save Notification Settings
-          </Button>
         </TabsContent>
 
         {/* ==================== Billing Tab ==================== */}

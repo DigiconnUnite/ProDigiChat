@@ -39,6 +39,7 @@ import {
 const csvImportSchema = z.object({
   defaultOptInStatus: z.enum(["opted_in", "opted_out", "pending"]),
   tags: z.string(),
+  duplicateHandling: z.enum(["skip", "update", "create"]),
 })
 
 type CsvImportFormData = z.infer<typeof csvImportSchema>
@@ -81,6 +82,7 @@ export function ImportContactsDialog({
     defaultValues: {
       defaultOptInStatus: "pending",
       tags: "",
+      duplicateHandling: "skip",
     },
   })
 
@@ -202,6 +204,7 @@ export function ImportContactsDialog({
       if (data.tags) {
         formData.append("tags", JSON.stringify(data.tags.split(",").map((t) => t.trim())))
       }
+      formData.append("duplicateHandling", data.duplicateHandling)
       formData.append("async", "true")
 
       const response = await fetch("/api/contacts/import", {
@@ -297,7 +300,7 @@ export function ImportContactsDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] bg-gray-50">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
@@ -332,6 +335,16 @@ export function ImportContactsDialog({
                     (CSV files only, max 10MB)
                   </span>
                 </label>
+              </div>
+
+              {/* CSV Format Example */}
+              <div>
+                <div className="text-sm font-medium mb-2">Required CSV Format</div>
+                <div className="bg-gray-50 rounded-md p-3 text-xs font-mono text-gray-600">
+                  firstName, lastName, phoneNumber, email, tags<br />
+                  John, Doe, +1234567890, john@example.com, "VIP,Newsletter"<br />
+                  Jane, Smith, +1234567891, jane@example.com, Lead
+                </div>
               </div>
 
               {/* Preview */}
@@ -403,6 +416,29 @@ export function ImportContactsDialog({
                     <FormControl>
                       <Input placeholder="customer, vip, lead" {...field} />
                     </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              {/* Duplicate Handling */}
+              <FormField
+                control={form.control}
+                name="duplicateHandling"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Duplicate Handling</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select option" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="skip">Skip duplicates</SelectItem>
+                        <SelectItem value="update">Update existing contacts</SelectItem>
+                        <SelectItem value="create">Create new (allow duplicates)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </FormItem>
                 )}
               />

@@ -20,12 +20,16 @@ import {
   Eye,
   ChevronLeft,
   ChevronRight,
+  Check,
+  Menu,
+  Filter,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Table,
   TableBody,
@@ -58,6 +62,8 @@ import {
 } from "@/components/ui/select"
 import { ContactFormDialog } from "@/components/contacts/contact-form-dialog"
 import { ImportContactsDialog } from "@/components/contacts/import-contacts-dialog"
+import { ContactDetailDrawer } from "@/components/contacts/contact-detail-drawer"
+import { BulkTagDialog } from "@/components/contacts/bulk-tag-dialog"
 import { cn } from "@/lib/utils"
 import { parseTags } from "@/types/common"
 
@@ -127,6 +133,16 @@ const lifecycleConfig = {
   bounced: { label: 'Bounced', className: 'bg-orange-100 text-orange-700 border-orange-200' },
 }
 
+// Avatar color palette
+const AVATAR_COLORS = ['#25D366', '#128C7E', '#0ea5e9', '#8b5cf6', '#f59e0b', '#ef4444', '#ec4899', '#14b8a6', '#f97316', '#6366f1']
+
+// Helper functions for avatars
+const getAvatarColor = (index: number) => AVATAR_COLORS[index % AVATAR_COLORS.length]
+
+const getInitials = (firstName: string, lastName?: string | null) => {
+  return (firstName[0] + (lastName ? lastName[0] : '')).toUpperCase()
+}
+
 export default function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -137,6 +153,8 @@ export default function ContactsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [lifecycleFilter, setLifecycleFilter] = useState<string>('all')
+  const [tagFilter, setTagFilter] = useState<string>('all')
+  const [segmentFilter, setSegmentFilter] = useState<string>('all')
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
@@ -154,6 +172,17 @@ export default function ContactsPage() {
   // Delete dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null)
+
+  // Contact detail drawer
+  const [drawerContact, setDrawerContact] = useState<Contact | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+
+  // Mobile sidebar
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Bulk selection
+  const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set())
+  const [selectAll, setSelectAll] = useState(false)
 
   // Fetch contacts
   const fetchContacts = useCallback(async () => {
@@ -234,9 +263,113 @@ export default function ContactsPage() {
     setSearchQuery('')
     setStatusFilter('all')
     setLifecycleFilter('all')
+    setTagFilter('all')
+    setSegmentFilter('all')
     setCurrentPage(1)
     setSortConfig({ field: 'createdAt', order: 'desc' })
   }, [])
+
+  // Handle bulk selection
+  const handleSelectContact = (contactId: string, checked: boolean) => {
+    const newSelected = new Set(selectedContacts)
+    if (checked) {
+      newSelected.add(contactId)
+    } else {
+      newSelected.delete(contactId)
+    }
+    setSelectedContacts(newSelected)
+    setSelectAll(newSelected.size === contacts.length && contacts.length > 0)
+  }
+
+  const handleSelectAll = (checked: boolean) => {
+    setSelectAll(checked)
+    if (checked) {
+      setSelectedContacts(new Set(contacts.map((c) => c.id)))
+    } else {
+      setSelectedContacts(new Set())
+    }
+  }
+
+  const handleClearSelection = () => {
+    setSelectedContacts(new Set())
+    setSelectAll(false)
+  }
+
+  // Bulk actions
+  const handleBulkDelete = async () => {
+    if (selectedContacts.size === 0) return
+
+    if (!confirm(`Delete ${selectedContacts.size} contacts? This cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const promises = Array.from(selectedContacts).map((id) =>
+        fetch(`/api/contacts?id=${id}`, { method: 'DELETE' })
+      )
+      await Promise.all(promises)
+      toast.success(`Deleted ${selectedContacts.size} contacts`)
+      handleClearSelection()
+      fetchContacts()
+    } catch (error) {
+      toast.error('Failed to delete contacts')
+    }
+  }
+
+  const handleBulkStatusChange = async (newStatus: string) => {
+    if (selectedContacts.size === 0) return
+
+    try {
+      const promises = Array.from(selectedContacts).map((id) =>
+        fetch('/api/contacts', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, optInStatus: newStatus }),
+        })
+      )
+      await Promise.all(promises)
+      toast.success(`Updated ${selectedContacts.size} contacts`)
+      handleClearSelection()
+      fetchContacts()
+    } catch (error) {
+      toast.error('Failed to update contacts')
+    }
+  }
+
+  const handleBulkTag = async (tags: string[], action: "add" | "remove" | "replace") => {
+    if (selectedContacts.size === 0) return
+
+    try {
+      const promises = Array.from(selectedContacts).map(async (id) => {
+        const contact = contacts.find((c) => c.id === id)
+        if (!contact) return
+
+        const existingTags = parseTags(contact.tags ?? null)
+        let newTags: string[]
+
+        if (action === "add") {
+          newTags = [...new Set([...existingTags, ...tags])]
+        } else if (action === "remove") {
+          newTags = existingTags.filter((t) => !tags.includes(t))
+        } else {
+          newTags = tags
+        }
+
+        return fetch('/api/contacts', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, tags: JSON.stringify(newTags) }),
+        })
+      })
+
+      await Promise.all(promises)
+      toast.success(`Updated tags for ${selectedContacts.size} contacts`)
+      handleClearSelection()
+      fetchContacts()
+    } catch (error) {
+      toast.error('Failed to update tags')
+    }
+  }
 
   // Calculate pagination meta
   const paginationMeta: PaginationMeta = useMemo(() => ({
@@ -268,6 +401,31 @@ export default function ContactsPage() {
       setDeleteDialogOpen(false)
       setContactToDelete(null)
     }
+  }
+
+  // Handle opening contact detail drawer
+  const handleOpenDrawer = (contact: Contact) => {
+    setDrawerContact(contact)
+    setDrawerOpen(true)
+  }
+
+  // Handle send message from drawer
+  const handleSendMessage = (contact: Contact) => {
+    toast.info(`Send message to ${contact.firstName} ${contact.lastName}`)
+    // TODO: Implement send message functionality
+  }
+
+  // Handle edit from drawer
+  const handleEditFromDrawer = (contact: Contact) => {
+    setDrawerOpen(false)
+    // The ContactFormDialog will handle the edit
+  }
+
+  // Handle delete from drawer
+  const handleDeleteFromDrawer = (contact: Contact) => {
+    setDrawerOpen(false)
+    setContactToDelete(contact)
+    setDeleteDialogOpen(true)
   }
 
   // Export contacts as CSV
@@ -388,16 +546,16 @@ export default function ContactsPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Header Actions */}
+    <div className="container mx-auto p-4 sm:p-6 space-y-6">
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Contacts</h1>
-          <p className="text-gray-500">
-            Manage your WhatsApp contacts
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Contacts</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Manage your audience and send WhatsApp messages
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <Button variant="outline" className="gap-2" onClick={handleExport} disabled={isExporting}>
             <Download className="w-4 h-4" />
             {isExporting ? 'Exporting...' : 'Export'}
@@ -417,11 +575,226 @@ export default function ContactsPage() {
         </div>
       </div>
 
-      
+      {/* Main Layout with Sidebar */}
+      <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-4">
+        {/* Mobile Sidebar Toggle */}
+        <div className="lg:hidden flex items-center gap-2 mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+          >
+            <Menu className="h-4 w-4 mr-2" />
+            {sidebarOpen ? 'Hide Filters' : 'Show Filters'}
+          </Button>
+        </div>
 
-      {/* Filter Bar - Green Theme like Template Management */}
-      <div className="bg-green-950 rounded-t-3xl rounded-b-lg pt-4 pb-1 px-1 space-y-4">
-        <div className="flex flex-row flex-wrap justify-between items-center px-2 gap-2 sm:gap-4">
+        {/* Segment Sidebar */}
+        <Card className={`${sidebarOpen ? 'block' : 'hidden'} lg:block`}>
+          <CardContent className="px-2">
+            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+              Segments
+            </div>
+            <div className="space-y-1">
+              <button
+                onClick={() => {
+                  setSegmentFilter('all')
+                  setCurrentPage(1)
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${
+                  segmentFilter === 'all'
+                    ? 'bg-green-100 text-green-700'
+                    : 'hover:bg-gray-100 text-gray-700'
+                }`}
+              >
+                <span>All Contacts</span>
+                <span className="text-xs bg-gray-200 px-2 py-0.5 rounded-full">
+                  {stats.total}
+                </span>
+              </button>
+              <button
+                onClick={() => {
+                  setSegmentFilter('opted_in')
+                  setCurrentPage(1)
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${
+                  segmentFilter === 'opted_in'
+                    ? 'bg-green-100 text-green-700'
+                    : 'hover:bg-gray-100 text-gray-700'
+                }`}
+              >
+                <span>Opted In</span>
+                <span className="text-xs bg-gray-200 px-2 py-0.5 rounded-full">
+                  {stats.optedIn}
+                </span>
+              </button>
+              <button
+                onClick={() => {
+                  setSegmentFilter('pending')
+                  setCurrentPage(1)
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${
+                  segmentFilter === 'pending'
+                    ? 'bg-green-100 text-green-700'
+                    : 'hover:bg-gray-100 text-gray-700'
+                }`}
+              >
+                <span>Pending</span>
+                <span className="text-xs bg-gray-200 px-2 py-0.5 rounded-full">
+                  {stats.pending}
+                </span>
+              </button>
+              <button
+                onClick={() => {
+                  setSegmentFilter('opted_out')
+                  setCurrentPage(1)
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${
+                  segmentFilter === 'opted_out'
+                    ? 'bg-green-100 text-green-700'
+                    : 'hover:bg-gray-100 text-gray-700'
+                }`}
+              >
+                <span>Opted Out</span>
+                <span className="text-xs bg-gray-200 px-2 py-0.5 rounded-full">
+                  {stats.optedOut}
+                </span>
+              </button>
+            </div>
+
+            <div className="h-px bg-gray-200 my-4"></div>
+
+            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+              Tags
+            </div>
+            <div className="space-y-1">
+              {['VIP', 'Newsletter', 'Wholesale', 'Diwali-offer', 'Premium'].map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => {
+                    setTagFilter(tag)
+                    setSegmentFilter('all')
+                    setCurrentPage(1)
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${
+                    tagFilter === tag
+                      ? 'bg-green-100 text-green-700'
+                      : 'hover:bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  <span>{tag}</span>
+                  <span className="text-xs bg-gray-200 px-2 py-0.5 rounded-full">
+                    {contacts.filter((c) => {
+                      const tags = parseTags(c.tags ?? null)
+                      return tags.includes(tag)
+                    }).length}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div className="h-px bg-gray-200 my-4"></div>
+
+            <Button variant="outline" size="sm" className="w-full">
+              + New Segment
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Main Content Area */}
+        <div>
+          {/* Bulk Action Bar */}
+          {selectedContacts.size > 0 && (
+            <div className="bg-green-600 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-lg mb-4 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+              <span className="font-medium text-sm sm:text-base">
+                {selectedContacts.size} contact{selectedContacts.size > 1 ? 's' : ''} selected
+              </span>
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                <BulkTagDialog
+                  selectedCount={selectedContacts.size}
+                  onApply={handleBulkTag}
+                >
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-white/10 hover:bg-white/20 text-white border-white/30"
+                  >
+                    Tag
+                  </Button>
+                </BulkTagDialog>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-white/10 hover:bg-white/20 text-white border-white/30"
+                  onClick={() => handleBulkStatusChange('opted_in')}
+                >
+                  Mark Opted In
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-white/10 hover:bg-white/20 text-white border-white/30"
+                  onClick={() => handleBulkStatusChange('opted_out')}
+                >
+                  Mark Opted Out
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="bg-red-500 hover:bg-red-600 text-white border-red-400"
+                  onClick={handleBulkDelete}
+                >
+                  Delete
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-white/10 hover:bg-white/20 text-white border-white/30 ml-auto"
+                  onClick={handleClearSelection}
+                >
+                  ✕ Clear
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Tag Filter Chips */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            <button
+              onClick={() => {
+                setTagFilter('all')
+                setCurrentPage(1)
+              }}
+              className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                tagFilter === 'all'
+                  ? 'bg-green-100 text-green-700 border-green-300'
+                  : 'bg-white text-gray-600 border-gray-300 hover:border-green-300 hover:text-green-700'
+              }`}
+            >
+              All
+            </button>
+            {['VIP', 'Newsletter', 'Wholesale', 'Diwali-offer', 'Premium'].map((tag) => (
+              <button
+                key={tag}
+                onClick={() => {
+                  setTagFilter(tag)
+                  setSegmentFilter('all')
+                  setCurrentPage(1)
+                }}
+                className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                  tagFilter === tag
+                    ? 'bg-green-100 text-green-700 border-green-300'
+                    : 'bg-white text-gray-600 border-gray-300 hover:border-green-300 hover:text-green-700'
+                }`}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+
+          {/* Filter Bar - Green Theme like Template Management */}
+          <div className="bg-green-950 rounded-t-3xl rounded-b-lg pt-4 pb-1 px-1 space-y-4">
+            <div className="flex flex-row flex-wrap justify-between items-center px-2 gap-2 sm:gap-4">
           {/* Status Filter */}
           <Select
             value={statusFilter}
@@ -507,10 +880,17 @@ export default function ContactsPage() {
         </div>
 
         {/* Contacts Table */}
-        <div className="border border-green-800 rounded-lg bg-green-900/50 overflow-hidden">
-          <Table className="bg-white">
+        <div className="border border-green-800 rounded-lg bg-green-900/50 overflow-x-auto">
+          <Table className="bg-white min-w-[700px]">
             <TableHeader>
               <TableRow className="bg-gray-50">
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={selectAll}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Select all"
+                  />
+                </TableHead>
                 <TableHead
                   className="cursor-pointer hover:bg-gray-100 font-semibold"
                   onClick={() => handleSort("firstName")}
@@ -545,7 +925,7 @@ export default function ContactsPage() {
             <TableBody className="bg-white">
               {contacts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={8} className="text-center py-8">
                     <div className="flex flex-col items-center gap-2">
                       <p className="text-gray-500">No contacts found</p>
                       {stats.total === 0 ? (
@@ -563,22 +943,50 @@ export default function ContactsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                contacts.map((contact) => {
+                contacts.map((contact, index) => {
                   const status = statusConfig[contact.optInStatus as keyof typeof statusConfig]
                   const lifecycle = lifecycleConfig[(contact.lifecycleStatus || 'lead') as keyof typeof lifecycleConfig] || lifecycleConfig.lead
                   const StatusIcon = status?.icon || Clock
                   const contactTags = parseTags(contact.tags ?? null)
+                  const avatarColor = getAvatarColor(index)
+                  const initials = getInitials(contact.firstName, contact.lastName)
 
                   return (
-                    <TableRow key={contact.id}>
+                    <TableRow
+                      key={contact.id}
+                      className={`cursor-pointer transition-colors hover:bg-gray-50 ${
+                        selectedContacts.has(contact.id) ? 'bg-green-50' : ''
+                      }`}
+                    >
                       <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <span className="font-medium">
-                            {contact.firstName} {contact.lastName}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {contact.email || "No email"}
-                          </span>
+                        <Checkbox
+                          checked={selectedContacts.has(contact.id)}
+                          onCheckedChange={(checked) => handleSelectContact(contact.id, checked as boolean)}
+                          aria-label={`Select ${contact.firstName}`}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div
+                          className="flex items-center gap-3"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleOpenDrawer(contact)
+                          }}
+                        >
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0"
+                            style={{ backgroundColor: avatarColor }}
+                          >
+                            {initials}
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-medium text-sm hover:text-green-600 transition-colors">
+                              {contact.firstName} {contact.lastName}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {contact.email || "No email"}
+                            </span>
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -627,12 +1035,30 @@ export default function ContactsPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-1">
+                          {/* View Details Button */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 transition-colors"
+                            title="View Details"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleOpenDrawer(contact)
+                            }}
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </Button>
+
                           {/* Send Message Button */}
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                            className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50 transition-colors"
                             title="Send Message"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleSendMessage(contact)
+                            }}
                           >
                             <Send className="w-3.5 h-3.5" />
                           </Button>
@@ -642,8 +1068,9 @@ export default function ContactsPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8"
+                              className="h-8 transition-colors"
                               title="Edit"
+                              onClick={(e) => e.stopPropagation()}
                             >
                               <Edit className="w-3.5 h-3.5" />
                             </Button>
@@ -653,8 +1080,9 @@ export default function ContactsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => {
+                            className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation()
                               setContactToDelete(contact)
                               setDeleteDialogOpen(true)
                             }}
@@ -675,11 +1103,11 @@ export default function ContactsPage() {
 
       {/* Pagination Controls */}
       {paginationMeta.totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-sm text-gray-500">
             Page {paginationMeta.page} of {paginationMeta.totalPages}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-center">
             <Button
               variant="outline"
               size="sm"
@@ -749,6 +1177,8 @@ export default function ContactsPage() {
           </div>
         </div>
       )}
+        </div>
+      </div>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -770,6 +1200,16 @@ export default function ContactsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Contact Detail Drawer */}
+      <ContactDetailDrawer
+        contact={drawerContact}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        onEdit={handleEditFromDrawer}
+        onDelete={handleDeleteFromDrawer}
+        onSendMessage={handleSendMessage}
+      />
     </div>
   )
 }
