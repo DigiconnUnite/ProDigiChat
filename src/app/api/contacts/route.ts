@@ -198,7 +198,6 @@ export async function POST(request: NextRequest) {
         tags: JSON.stringify(parseTagsInput(tags)),
         attributes: JSON.stringify(parseAttributesInput(attributes)),
         optInStatus: optInStatus || 'pending',
-        displayName: buildDisplayName(firstName?.trim() || '', lastName?.trim() || '', normalizedPhoneNumber),
         optInAt: optInStatus === 'opted_in' ? new Date() : null,
         optOutAt: optInStatus === 'opted_out' ? new Date() : null,
         userId: userId,
@@ -284,7 +283,6 @@ export async function PUT(request: NextRequest) {
       data: {
         firstName: firstName?.trim() || '',
         lastName: lastName?.trim() || '',
-        displayName: buildDisplayName(firstName?.trim() || '', lastName?.trim() || '', normalizedPhoneNumber),
         phoneNumber: normalizedPhoneNumber,
         email: email?.trim() || '',
         tags: JSON.stringify(parseTagsInput(tags)),
