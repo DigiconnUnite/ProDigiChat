@@ -57,7 +57,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search') || ''
     const status = searchParams.get('status') || ''
-    const lifecycleStatus = searchParams.get('lifecycleStatus') || ''
     const includeDeleted = searchParams.get('includeDeleted') === 'true'
     const tags = searchParams.get('tags') || ''
     const pageParam = parseInt(searchParams.get('page') || '1', 10)
@@ -82,10 +81,6 @@ export async function GET(request: NextRequest) {
     
     if (status && status !== 'all') {
       conditions.optInStatus = status
-    }
-
-    if (lifecycleStatus && lifecycleStatus !== 'all') {
-      conditions.lifecycleStatus = normalizeLifecycleStatus(lifecycleStatus)
     }
     
     if (tags) {
@@ -203,7 +198,6 @@ export async function POST(request: NextRequest) {
         tags: JSON.stringify(parseTagsInput(tags)),
         attributes: JSON.stringify(parseAttributesInput(attributes)),
         optInStatus: optInStatus || 'pending',
-        lifecycleStatus: normalizeLifecycleStatus(body.lifecycleStatus),
         displayName: buildDisplayName(firstName?.trim() || '', lastName?.trim() || '', normalizedPhoneNumber),
         optInAt: optInStatus === 'opted_in' ? new Date() : null,
         optOutAt: optInStatus === 'opted_out' ? new Date() : null,
@@ -251,7 +245,7 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { id, firstName, lastName, phoneNumber, email, tags, attributes, optInStatus, lifecycleStatus } = body
+    const { id, firstName, lastName, phoneNumber, email, tags, attributes, optInStatus } = body
 
     const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber || '')
     if (!normalizedPhoneNumber) {
@@ -295,7 +289,6 @@ export async function PUT(request: NextRequest) {
         email: email?.trim() || '',
         tags: JSON.stringify(parseTagsInput(tags)),
         attributes: JSON.stringify(parseAttributesInput(attributes)),
-        lifecycleStatus: normalizeLifecycleStatus(lifecycleStatus || 'lead'),
         optInStatus: nextOptInStatus,
         optInAt: nextOptInStatus === 'opted_in' ? new Date() : null,
         optOutAt: nextOptInStatus === 'opted_out' ? new Date() : null,
@@ -382,7 +375,6 @@ export async function DELETE(request: NextRequest) {
       data: {
         isDeleted: true,
         deletedAt: new Date(),
-        lifecycleStatus: 'suppressed',
       },
     })
 
