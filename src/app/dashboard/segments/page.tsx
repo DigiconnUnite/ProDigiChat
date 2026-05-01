@@ -150,7 +150,8 @@ export default function SegmentsPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="bg-transparent px-2.5 border h-full lg:px-0">
+      <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Segments</h1>
@@ -314,6 +315,7 @@ export default function SegmentsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

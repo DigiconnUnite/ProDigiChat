@@ -531,7 +531,8 @@ const filteredCampaigns = useMemo(() => {
   // Error state
   if (error) {
     return (
-      <div className="container mx-auto py-6 space-y-6">
+      <div className="bg-transparent px-2.5 border h-full lg:px-0">
+        <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold">Campaigns</h1>
@@ -552,6 +553,7 @@ const filteredCampaigns = useMemo(() => {
             Try Again
           </Button>
         </div>
+        </div>
       </div>
     )
   }
@@ -559,7 +561,8 @@ const filteredCampaigns = useMemo(() => {
   // Loading state
   if (isLoading) {
     return (
-      <div className="container mx-auto py-6 space-y-6">
+      <div className="bg-transparent px-2.5 border h-full lg:px-0">
+        <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold">Campaigns</h1>
@@ -577,12 +580,14 @@ const filteredCampaigns = useMemo(() => {
             <p className="text-gray-500">Loading campaigns...</p>
           </div>
         </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="bg-transparent px-2.5 border h-full lg:px-0">
+      <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 space-y-6">
       {/* Header Actions */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -1007,6 +1012,7 @@ const filteredCampaigns = useMemo(() => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </div>
   )
 }

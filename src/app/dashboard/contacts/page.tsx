@@ -471,7 +471,8 @@ export default function ContactsPage() {
   // Error state
   if (error) {
     return (
-      <div className="container mx-auto py-6 space-y-6">
+      <div className="bg-transparent px-2.5 border h-full lg:px-0">
+        <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold">Contacts</h1>
@@ -506,6 +507,7 @@ export default function ContactsPage() {
             Try Again
           </Button>
         </div>
+        </div>
       </div>
     )
   }
@@ -513,7 +515,8 @@ export default function ContactsPage() {
   // Loading state
   if (isLoading && contacts.length === 0) {
     return (
-      <div className="container mx-auto py-6 space-y-6">
+      <div className="bg-transparent px-2.5 border h-full lg:px-0">
+        <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold">Contacts</h1>
@@ -541,12 +544,14 @@ export default function ContactsPage() {
             <p className="text-gray-500">Loading contacts...</p>
           </div>
         </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 space-y-6">
+    <div className="bg-transparent px-2.5 border h-full lg:px-0">
+      <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 p-4 sm:p-6 space-y-6">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -1210,6 +1215,7 @@ export default function ContactsPage() {
         onDelete={handleDeleteFromDrawer}
         onSendMessage={handleSendMessage}
       />
+      </div>
     </div>
   )
 }

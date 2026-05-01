@@ -89,12 +89,13 @@ export function Header({ variant = "public", className }: HeaderProps) {
       {/* Desktop Header - Hidden on mobile */}
       <header
         className={cn(
-          "hidden md:flex py-4 items-center justify-between rounded-b-4xl",
+          "hidden md:flex   items-center justify-between",
           isDashboard ? "bg-green-950" : "bg-green-950",
           className,
         )}
+        style={{backgroundColor: '#072507'}}
       >
-        <div className="container mx-auto px-4 sm:px-0 flex items-center justify-between w-full">
+        <div className="container py-4 border-x border-green-800 mx-auto px-5 flex items-center justify-between w-full">
         {/* Logo and Nav Links */}
         <div className="flex items-center gap-8">
           {/* Logo */}
@@ -365,7 +366,7 @@ function MobileDashboardTopHeader({
   pathname: string
 }) {
   return (
-    <div className="md:hidden fixed top-0 left-0 rounded-b-2xl right-0 bg-green-950 border-none shadow z-50 flex items-center justify-between h-14 px-4">
+    <div className="md:hidden fixed top-0 left-0 right-0 bg-green-950 border-x border-green-800 shadow z-50 flex items-center justify-between h-14 px-5" style={{backgroundColor: '#072507'}}>
       {/* Logo */}
       <Link
         href="/dashboard"
@@ -523,7 +524,7 @@ function MobilePublicNavigation({
   session: typeof useSession extends () => infer R ? R extends { data: infer T } ? T : never : never
 }) {
   return (
-    <nav className="md:hidden fixed top-0 left-0 rounded-b-2xl right-0 bg-green-950 border-none shadow z-50 flex items-center justify-between h-14 px-4">
+    <nav className="md:hidden fixed top-0 left-0 right-0 bg-green-950 border-x border-green-800 shadow z-50 flex items-center justify-between h-14 px-5" style={{backgroundColor: '#072507'}}>
       <div className="container mx-auto flex h-16 items-center justify-between ">
         <Link href="/landing" className="flex items-center gap-2">
           <Image

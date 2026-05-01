@@ -226,7 +226,8 @@ function SettingsPageContent() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="bg-transparent px-2.5 border h-full lg:px-0">
+      <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -690,6 +691,7 @@ function SettingsPageContent() {
           </Card>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   )
 }
@@ -698,10 +700,12 @@ function SettingsPageContent() {
 export default function SettingsPage() {
   return (
     <Suspense fallback={
-      <div className="container mx-auto py-6 space-y-6">
+      <div className="bg-transparent px-2.5 border h-full lg:px-0">
+      <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 space-y-6">
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
+      </div>
       </div>
     }>
       <SettingsPageContent />

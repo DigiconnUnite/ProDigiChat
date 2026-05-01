@@ -13,7 +13,7 @@ export default function TermsPage() {
       <Header variant="public" className="fixed top-0 left-0 right-0 z-50" />
       
       {/* Main Content - Light background matching privacy page */}
-      <div className="min-h-screen bg-background pt-20 rounded-b-4xl border">
+      <div className="min-h-screen bg-background pt-20 border">
         {/* Content Container */}
         <main className="container mx-auto px-4 py-12 max-w-6xl">
           <div className="rounded-4xl p-8 md:p-12">

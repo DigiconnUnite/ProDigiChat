@@ -190,7 +190,8 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="bg-transparent px-2.5 border h-full lg:px-0">
+      <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 space-y-6">
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -613,6 +614,7 @@ export default function ProfilePage() {
           </Card>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }

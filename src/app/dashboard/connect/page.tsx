@@ -146,7 +146,8 @@ function ConnectPageContent() {
   // Entry state - show connection options
   if (pageState === 'entry') {
     return (
-      <div className="container mx-auto py-8 max-w-4xl">
+      <div className="bg-transparent px-2.5 lg:px-0">
+        <div className="container mx-auto relative border-l border-r border-slate-300 px-5 py-8 max-w-4xl">
         {/* Back Link */}
         <Link 
           href="/dashboard/settings?tab=whatsapp"
@@ -195,6 +196,7 @@ function ConnectPageContent() {
             <Settings className="w-4 h-4" />
             Already connected? View your accounts
           </Link>
+        </div>
         </div>
       </div>
     );

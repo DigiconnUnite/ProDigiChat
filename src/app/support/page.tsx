@@ -137,7 +137,7 @@ export default function SupportPage() {
     <>
       <Header variant="public" className="fixed top-0 left-0 right-0 z-50" />
 
-      <main className="bg-background rounded-b-2xl md:rounded-b-4xl pt-32">
+      <main className="bg-background pt-32">
         {/* Hero Section */}
         <section className="pb-16">
           <div className="container mx-auto px-4">

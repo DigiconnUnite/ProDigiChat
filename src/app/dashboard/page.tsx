@@ -406,15 +406,16 @@ export default function DashboardPage() {
     : fallbackCampaignStatus
 
   return (
-    <div className="container mx-auto space-y-6">
-      {/* Dark Welcome Banner with WhatsApp Connection Status */}
-      <div className="relative overflow-hidden rounded-2xl mt-16 bg-linear-to-br from-zinc-900 via-zinc-800 to-zinc-700 border border-slate-700/50 shadow-2xl">
+    <div className="bg-transparent px-2.5 lg:px-0">
+      <div className="container mx-auto relative border-l border-r border-slate-300 ">
+        {/* Dark Welcome Banner with WhatsApp Connection Status */}
+        <div className="relative overflow-hidden bg-linear-to-br from-lime-50 to-green-50 border-b ">
         {/* Content */}
         <div className="relative px-8 py-8 ">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             {/* Welcome Message */}
             <div className="space-y-2">
-              <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
                 Welcome back,{" "}
                 <span className="text-green-500">{firstName}</span> 👋
               </h1>
@@ -442,11 +443,11 @@ export default function DashboardPage() {
       )}
 
       {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {isLoading
           ? // Skeleton loaders for metrics
             Array.from({ length: 6 }).map((_, index) => (
-              <Card key={index}>
+              <Card className={`rounded-none border ${index % 6 !== 5 ? 'border-r' : 'border-r-0'} ${index >= 6 ? 'border-t' : ''}`} key={index}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <Skeleton className="h-4 w-24" />
                   <Skeleton className="h-4 w-4 rounded-full" />
@@ -460,7 +461,7 @@ export default function DashboardPage() {
           : metrics.map((metric, index) => {
               const Icon = metric.icon;
               return (
-                <Card key={index}>
+                <Card className={`rounded-none border ${index % 6 !== 5 ? 'border-r' : 'border-r-0'} ${index >= 6 ? 'border-t' : ''}`} key={index}>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">
                       {metric.title}
@@ -489,9 +490,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Charts Row */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid lg:grid-cols-2">
         {/* Message Volume Chart */}
-        <Card className="col-span-1">
+        <Card className="col-span-1 rounded-none border-r">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -556,7 +557,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Campaign Performance Chart */}
-        <Card className="col-span-1">
+        <Card className="col-span-1 rounded-none">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -622,9 +623,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Bottom Row */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid lg:grid-cols-3">
         {/* Recent Activity */}
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 rounded-none border-r">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -707,7 +708,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Campaign Status Overview */}
-        <Card>
+        <Card className="rounded-none">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -822,6 +823,7 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );

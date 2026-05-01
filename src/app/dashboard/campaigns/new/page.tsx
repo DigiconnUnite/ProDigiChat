@@ -1008,7 +1008,8 @@ export default function NewCampaignPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 px-4 space-y-6">
+    <div className="bg-transparent px-2.5 border h-full lg:px-0">
+      <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 px-4 space-y-6">
       {/* Three column layout for Step 3, Two column for others */}
       <div className="flex flex-col lg:flex-row gap-6">
         
@@ -1106,6 +1107,7 @@ export default function NewCampaignPage() {
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   )

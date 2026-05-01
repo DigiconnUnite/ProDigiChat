@@ -407,7 +407,8 @@ export default function InboxPage() {
   }
 
   return (
-    <div className="container mx-auto h-[calc(100vh-10rem)] p-0 m-0 overflow-hidden">
+    <div className="bg-transparent px-2.5 lg:px-0">
+      <div className="container mx-auto relative border-l border-r border-slate-300 px-5 h-[calc(100vh-10rem)] p-0 m-0 overflow-hidden">
       {/* Chat Interface */}
       <Card className="h-full  p-0 border-0 shadow-none rounded-none">
         <CardContent className="p-0 gap-2 bg-gray-200 flex h-full">
@@ -773,6 +774,7 @@ export default function InboxPage() {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }

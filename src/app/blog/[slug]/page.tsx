@@ -41,7 +41,7 @@ export default function BlogDetailPage({ params }: BlogDetailPageProps) {
     <>
       <Header variant="public" className="fixed top-0 left-0 right-0 z-50" />
 
-      <main className="bg-background rounded-b-2xl md:rounded-b-4xl pt-32">
+      <main className="bg-background pt-32">
         {/* Back Navigation */}
         <section className="pb-8">
           <div className="container mx-auto px-4">
