@@ -3,8 +3,6 @@
 
 // Settings tabs
 export const SETTINGS_TABS = {
-  GENERAL: 'general',
-  PROFILE: 'profile',
   WHATSAPP: 'whatsapp',
   TEAM: 'team',
   API: 'api',

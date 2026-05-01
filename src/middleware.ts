@@ -18,6 +18,8 @@ export async function middleware(request: NextRequest) {
     "/privacy",
     "/terms",
     "/api/auth",
+    "/api/webhooks",
+    "/api/whatsapp/webhooks",
   ];
   const isPublicRoute = publicRoutes.some(route => 
     pathname.startsWith(route)

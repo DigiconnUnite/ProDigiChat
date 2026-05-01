@@ -47,7 +47,7 @@ const contactFormSchema = z.object({
   optInStatus: z.enum(["opted_in", "opted_out", "pending"]),
   tags: z.array(z.string()),
   notes: z.string().optional(),
-  customAttributes: z.record(z.string()).optional(),
+  customAttributes: z.record(z.string(), z.string()).optional(),
 })
 
 type ContactFormData = z.infer<typeof contactFormSchema>

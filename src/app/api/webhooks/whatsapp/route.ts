@@ -9,18 +9,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('[WhatsApp Webhook] Received webhook:', JSON.stringify(body, null, 2));
 
-    // Handle webhook verification (Meta sends a GET request for verification)
-    if (request.method === 'GET') {
-      const verifyToken = request.nextUrl.searchParams.get('hub.verify_token');
-      const challenge = request.nextUrl.searchParams.get('hub.challenge');
-
-      if (verifyToken === process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN && challenge) {
-        return new NextResponse(challenge);
-      }
-
-      return NextResponse.json({ error: 'Invalid verification token' }, { status: 403 });
-    }
-
     // Process webhook events
     if (body.object === 'whatsapp_business_account') {
       const entries = body.entry || [];
@@ -51,13 +39,25 @@ export async function POST(request: NextRequest) {
 
 // GET /api/webhooks/whatsapp - Webhook verification
 export async function GET(request: NextRequest) {
-  const verifyToken = request.nextUrl.searchParams.get('hub.verify_token');
-  const challenge = request.nextUrl.searchParams.get('hub.challenge');
+  const { searchParams } = new URL(request.url);
+  const mode = searchParams.get('hub.mode');
+  const token = searchParams.get('hub.verify_token');
+  const challenge = searchParams.get('hub.challenge');
 
-  if (verifyToken === process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN && challenge) {
-    return new NextResponse(challenge);
+  console.log('[Webhook Verification] Received verification request', { mode, token: token ? '***' : null, challenge: challenge ? '***' : null });
+
+  // Check if this is a webhook verification request
+  if (mode === 'subscribe' && token === process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN && challenge) {
+    console.log('[Webhook Verification] Verification successful');
+    return new NextResponse(challenge, { 
+      status: 200,
+      headers: {
+        'Content-Type': 'text/plain',
+      }
+    });
   }
 
+  console.log('[Webhook Verification] Verification failed - token mismatch or missing parameters');
   return NextResponse.json({ error: 'Invalid verification token' }, { status: 403 });
 }
 

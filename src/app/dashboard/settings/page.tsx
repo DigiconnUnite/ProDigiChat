@@ -4,12 +4,13 @@ import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
 import { useSession } from "next-auth/react"
 import {
   Save,
@@ -20,59 +21,24 @@ import {
   Mail,
   MessageSquare,
   Check,
-  Settings2,
   Download as DownloadIcon,
   AlertTriangle as AlertTriangleIcon,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Progress } from "@/components/ui/progress"
 
 // Constants
 import {
   SETTINGS_TABS,
-  TIMEZONE_OPTIONS,
-  LANGUAGE_OPTIONS,
-  DATE_FORMAT_OPTIONS,
-  CURRENCY_OPTIONS,
   NOTIFICATION_FREQUENCY_OPTIONS,
 } from "@/lib/constants/settings"
-
-// Validation helpers
-import {
-  validateEmail,
-} from "@/lib/validations/settings"
 
 // Types
 import { WhatsAppSettingsTab } from "@/components/settings/WhatsAppSettingsTab"
 import { TeamSettingsTab } from "@/components/settings/TeamSettingsTab"
 import { ApiKeysTab } from "@/components/settings/ApiKeysTab"
-import { ProfileSettingsTab } from "@/components/settings/ProfileSettingsTab"
 import { WebhooksTab } from "@/components/settings/WebhooksTab"
 import { PrivacySettingsTab } from "@/components/settings/PrivacySettingsTab"
-
-interface GeneralSettings {
-  companyName: string
-  companyEmail: string
-  website: string
-  supportEmail: string
-  address: string
-  timezone: string
-  language: string
-  dateFormat: string
-  currency: string
-  businessHours: {
-    startTime: string
-    endTime: string
-    workingDays: string[]
-  }
-}
 
 interface NotificationSettings {
   email: {
@@ -115,7 +81,7 @@ function SettingsPageContent() {
   const { toast } = useToast()
   const { data: session } = useSession()
   const searchParams = useSearchParams()
-  const [activeTab, setActiveTab] = useState<string>(SETTINGS_TABS.GENERAL)
+  const [activeTab, setActiveTab] = useState<string>(SETTINGS_TABS.WHATSAPP)
   
   // Get organization ID from session - REQUIRED for security
   // If no valid orgId exists, the user should not have access to settings
@@ -142,29 +108,7 @@ function SettingsPageContent() {
     }
   }, [searchParams])
   
-  const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-
-  // General Settings State
-  const [generalSettings, setGeneralSettings] = useState<GeneralSettings>({
-    companyName: "",
-    companyEmail: "",
-    website: "",
-    supportEmail: "",
-    address: "",
-    timezone: "UTC",
-    language: "en",
-    dateFormat: "YYYY-MM-DD",
-    currency: "USD",
-    businessHours: {
-      startTime: "09:00",
-      endTime: "18:00",
-      workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-    },
-  })
-
-  // Validation errors
-  const [errors, setErrors] = useState<Record<string, string>>({})
 
   // Notifications State
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
@@ -199,45 +143,9 @@ function SettingsPageContent() {
       }
     }
     initOrg()
-    fetchGeneralSettings()
     fetchNotificationSettings()
     fetchBillingInfo()
   }, [])
-
-  const fetchGeneralSettings = async () => {
-    setIsLoading(true)
-    try {
-      const response = await fetch(`/api/settings/general?organizationId=${organizationId}`)
-      if (response.ok) {
-        const data = await response.json()
-        setGeneralSettings({
-          companyName: data.general?.companyName || "",
-          companyEmail: data.general?.companyEmail || "",
-          website: data.general?.website || "",
-          supportEmail: data.general?.supportEmail || "",
-          address: data.general?.address || "",
-          timezone: data.general?.timezone || "UTC",
-          language: data.general?.language || "en",
-          dateFormat: data.general?.dateFormat || "YYYY-MM-DD",
-          currency: data.general?.currency || "USD",
-          businessHours: data.general?.businessHours || {
-            startTime: "09:00",
-            endTime: "18:00",
-            workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-          },
-        })
-      }
-    } catch (error) {
-      console.error("Error fetching general settings:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load general settings",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const fetchNotificationSettings = async () => {
     try {
@@ -267,68 +175,6 @@ function SettingsPageContent() {
       }
     } catch (error) {
       console.error("Error fetching billing info:", error)
-    }
-  }
-
-  // Validate General Settings
-  const validateGeneralSettings = (): boolean => {
-    const newErrors: Record<string, string> = {}
-    
-    if (generalSettings.companyEmail && !validateEmail(generalSettings.companyEmail)) {
-      newErrors.companyEmail = "Please enter a valid email address"
-    }
-    
-    if (generalSettings.companyName && generalSettings.companyName.length < 2) {
-      newErrors.companyName = "Company name must be at least 2 characters"
-    }
-    
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  // Save General Settings
-  const saveGeneralSettings = async () => {
-    if (!validateGeneralSettings()) {
-      toast({
-        title: "Validation Error",
-        description: "Please correct the errors before saving",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsSaving(true)
-    try {
-      const response = await fetch(`/api/settings/general?organizationId=${organizationId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          organizationId: organizationId,
-          name: generalSettings.companyName,
-          email: generalSettings.companyEmail,
-          timezone: generalSettings.timezone,
-          language: generalSettings.language,
-          dateFormat: generalSettings.dateFormat,
-          currency: generalSettings.currency,
-        }),
-      })
-      if (response.ok) {
-        toast({
-          title: "Settings saved",
-          description: "Your general settings have been updated successfully.",
-        })
-        setErrors({})
-      } else {
-        throw new Error("Failed to save settings")
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save settings. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsSaving(false)
     }
   }
 
@@ -400,9 +246,7 @@ function SettingsPageContent() {
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-3 md:grid-cols-6 lg:grid-cols-9">
-          <TabsTrigger value={SETTINGS_TABS.GENERAL}>General</TabsTrigger>
-          <TabsTrigger value={SETTINGS_TABS.PROFILE}>Profile</TabsTrigger>
+        <TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
           <TabsTrigger value={SETTINGS_TABS.WHATSAPP}>WhatsApp</TabsTrigger>
           <TabsTrigger value={SETTINGS_TABS.TEAM}>Team</TabsTrigger>
           <TabsTrigger value={SETTINGS_TABS.API}>API Keys</TabsTrigger>
@@ -411,344 +255,6 @@ function SettingsPageContent() {
           <TabsTrigger value={SETTINGS_TABS.NOTIFICATIONS}>Notifications</TabsTrigger>
           <TabsTrigger value={SETTINGS_TABS.BILLING}>Billing</TabsTrigger>
         </TabsList>
-
-        {/* ==================== General Settings Tab ==================== */}
-        <TabsContent value={SETTINGS_TABS.GENERAL} className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings2 className="h-5 w-5" />
-                    Company Information
-                  </CardTitle>
-                  <CardDescription>Update your company details and preferences</CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => {
-                      setGeneralSettings({
-                        companyName: "",
-                        companyEmail: "",
-                        website: "",
-                        supportEmail: "",
-                        address: "",
-                        timezone: "UTC",
-                        language: "en",
-                        dateFormat: "YYYY-MM-DD",
-                        currency: "USD",
-                        businessHours: {
-                          startTime: "09:00",
-                          endTime: "18:00",
-                          workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-                        },
-                      })
-                      setErrors({})
-                    }}
-                  >
-                    Discard
-                  </Button>
-                  <Button
-                    onClick={saveGeneralSettings}
-                    disabled={isSaving}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="mr-2 h-4 w-4" />
-                        Save
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="companyName">Company Name</Label>
-                      <Input
-                        id="companyName"
-                        value={generalSettings.companyName}
-                        onChange={(e) =>
-                          setGeneralSettings({
-                            ...generalSettings,
-                            companyName: e.target.value,
-                          })
-                        }
-                        placeholder="Enter company name"
-                        className={errors.companyName ? "border-destructive" : ""}
-                      />
-                      {errors.companyName && (
-                        <p className="text-sm text-destructive">{errors.companyName}</p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="companyEmail">Company Email</Label>
-                      <Input
-                        id="companyEmail"
-                        type="email"
-                        value={generalSettings.companyEmail}
-                        onChange={(e) =>
-                          setGeneralSettings({
-                            ...generalSettings,
-                            companyEmail: e.target.value,
-                          })
-                        }
-                        placeholder="contact@company.com"
-                        className={errors.companyEmail ? "border-destructive" : ""}
-                      />
-                      {errors.companyEmail && (
-                        <p className="text-sm text-destructive">{errors.companyEmail}</p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="website">Website</Label>
-                      <Input
-                        id="website"
-                        type="url"
-                        value={generalSettings.website}
-                        onChange={(e) =>
-                          setGeneralSettings({
-                            ...generalSettings,
-                            website: e.target.value,
-                          })
-                        }
-                        placeholder="https://yourcompany.com"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="supportEmail">Support Email</Label>
-                      <Input
-                        id="supportEmail"
-                        type="email"
-                        value={generalSettings.supportEmail}
-                        onChange={(e) =>
-                          setGeneralSettings({
-                            ...generalSettings,
-                            supportEmail: e.target.value,
-                          })
-                        }
-                        placeholder="support@company.com"
-                      />
-                    </div>
-                    <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="address">Company Address</Label>
-                      <Input
-                        id="address"
-                        value={generalSettings.address}
-                        onChange={(e) =>
-                          setGeneralSettings({
-                            ...generalSettings,
-                            address: e.target.value,
-                          })
-                        }
-                        placeholder="123 Business St, City, Country"
-                      />
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Regional Settings</h3>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="timezone">Default Timezone</Label>
-                        <Select
-                          value={generalSettings.timezone}
-                          onValueChange={(value) =>
-                            setGeneralSettings({
-                              ...generalSettings,
-                              timezone: value,
-                            })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select timezone" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TIMEZONE_OPTIONS.map((tz) => (
-                              <SelectItem key={tz.value} value={tz.value}>
-                                {tz.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="language">Language</Label>
-                        <Select
-                          value={generalSettings.language}
-                          onValueChange={(value) =>
-                            setGeneralSettings({
-                              ...generalSettings,
-                              language: value,
-                            })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select language" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {LANGUAGE_OPTIONS.map((lang) => (
-                              <SelectItem key={lang.value} value={lang.value}>
-                                {lang.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="dateFormat">Date Format</Label>
-                        <Select
-                          value={generalSettings.dateFormat}
-                          onValueChange={(value) =>
-                            setGeneralSettings({
-                              ...generalSettings,
-                              dateFormat: value,
-                            })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select format" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {DATE_FORMAT_OPTIONS.map((fmt) => (
-                              <SelectItem key={fmt.value} value={fmt.value}>
-                                {fmt.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="currency">Currency</Label>
-                        <Select
-                          value={generalSettings.currency}
-                          onValueChange={(value) =>
-                            setGeneralSettings({
-                              ...generalSettings,
-                              currency: value,
-                            })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select currency" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {CURRENCY_OPTIONS.map((curr) => (
-                              <SelectItem key={curr.value} value={curr.value}>
-                                {curr.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Business Hours</h3>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="startTime">Start Time</Label>
-                        <Input
-                          id="startTime"
-                          type="time"
-                          value={generalSettings.businessHours.startTime}
-                          onChange={(e) =>
-                            setGeneralSettings({
-                              ...generalSettings,
-                              businessHours: {
-                                ...generalSettings.businessHours,
-                                startTime: e.target.value,
-                              },
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="endTime">End Time</Label>
-                        <Input
-                          id="endTime"
-                          type="time"
-                          value={generalSettings.businessHours.endTime}
-                          onChange={(e) =>
-                            setGeneralSettings({
-                              ...generalSettings,
-                              businessHours: {
-                                ...generalSettings.businessHours,
-                                endTime: e.target.value,
-                              },
-                            })
-                          }
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Working Days</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day) => (
-                          <label
-                            key={day}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-md border cursor-pointer text-sm ${
-                              generalSettings.businessHours.workingDays.includes(day)
-                                ? "bg-green-100 border-green-300 text-green-800"
-                                : "bg-muted border-border"
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={generalSettings.businessHours.workingDays.includes(day)}
-                              onChange={(e) => {
-                                const newDays = e.target.checked
-                                  ? [...generalSettings.businessHours.workingDays, day]
-                                  : generalSettings.businessHours.workingDays.filter((d) => d !== day);
-                                setGeneralSettings({
-                                  ...generalSettings,
-                                  businessHours: {
-                                    ...generalSettings.businessHours,
-                                    workingDays: newDays,
-                                  },
-                                });
-                              }}
-                              className="sr-only"
-                            />
-                            {day}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ==================== Profile Settings Tab ==================== */}
-        <TabsContent value={SETTINGS_TABS.PROFILE} className="space-y-6">
-          <ProfileSettingsTab organizationId={organizationId} />
-        </TabsContent>
 
         {/* ==================== WhatsApp Settings Tab ==================== */}
         <TabsContent value={SETTINGS_TABS.WHATSAPP} className="space-y-6">
