@@ -255,20 +255,26 @@ export function TemplateManagement({
   // Error state
   if (error) {
     return (
-      <div className="space-y-6">
+      <div className="bg-transparent px-2.5 border h-full lg:px-0">
+        <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold">Manage Templates</h1>
             <p className="text-gray-500">Manage your WhatsApp message templates</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            {onSyncFromMeta && (
+              <Button variant="outline" size="icon" className="gap-2" onClick={onSyncFromMeta} disabled={isSyncing}>
+                <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              </Button>
+            )}
             {onOpenLibrary && (
-              <Button onClick={onOpenLibrary} variant="outline" className="gap-2">
+              <Button variant="outline" className="gap-2" onClick={onOpenLibrary}>
                 <BookOpen className="w-4 h-4" />
                 Browse Templates
               </Button>
             )}
-            <Button onClick={onCreateNew} className="gap-2">
+            <Button className="gap-2" onClick={onCreateNew}>
               <Plus className="w-4 h-4" />
               Create New Template
             </Button>
@@ -276,7 +282,7 @@ export function TemplateManagement({
         </div>
 
         <div className="border rounded-lg bg-white p-12 text-center">
-          <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+          <RefreshCw className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
           <h3 className="text-lg font-medium mb-2">Error Loading Templates</h3>
           <p className="text-gray-500 mb-4">{error}</p>
           {onRetry && (
@@ -286,6 +292,7 @@ export function TemplateManagement({
             </Button>
           )}
         </div>
+        </div>
       </div>
     );
   }
@@ -293,20 +300,26 @@ export function TemplateManagement({
   // Loading state
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="bg-transparent px-2.5 border h-full lg:px-0">
+        <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold">Manage Templates</h1>
             <p className="text-gray-500">Manage your WhatsApp message templates</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            {onSyncFromMeta && (
+              <Button variant="outline" size="icon" className="gap-2" onClick={onSyncFromMeta} disabled>
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+            )}
             {onOpenLibrary && (
-              <Button onClick={onOpenLibrary} variant="outline" className="gap-2" disabled>
+              <Button variant="outline" className="gap-2" onClick={onOpenLibrary} disabled>
                 <BookOpen className="w-4 h-4" />
                 Browse Templates
               </Button>
             )}
-            <Button onClick={onCreateNew} className="gap-2" disabled>
+            <Button className="gap-2" disabled>
               <Plus className="w-4 h-4" />
               Create New Template
             </Button>
@@ -319,12 +332,14 @@ export function TemplateManagement({
             <p className="text-gray-500">Loading templates...</p>
           </div>
         </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="bg-transparent px-2.5 border h-full lg:px-0">
+      <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 space-y-6">
       {/* Header Actions */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -333,31 +348,26 @@ export function TemplateManagement({
             Manage your WhatsApp message templates
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           {onSyncFromMeta && (
-            <Button 
-              onClick={onSyncFromMeta} 
-              disabled={isSyncing}
-              variant="default" 
-              className="gap-2 bg-green-900 hover:bg-green-800"
-            >
-              {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              
+            <Button variant="outline" size="icon" className="gap-2" onClick={onSyncFromMeta} disabled={isSyncing}>
+              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
             </Button>
           )}
           {onOpenLibrary && (
-            <Button onClick={onOpenLibrary} variant="default" className="gap-2">
+            <Button variant="outline" className="gap-2" onClick={onOpenLibrary}>
               <BookOpen className="w-4 h-4" />
-              Browse
+              Browse Templates
             </Button>
           )}
-          <Button onClick={onCreateNew} className="gap-2">
+          <Button className="gap-2" onClick={onCreateNew}>
             <Plus className="w-4 h-4" />
-            Create New 
+            Create New Template
           </Button>
         </div>
       </div>
 
+      {/* Filter Bar - Green Theme */}
       <div className="bg-green-950 rounded-t-3xl rounded-b-lg pt-4 pb-1 px-1 space-y-4">
         <div className="flex flex-row flex-wrap justify-between items-center px-2 gap-2 sm:gap-4">
           {/* Category Filter */}
@@ -368,11 +378,11 @@ export function TemplateManagement({
               setCurrentPage(1);
             }}
           >
-            <SelectTrigger className="w-[100px] sm:w-[130px] bg-green-900 border-green-700 text-white text-xs sm:text-sm">
+            <SelectTrigger className="w-[100px] sm:w-[140px] bg-green-900 border-green-700 text-white text-xs sm:text-sm">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All </SelectItem>
+              <SelectItem value="all">All</SelectItem>
               <SelectItem value="marketing">Marketing</SelectItem>
               <SelectItem value="utility">Utility</SelectItem>
               <SelectItem value="authentication">Authentication</SelectItem>
@@ -387,7 +397,7 @@ export function TemplateManagement({
               setCurrentPage(1);
             }}
           >
-            <SelectTrigger className="w-[100px] sm:w-[130px] bg-green-900 border-green-700 text-white text-xs sm:text-sm">
+            <SelectTrigger className="w-[100px] sm:w-[140px] bg-green-900 border-green-700 text-white text-xs sm:text-sm">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -455,7 +465,7 @@ export function TemplateManagement({
                   className="cursor-pointer hover:bg-gray-100 font-semibold"
                   onClick={() => handleSort("name")}
                 >
-                  Name {renderSortIcon("name")}
+                  Template Name {renderSortIcon("name")}
                 </TableHead>
                 <TableHead>Language</TableHead>
                 <TableHead
@@ -488,7 +498,7 @@ export function TemplateManagement({
                     <div className="flex flex-col items-center gap-2">
                       <p className="text-gray-500">No templates found</p>
                       {templates.length === 0 ? (
-                        <Button variant="outline" onClick={onCreateNew}>
+                        <Button variant="outline">
                           Create your first template
                         </Button>
                       ) : (
@@ -511,13 +521,7 @@ export function TemplateManagement({
                   return (
                     <TableRow key={template.id}>
                       <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <span className="font-medium">{template.name}</span>
-                          <span className="text-xs text-gray-500 truncate max-w-[250px]">
-                            {template.translations[0]?.body?.substring(0, 40)}
-                            ...
-                          </span>
-                        </div>
+                        <span className="font-medium">{template.name}</span>
                       </TableCell>
                       <TableCell>
                         <span className="text-sm">{languages}</span>
@@ -713,6 +717,7 @@ export function TemplateManagement({
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

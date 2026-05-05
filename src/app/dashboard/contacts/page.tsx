@@ -177,6 +177,9 @@ export default function ContactsPage() {
   const [drawerContact, setDrawerContact] = useState<Contact | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
 
+  // Contact form dialog
+  const [editingContact, setEditingContact] = useState<Contact | null>(null)
+
   // Mobile sidebar
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -372,12 +375,62 @@ export default function ContactsPage() {
   }
 
   // Calculate pagination meta
+  // Filter contacts based on search and filters
+  const filteredContacts = useMemo(() => {
+    let filtered = [...contacts]
+
+    // Filter by search query
+    if (searchQuery) {
+      filtered = filtered.filter(
+        (contact) =>
+          contact.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (contact.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
+          contact.phoneNumber.includes(searchQuery) ||
+          (contact.email?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
+      )
+    }
+
+    // Filter by segment (status)
+    if (segmentFilter !== 'all') {
+      filtered = filtered.filter((contact) => contact.optInStatus === segmentFilter)
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      const aValue = a[sortConfig.field]
+      const bValue = b[sortConfig.field]
+
+      if (aValue === null || aValue === undefined) return 1
+      if (bValue === null || bValue === undefined) return -1
+
+      let comparison = 0
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        comparison = aValue.localeCompare(bValue)
+      } else if (typeof aValue === 'number' && typeof bValue === 'number') {
+        comparison = aValue - bValue
+      } else {
+        // Handle mixed types by converting to strings
+        comparison = String(aValue).localeCompare(String(bValue))
+      }
+
+      return sortConfig.order === 'desc' ? -comparison : comparison
+    })
+
+    return filtered
+  }, [contacts, searchQuery, segmentFilter, sortConfig])
+
+  // Paginate contacts
+  const paginatedContacts = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage
+    return filteredContacts.slice(startIndex, startIndex + itemsPerPage)
+  }, [filteredContacts, currentPage, itemsPerPage])
+
   const paginationMeta: PaginationMeta = useMemo(() => ({
-    total: stats.total,
+    total: filteredContacts.length,
     page: currentPage,
     limit: itemsPerPage,
-    totalPages: Math.ceil(stats.total / itemsPerPage),
-  }), [stats.total, currentPage, itemsPerPage])
+    totalPages: Math.ceil(filteredContacts.length / itemsPerPage),
+  }), [filteredContacts.length, currentPage, itemsPerPage])
 
   // Handle delete contact
   const handleDeleteContact = async () => {
@@ -424,6 +477,17 @@ export default function ContactsPage() {
   // Handle delete from drawer
   const handleDeleteFromDrawer = (contact: Contact) => {
     setDrawerOpen(false)
+    setContactToDelete(contact)
+    setDeleteDialogOpen(true)
+  }
+
+  // Handle edit contact
+  const handleEdit = (contact: Contact) => {
+    setEditingContact(contact)
+  }
+
+  // Handle delete contact
+  const handleDelete = (contact: Contact) => {
     setContactToDelete(contact)
     setDeleteDialogOpen(true)
   }
@@ -478,24 +542,17 @@ export default function ContactsPage() {
             <h1 className="text-2xl font-bold">Contacts</h1>
             <p className="text-gray-500">Manage your WhatsApp contacts</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" className="gap-2" onClick={handleExport} disabled={isExporting}>
-              <Download className="w-4 h-4" />
-              {isExporting ? 'Exporting...' : 'Export'}
+          <ContactFormDialog
+            contact={null}
+            onSuccess={() => {
+              fetchContacts()
+            }}
+          >
+            <Button className="gap-2">
+              <Plus className="w-4 h-4" />
+              Add Contact
             </Button>
-            <ImportContactsDialog onImportComplete={fetchContacts}>
-              <Button variant="outline" className="gap-2">
-                <Upload className="w-4 h-4" />
-                Import
-              </Button>
-            </ImportContactsDialog>
-            <ContactFormDialog onSuccess={fetchContacts}>
-              <Button className="gap-2">
-                <Plus className="w-4 h-4" />
-                Add Contact
-              </Button>
-            </ContactFormDialog>
-          </div>
+          </ContactFormDialog>
         </div>
 
         <div className="border rounded-lg bg-white p-12 text-center">
@@ -522,20 +579,17 @@ export default function ContactsPage() {
             <h1 className="text-2xl font-bold">Contacts</h1>
             <p className="text-gray-500">Manage your WhatsApp contacts</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" className="gap-2" disabled>
-              <Download className="w-4 h-4" />
-              Export
-            </Button>
-            <Button variant="outline" className="gap-2" disabled>
-              <Upload className="w-4 h-4" />
-              Import
-            </Button>
-            <Button className="gap-2" disabled>
+          <ContactFormDialog
+            contact={null}
+            onSuccess={() => {
+              fetchContacts()
+            }}
+          >
+            <Button className="gap-2" disabled={isLoading}>
               <Plus className="w-4 h-4" />
               Add Contact
             </Button>
-          </div>
+          </ContactFormDialog>
         </div>
 
         <div className="border rounded-lg bg-white">
@@ -551,260 +605,36 @@ export default function ContactsPage() {
 
   return (
     <div className="bg-transparent px-2.5 border h-full lg:px-0">
-      <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 p-4 sm:p-6 space-y-6">
-      {/* Page Header */}
+      <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 space-y-6">
+      {/* Header Actions */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Contacts</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Manage your audience and send WhatsApp messages
+          <h1 className="text-2xl font-bold">Contacts</h1>
+          <p className="text-gray-500">
+            Manage your WhatsApp contacts
           </p>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Button variant="outline" className="gap-2" onClick={handleExport} disabled={isExporting}>
-            <Download className="w-4 h-4" />
-            {isExporting ? 'Exporting...' : 'Export'}
+        <ContactFormDialog
+          contact={null}
+          onSuccess={() => {
+            fetchContacts()
+          }}
+        >
+          <Button className="gap-2">
+            <Plus className="w-4 h-4" />
+            Add Contact
           </Button>
-          <ImportContactsDialog onImportComplete={fetchContacts}>
-            <Button variant="outline" className="gap-2">
-              <Upload className="w-4 h-4" />
-              Import
-            </Button>
-          </ImportContactsDialog>
-          <ContactFormDialog onSuccess={fetchContacts}>
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" />
-              Add Contact
-            </Button>
-          </ContactFormDialog>
-        </div>
+        </ContactFormDialog>
       </div>
 
-      {/* Main Layout with Sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-4">
-        {/* Mobile Sidebar Toggle */}
-        <div className="lg:hidden flex items-center gap-2 mb-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
-            <Menu className="h-4 w-4 mr-2" />
-            {sidebarOpen ? 'Hide Filters' : 'Show Filters'}
-          </Button>
-        </div>
-
-        {/* Segment Sidebar */}
-        <Card className={`${sidebarOpen ? 'block' : 'hidden'} lg:block`}>
-          <CardContent className="px-2">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-              Segments
-            </div>
-            <div className="space-y-1">
-              <button
-                onClick={() => {
-                  setSegmentFilter('all')
-                  setCurrentPage(1)
-                }}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${
-                  segmentFilter === 'all'
-                    ? 'bg-green-100 text-green-700'
-                    : 'hover:bg-gray-100 text-gray-700'
-                }`}
-              >
-                <span>All Contacts</span>
-                <span className="text-xs bg-gray-200 px-2 py-0.5 rounded-full">
-                  {stats.total}
-                </span>
-              </button>
-              <button
-                onClick={() => {
-                  setSegmentFilter('opted_in')
-                  setCurrentPage(1)
-                }}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${
-                  segmentFilter === 'opted_in'
-                    ? 'bg-green-100 text-green-700'
-                    : 'hover:bg-gray-100 text-gray-700'
-                }`}
-              >
-                <span>Opted In</span>
-                <span className="text-xs bg-gray-200 px-2 py-0.5 rounded-full">
-                  {stats.optedIn}
-                </span>
-              </button>
-              <button
-                onClick={() => {
-                  setSegmentFilter('pending')
-                  setCurrentPage(1)
-                }}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${
-                  segmentFilter === 'pending'
-                    ? 'bg-green-100 text-green-700'
-                    : 'hover:bg-gray-100 text-gray-700'
-                }`}
-              >
-                <span>Pending</span>
-                <span className="text-xs bg-gray-200 px-2 py-0.5 rounded-full">
-                  {stats.pending}
-                </span>
-              </button>
-              <button
-                onClick={() => {
-                  setSegmentFilter('opted_out')
-                  setCurrentPage(1)
-                }}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${
-                  segmentFilter === 'opted_out'
-                    ? 'bg-green-100 text-green-700'
-                    : 'hover:bg-gray-100 text-gray-700'
-                }`}
-              >
-                <span>Opted Out</span>
-                <span className="text-xs bg-gray-200 px-2 py-0.5 rounded-full">
-                  {stats.optedOut}
-                </span>
-              </button>
-            </div>
-
-            <div className="h-px bg-gray-200 my-4"></div>
-
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-              Tags
-            </div>
-            <div className="space-y-1">
-              {['VIP', 'Newsletter', 'Wholesale', 'Diwali-offer', 'Premium'].map((tag) => (
-                <button
-                  key={tag}
-                  onClick={() => {
-                    setTagFilter(tag)
-                    setSegmentFilter('all')
-                    setCurrentPage(1)
-                  }}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${
-                    tagFilter === tag
-                      ? 'bg-green-100 text-green-700'
-                      : 'hover:bg-gray-100 text-gray-700'
-                  }`}
-                >
-                  <span>{tag}</span>
-                  <span className="text-xs bg-gray-200 px-2 py-0.5 rounded-full">
-                    {contacts.filter((c) => {
-                      const tags = parseTags(c.tags ?? null)
-                      return tags.includes(tag)
-                    }).length}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <div className="h-px bg-gray-200 my-4"></div>
-
-            <Button variant="outline" size="sm" className="w-full">
-              + New Segment
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Main Content Area */}
-        <div>
-          {/* Bulk Action Bar */}
-          {selectedContacts.size > 0 && (
-            <div className="bg-green-600 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-lg mb-4 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-              <span className="font-medium text-sm sm:text-base">
-                {selectedContacts.size} contact{selectedContacts.size > 1 ? 's' : ''} selected
-              </span>
-              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                <BulkTagDialog
-                  selectedCount={selectedContacts.size}
-                  onApply={handleBulkTag}
-                >
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-white/10 hover:bg-white/20 text-white border-white/30"
-                  >
-                    Tag
-                  </Button>
-                </BulkTagDialog>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-white/10 hover:bg-white/20 text-white border-white/30"
-                  onClick={() => handleBulkStatusChange('opted_in')}
-                >
-                  Mark Opted In
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-white/10 hover:bg-white/20 text-white border-white/30"
-                  onClick={() => handleBulkStatusChange('opted_out')}
-                >
-                  Mark Opted Out
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="bg-red-500 hover:bg-red-600 text-white border-red-400"
-                  onClick={handleBulkDelete}
-                >
-                  Delete
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-white/10 hover:bg-white/20 text-white border-white/30 ml-auto"
-                  onClick={handleClearSelection}
-                >
-                  ✕ Clear
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Tag Filter Chips */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            <button
-              onClick={() => {
-                setTagFilter('all')
-                setCurrentPage(1)
-              }}
-              className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
-                tagFilter === 'all'
-                  ? 'bg-green-100 text-green-700 border-green-300'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-green-300 hover:text-green-700'
-              }`}
-            >
-              All
-            </button>
-            {['VIP', 'Newsletter', 'Wholesale', 'Diwali-offer', 'Premium'].map((tag) => (
-              <button
-                key={tag}
-                onClick={() => {
-                  setTagFilter(tag)
-                  setSegmentFilter('all')
-                  setCurrentPage(1)
-                }}
-                className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
-                  tagFilter === tag
-                    ? 'bg-green-100 text-green-700 border-green-300'
-                    : 'bg-white text-gray-600 border-gray-300 hover:border-green-300 hover:text-green-700'
-                }`}
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
-
-          {/* Filter Bar - Green Theme like Template Management */}
-          <div className="bg-green-950 rounded-t-3xl rounded-b-lg pt-4 pb-1 px-1 space-y-4">
-            <div className="flex flex-row flex-wrap justify-between items-center px-2 gap-2 sm:gap-4">
+      {/* Filter Bar - Green Theme */}
+      <div className="bg-green-950 rounded-t-3xl rounded-b-lg pt-4 pb-1 px-1 space-y-4">
+        <div className="flex flex-row flex-wrap justify-between items-center px-2 gap-2 sm:gap-4">
           {/* Status Filter */}
           <Select
-            value={statusFilter}
+            value={segmentFilter}
             onValueChange={(v) => {
-              setStatusFilter(v)
+              setSegmentFilter(v as any)
               setCurrentPage(1)
             }}
           >
@@ -820,11 +650,15 @@ export default function ContactsPage() {
           </Select>
 
           {/* Clear Filters Button */}
-          {(searchQuery || statusFilter !== "all" || lifecycleFilter !== 'all') && (
+          {(searchQuery || segmentFilter !== "all") && (
             <Button
               variant="outline"
               size="sm"
-              onClick={resetFilters}
+              onClick={() => {
+                setSearchQuery('')
+                setSegmentFilter('all')
+                setCurrentPage(1)
+              }}
               className="border-green-700 text-gray-500 hover:bg-green-800 hover:text-white text-xs sm:text-sm px-2 sm:px-3"
             >
               Clear
@@ -836,37 +670,20 @@ export default function ContactsPage() {
             <span className="hidden sm:inline">Show</span>
             <Select
               value={itemsPerPage.toString()}
-              onValueChange={handleItemsPerPageChange}
+              onValueChange={(value) => {
+                setItemsPerPage(Number(value))
+                setCurrentPage(1)
+              }}
             >
               <SelectTrigger className="w-[60px] sm:w-[80px] bg-green-900 border-green-700 text-white text-xs sm:text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {ITEMS_PER_PAGE_OPTIONS.map((option) => (
+                {[10, 25, 50, 100].map((option) => (
                   <SelectItem key={option} value={option.toString()}>
                     {option}
                   </SelectItem>
                 ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={lifecycleFilter}
-              onValueChange={(v) => {
-                setLifecycleFilter(v)
-                setCurrentPage(1)
-              }}
-            >
-              <SelectTrigger className="w-[120px] sm:w-[170px] bg-green-900 border-green-700 text-white text-xs sm:text-sm">
-                <SelectValue placeholder="Lifecycle" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Lifecycle</SelectItem>
-                <SelectItem value="lead">Lead</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="suppressed">Suppressed</SelectItem>
-                <SelectItem value="blocked">Blocked</SelectItem>
-                <SelectItem value="bounced">Bounced</SelectItem>
               </SelectContent>
             </Select>
             <span className="hidden sm:inline">entries</span>
@@ -885,17 +702,10 @@ export default function ContactsPage() {
         </div>
 
         {/* Contacts Table */}
-        <div className="border border-green-800 rounded-lg bg-green-900/50 overflow-x-auto">
-          <Table className="bg-white min-w-[700px]">
+        <div className="border border-green-800 rounded-lg bg-green-900/50 overflow-hidden">
+          <Table className="bg-white">
             <TableHeader>
               <TableRow className="bg-gray-50">
-                <TableHead className="w-12">
-                  <Checkbox
-                    checked={selectAll}
-                    onCheckedChange={handleSelectAll}
-                    aria-label="Select all"
-                  />
-                </TableHead>
                 <TableHead
                   className="cursor-pointer hover:bg-gray-100 font-semibold"
                   onClick={() => handleSort("firstName")}
@@ -908,8 +718,9 @@ export default function ContactsPage() {
                 >
                   Phone {renderSortIcon("phoneNumber")}
                 </TableHead>
-                <TableHead>Tags</TableHead>
-                <TableHead>Lifecycle</TableHead>
+                <TableHead className="font-semibold">
+                  Email
+                </TableHead>
                 <TableHead
                   className="cursor-pointer hover:bg-gray-100 font-semibold"
                   onClick={() => handleSort("optInStatus")}
@@ -920,27 +731,46 @@ export default function ContactsPage() {
                   className="cursor-pointer hover:bg-gray-100 font-semibold"
                   onClick={() => handleSort("createdAt")}
                 >
-                  Created On {renderSortIcon("createdAt")}
+                  Created {renderSortIcon("createdAt")}
                 </TableHead>
                 <TableHead className="font-semibold text-right">
                   Action
                 </TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody className="bg-white">
-              {contacts.length === 0 ? (
+      <TableBody className="bg-white">
+              {paginatedContacts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
+                  <TableCell colSpan={6} className="text-center py-8">
                     <div className="flex flex-col items-center gap-2">
-                      <p className="text-gray-500">No contacts found</p>
-                      {stats.total === 0 ? (
-                        <ContactFormDialog onSuccess={fetchContacts}>
-                          <Button variant="outline">
-                            Add your first contact
-                          </Button>
-                        </ContactFormDialog>
+                      <p className="text-gray-500">
+                        {contacts.length === 0 ? 
+                          "No contacts found in your organization" : 
+                          "No contacts match your current filters"
+                        }
+                      </p>
+                      {contacts.length === 0 ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <p className="text-sm text-gray-400">
+                            Try importing contacts or create your first contact
+                          </p>
+                          <ContactFormDialog
+                            contact={null}
+                            onSuccess={() => {
+                              fetchContacts()
+                            }}
+                          >
+                            <Button variant="outline">
+                              Create your first contact
+                            </Button>
+                          </ContactFormDialog>
+                        </div>
                       ) : (
-                        <Button variant="ghost" onClick={resetFilters}>
+                        <Button variant="ghost" onClick={() => {
+                          setSearchQuery('')
+                          setSegmentFilter('all')
+                          setCurrentPage(1)
+                        }}>
                           Clear filters
                         </Button>
                       )}
@@ -948,149 +778,97 @@ export default function ContactsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                contacts.map((contact, index) => {
-                  const status = statusConfig[contact.optInStatus as keyof typeof statusConfig]
-                  const lifecycle = lifecycleConfig[(contact.lifecycleStatus || 'lead') as keyof typeof lifecycleConfig] || lifecycleConfig.lead
-                  const StatusIcon = status?.icon || Clock
-                  const contactTags = parseTags(contact.tags ?? null)
-                  const avatarColor = getAvatarColor(index)
+                paginatedContacts.map((contact) => {
                   const initials = getInitials(contact.firstName, contact.lastName)
 
                   return (
-                    <TableRow
-                      key={contact.id}
-                      className={`cursor-pointer transition-colors hover:bg-gray-50 ${
-                        selectedContacts.has(contact.id) ? 'bg-green-50' : ''
-                      }`}
-                    >
+                    <TableRow key={contact.id}>
                       <TableCell>
-                        <Checkbox
-                          checked={selectedContacts.has(contact.id)}
-                          onCheckedChange={(checked) => handleSelectContact(contact.id, checked as boolean)}
-                          aria-label={`Select ${contact.firstName}`}
-                        />
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                            <span className="text-xs font-medium text-green-700">
+                              {initials}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="font-medium">
+                              {contact.firstName} {contact.lastName || ''}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {parseTags(contact.tags ?? null).slice(0, 2).map((tag, index) => (
+                                <span key={index} className="inline-block">
+                                  <Badge variant="outline" className="text-xs mr-1">
+                                    {tag}
+                                  </Badge>
+                                </span>
+                              ))}
+                              {parseTags(contact.tags ?? null).length > 2 && (
+                                <span className="text-xs text-gray-400">
+                                  +{parseTags(contact.tags ?? null).length - 2} more
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </TableCell>
                       <TableCell>
-                        <div
-                          className="flex items-center gap-3"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleOpenDrawer(contact)
-                          }}
+                        <div className="font-mono text-sm">{contact.phoneNumber}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">{contact.email || '-'}</div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={contact.optInStatus === 'opted_in' ? 'default' : 'secondary'}
+                          className={
+                            contact.optInStatus === 'opted_in'
+                              ? 'bg-green-100 text-green-700 border-green-200'
+                              : contact.optInStatus === 'opted_out'
+                              ? 'bg-red-100 text-red-700 border-red-200'
+                              : 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                          }
                         >
-                          <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0"
-                            style={{ backgroundColor: avatarColor }}
-                          >
-                            {initials}
-                          </div>
-                          <div className="flex flex-col gap-0.5">
-                            <span className="font-medium text-sm hover:text-green-600 transition-colors">
-                              {contact.firstName} {contact.lastName}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {contact.email || "No email"}
-                            </span>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-mono text-sm">{contact.phoneNumber}</span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {contactTags.slice(0, 3).map((tag) => (
-                            <Badge key={tag} variant="secondary" className="text-xs">
-                              {tag}
-                            </Badge>
-                          ))}
-                          {contactTags.length > 3 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{contactTags.length - 3}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={cn('border', lifecycle.className)}>
-                          {lifecycle.label}
+                          {contact.optInStatus === 'opted_in' ? 'Opted In' :
+                           contact.optInStatus === 'opted_out' ? 'Opted Out' : 'Pending'}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {status && (
-                          <div
-                            className={cn(
-                              "flex items-center gap-1.5",
-                              status.bg,
-                              status.borderColor,
-                              "border px-2.5 py-1 rounded-full w-[100px] justify-start",
-                            )}
-                          >
-                            <StatusIcon className={cn("w-3.5 h-3.5 flex-shrink-0", status.color)} />
-                            <span className={cn("text-xs font-medium", status.color)}>
-                              {status.label}
-                            </span>
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-gray-600">
-                          {formatDate(contact.createdAt)}
-                        </span>
+                        <div className="text-sm text-gray-600">
+                          {new Date(contact.createdAt || '').toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-1">
-                          {/* View Details Button */}
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 transition-colors"
-                            title="View Details"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleOpenDrawer(contact)
+                            className="h-8"
+                            onClick={() => {
+                              setDrawerContact(contact)
+                              setDrawerOpen(true)
                             }}
+                            title="View Details"
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </Button>
-
-                          {/* Send Message Button */}
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50 transition-colors"
-                            title="Send Message"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleSendMessage(contact)
-                            }}
+                            className="h-8"
+                            onClick={() => handleEdit(contact)}
+                            title="Edit"
                           >
-                            <Send className="w-3.5 h-3.5" />
+                            <Edit className="w-3.5 h-3.5" />
                           </Button>
-
-                          {/* Edit Button */}
-                          <ContactFormDialog contact={contact} onSuccess={fetchContacts}>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 transition-colors"
-                              title="Edit"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                            </Button>
-                          </ContactFormDialog>
-
-                          {/* Delete Button */}
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setContactToDelete(contact)
-                              setDeleteDialogOpen(true)
-                            }}
+                            className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleDelete(contact)}
                             title="Delete"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -1108,19 +886,19 @@ export default function ContactsPage() {
 
       {/* Pagination Controls */}
       {paginationMeta.totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center justify-between">
           <div className="text-sm text-gray-500">
             Page {paginationMeta.page} of {paginationMeta.totalPages}
           </div>
-          <div className="flex items-center gap-2 flex-wrap justify-center">
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => handlePageChange(1)}
               disabled={currentPage === 1}
             >
-              <ChevronLeft className="w-4 h-4 mr-1" />
               First
+              <ChevronLeft className="w-4 h-4 ml-1" />
             </Button>
             <Button
               variant="outline"
@@ -1130,38 +908,30 @@ export default function ContactsPage() {
             >
               Previous
             </Button>
+            {Array.from({ length: Math.min(5, paginationMeta.totalPages) }, (_, i) => {
+              let pageNum
+              if (paginationMeta.totalPages <= 5) {
+                pageNum = i + 1
+              } else if (currentPage <= 3) {
+                pageNum = i + 1
+              } else if (currentPage >= paginationMeta.totalPages - 2) {
+                pageNum = paginationMeta.totalPages - 4 + i
+              } else {
+                pageNum = currentPage - 2 + i
+              }
 
-            {/* Page number buttons */}
-            <div className="flex items-center gap-1">
-              {Array.from(
-                { length: Math.min(5, paginationMeta.totalPages) },
-                (_, i) => {
-                  let pageNum: number
-                  if (paginationMeta.totalPages <= 5) {
-                    pageNum = i + 1
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1
-                  } else if (currentPage >= paginationMeta.totalPages - 2) {
-                    pageNum = paginationMeta.totalPages - 4 + i
-                  } else {
-                    pageNum = currentPage - 2 + i
-                  }
-
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={currentPage === pageNum ? "default" : "outline"}
-                      size="sm"
-                      className="w-8"
-                      onClick={() => handlePageChange(pageNum)}
-                    >
-                      {pageNum}
-                    </Button>
-                  )
-                },
-              )}
-            </div>
-
+              return (
+                <Button
+                  key={pageNum}
+                  variant={currentPage === pageNum ? "default" : "outline"}
+                  size="sm"
+                  className="w-8"
+                  onClick={() => handlePageChange(pageNum)}
+                >
+                  {pageNum}
+                </Button>
+              )
+            })}
             <Button
               variant="outline"
               size="sm"
@@ -1182,8 +952,6 @@ export default function ContactsPage() {
           </div>
         </div>
       )}
-        </div>
-      </div>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -1215,7 +983,20 @@ export default function ContactsPage() {
         onDelete={handleDeleteFromDrawer}
         onSendMessage={handleSendMessage}
       />
-      </div>
+
+      {/* Edit Contact Dialog */}
+      {editingContact && (
+        <ContactFormDialog
+          contact={editingContact}
+          onSuccess={() => {
+            setEditingContact(null)
+            fetchContacts()
+          }}
+        >
+          <div style={{ display: 'none' }} />
+        </ContactFormDialog>
+      )}
+            </div>
     </div>
   )
 }

@@ -172,11 +172,11 @@ export function TemplateWizard({ initialData, onSave, onCancel, isLoading = fals
   };
 
   return (
-    <div className="w-full  bg-red-500 mx-auto">
+    <div className="w-full h-full   mx-auto">
       {/* Main Content */}
       <div className={`grid gap-0 transition-all duration-300 ${isSidebarOpen ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1'}`}>
         {/* Left Panel - Form Sections */}
-        <div className={`${isSidebarOpen ? 'lg:col-span-2' : 'col-span-1'} flex flex-col h-[calc(100vh-140px)]`}>
+        <div className={`${isSidebarOpen ? 'lg:col-span-2' : 'col-span-1'} flex flex-col h-[calc(100vh-80px)]`}>
           {/* Fixed Header */}
           <div className="sticky top-0 bg-background z-10 px-6 pt-4 pb-4 mb-4 border-b border-border shrink-0">
             <div className="flex items-center justify-between">
@@ -205,7 +205,7 @@ export function TemplateWizard({ initialData, onSave, onCancel, isLoading = fals
           <div className="flex-1 scrollbar-hide overflow-y-auto px-6 pr-2 space-y-6">
 
           {/* Step 1: Name & Category Card */}
-          <Card className="border shadow-sm">
+          <Card className="border-2 border-green-950 rounded-lg bg-white shadow-sm hover:shadow-md transition-all duration-200">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-green-950 text-white flex items-center justify-center text-sm font-semibold">
@@ -252,7 +252,7 @@ export function TemplateWizard({ initialData, onSave, onCancel, isLoading = fals
           </Card>
 
           {/* Step 2: Content Builder Card */}
-          <Card className="border shadow-sm">
+          <Card className="border-2 border-green-950 rounded-lg bg-white shadow-sm hover:shadow-md transition-all duration-200">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-green-950 text-white flex items-center justify-center text-sm font-semibold">
@@ -329,7 +329,7 @@ export function TemplateWizard({ initialData, onSave, onCancel, isLoading = fals
           </Card>
 
           {/* Step 3: Buttons Card */}
-          <Card className="border shadow-sm">
+          <Card className="border-2 border-green-950 rounded-lg bg-white shadow-sm hover:shadow-md transition-all duration-200">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-green-950 text-white flex items-center justify-center text-sm font-semibold">
@@ -348,14 +348,14 @@ export function TemplateWizard({ initialData, onSave, onCancel, isLoading = fals
               </div>
 
               {currentTranslation?.buttons.length === 0 ? (
-                <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50/50">
                   <p className="text-muted-foreground">No buttons added yet</p>
                   <p className="text-xs text-muted-foreground">Add quick reply or call-to-action buttons</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {currentTranslation?.buttons.map((button, index) => (
-                    <Card key={button.id} className="border border-border/50">
+                    <Card key={button.id} className="border border-green-950/30 rounded-lg bg-white shadow-sm hover:shadow-md transition-all duration-200">
                       <CardContent className="p-4">
                         <div className="flex items-start gap-3">
                           <GripVertical className="w-4 h-4 text-muted-foreground cursor-move mt-2" />
@@ -428,7 +428,7 @@ export function TemplateWizard({ initialData, onSave, onCancel, isLoading = fals
           </Card>
 
           {/* Step 4: Sample Data Card */}
-          <Card className="border shadow-sm">
+          <Card className="border-2 border-green-950 rounded-lg bg-white shadow-sm hover:shadow-md transition-all duration-200">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-green-950 text-white flex items-center justify-center text-sm font-semibold">
@@ -439,7 +439,7 @@ export function TemplateWizard({ initialData, onSave, onCancel, isLoading = fals
               <p className="text-sm text-muted-foreground">Preview with sample values</p>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 shadow-sm">
                 <h4 className="font-medium text-yellow-800">Sample Data Required</h4>
                 <p className="text-sm text-yellow-700 mt-1">
                   Meta requires sample values for all variables to preview your template.
@@ -447,7 +447,7 @@ export function TemplateWizard({ initialData, onSave, onCancel, isLoading = fals
               </div>
 
               {variables.length === 0 ? (
-                <div className="text-center py-8">
+                <div className="text-center py-8 bg-gray-50/30 rounded-lg border border-gray-200/50">
                   <p className="text-muted-foreground">No variables detected in your template body</p>
                   <p className="text-sm text-muted-foreground">Add {'{{1}}'}, {'{{2}}'}, etc. in the body text</p>
                 </div>
@@ -504,7 +504,7 @@ export function TemplateWizard({ initialData, onSave, onCancel, isLoading = fals
 
         {/* Right Panel - Preview */}
         {isSidebarOpen && (
-          <div className="lg:col-span-1 border sticky top-6 h-[calc(100vh-140px)] overflow-hidden bg-gradient-to-br from-lime-50 to-green-50">
+          <div className="lg:col-span-1 border sticky top-6 h-[calc(100vh-80px)] overflow-hidden bg-gradient-to-br from-lime-50 to-green-50">
             <div className="h-full flex items-center justify-center p-6">
               <TemplatePreview
                 preview={{

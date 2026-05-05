@@ -306,26 +306,23 @@ function TemplatesPageContent() {
   };
 
   return (
-    <div className="bg-background px-2.5 lg:px-0">
-      <div className="container mx-auto relative border-l border-r border-slate-300 px-5 py-6 min-h-screen">
+    <>
       {viewMode === 'Manage' && (
-        <>
-          <TemplateManagement
-            templates={templates}
-            onCreateNew={handleCreateNew}
-            onOpenLibrary={handleOpenLibrary}
-            onSyncFromMeta={handleSyncFromMeta}
-            onEdit={handleEdit}
-            onDuplicate={handleDuplicate}
-            onDelete={handleDelete}
-            onViewDetails={handleViewDetails}
-            onCreateCampaign={handleCreateCampaign}
-            isLoading={isLoading}
-            error={error}
-            onRetry={handleRetry}
-            isSyncing={isSyncing}
-          />
-        </>
+        <TemplateManagement
+          templates={templates}
+          onCreateNew={handleCreateNew}
+          onOpenLibrary={handleOpenLibrary}
+          onSyncFromMeta={handleSyncFromMeta}
+          onEdit={handleEdit}
+          onDuplicate={handleDuplicate}
+          onDelete={handleDelete}
+          onViewDetails={handleViewDetails}
+          onCreateCampaign={handleCreateCampaign}
+          isLoading={isLoading}
+          error={error}
+          onRetry={handleRetry}
+          isSyncing={isSyncing}
+        />
       )}
 
       {(viewMode === 'create' || viewMode === 'edit') && (
@@ -363,8 +360,7 @@ function TemplatesPageContent() {
           )}
         </SheetContent>
       </Sheet>
-      </div>
-    </div>
+    </>
   );
 }
 

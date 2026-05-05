@@ -335,15 +335,26 @@ export default function InboxPage() {
   // Show loading while checking connection
   if (isCheckingConnection) {
     return (
-      <div className="container mx-auto h-[calc(100vh-10rem)] p-0 m-0 overflow-hidden">
-        <Card className="h-full p-0 border-0 shadow-none rounded-none">
-          <CardContent className="p-0 gap-2 bg-gray-200 flex h-full items-center justify-center">
-            <div className="flex items-center gap-2">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              <span className="text-muted-foreground">Loading...</span>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="bg-transparent px-2.5 border h-full lg:px-0">
+        <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">Inbox</h1>
+            <p className="text-gray-500">Manage your WhatsApp conversations and messages</p>
+          </div>
+          <Button className="gap-2" disabled>
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </Button>
+        </div>
+
+        <div className="border rounded-lg bg-white">
+          <div className="p-8 text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-green-500" />
+            <p className="text-gray-500">Loading inbox...</p>
+          </div>
+        </div>
+        </div>
       </div>
     )
   }
@@ -351,67 +362,90 @@ export default function InboxPage() {
   // Show error message when WhatsApp is not connected
   if (!isWhatsAppConnected) {
     return (
-      <div className="container mx-auto h-[calc(100vh-10rem)] p-0 m-0 overflow-hidden">
-        <Card className="h-full p-0 border-0 shadow-none rounded-none">
-          <CardContent className="p-0 gap-2 bg-gray-200 flex h-full items-center justify-center">
-            <div className="max-w-xl  text-center p-8 bg-white rounded-lg shadow-lg">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Plug className="h-8 w-8 text-red-600" />
-              </div>
-              <h2 className="text-xl font-semibold mb-2">WhatsApp Not Connected</h2>
-              <p className="text-muted-foreground mb-6">
-                To receive and view conversations in your inbox, you need to connect your WhatsApp account and configure webhooks.
-              </p>
-              
-              <div className="bg-gray-50 rounded-lg p-4 text-left mb-6">
-                <h3 className="font-medium mb-3 flex items-center gap-2">
-                  <ExternalLink className="h-4 w-4" />
-                  How to Connect WhatsApp:
-                </h3>
-                <ol className="list-decimal list-inside text-sm space-y-2 text-muted-foreground">
-                  <li>Go to <strong>Settings → WhatsApp</strong></li>
-                  <li>Click "Connect WhatsApp Account" button</li>
-                  <li>Authenticate with your Meta Business Account</li>
-                  <li>After connecting, configure webhooks to receive messages</li>
-                </ol>
-              </div>
+      <div className="bg-transparent px-2.5 border h-full lg:px-0">
+        <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">Inbox</h1>
+            <p className="text-gray-500">Manage your WhatsApp conversations and messages</p>
+          </div>
+          <Button className="gap-2" onClick={() => window.location.href = '/dashboard/settings/whatsapp'}>
+            <Plug className="w-4 h-4" />
+            Connect WhatsApp
+          </Button>
+        </div>
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-left mb-6">
-                <h3 className="font-medium mb-2 flex items-center gap-2 text-yellow-800">
-                  <AlertCircle className="h-4 w-4" />
-                  Webhook Configuration Required:
-                </h3>
-                <p className="text-sm text-yellow-700 mb-3">
-                  To receive incoming messages, you need to configure a webhook URL in your Meta Developer Portal:
-                </p>
-                <div className="bg-white rounded p-3 font-mono text-xs break-all border border-yellow-200">
-                  {typeof window !== 'undefined' ? window.location.origin : ''}/api/whatsapp/webhooks
-                </div>
-                <p className="text-xs text-yellow-600 mt-2">
-                  Add this URL in Meta Developer Portal → Webhooks → Subscribe to messages field
-                </p>
-              </div>
-              
-              <Button 
-                onClick={() => window.location.href = '/dashboard/settings/whatsapp'}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <Plug className="h-4 w-4 mr-2" />
-                Go to WhatsApp Settings
-              </Button>
+        <div className="border rounded-lg bg-white p-12 text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Plug className="h-8 w-8 text-red-600" />
+          </div>
+          <h3 className="text-lg font-medium mb-2">WhatsApp Not Connected</h3>
+          <p className="text-gray-500 mb-6">
+            To receive and view conversations in your inbox, you need to connect your WhatsApp account and configure webhooks.
+          </p>
+          
+          <div className="bg-gray-50 rounded-lg p-4 text-left mb-6 max-w-2xl mx-auto">
+            <h4 className="font-medium mb-3 flex items-center gap-2">
+              <ExternalLink className="h-4 w-4" />
+              How to Connect WhatsApp:
+            </h4>
+            <ol className="list-decimal list-inside text-sm space-y-2 text-gray-600">
+              <li>Go to <strong>Settings → WhatsApp</strong></li>
+              <li>Click "Connect WhatsApp Account" button</li>
+              <li>Authenticate with your Meta Business Account</li>
+              <li>After connecting, configure webhooks to receive messages</li>
+            </ol>
+          </div>
+
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-left mb-6 max-w-2xl mx-auto">
+            <h4 className="font-medium mb-2 flex items-center gap-2 text-yellow-800">
+              <AlertCircle className="h-4 w-4" />
+              Webhook Configuration Required:
+            </h4>
+            <p className="text-sm text-yellow-700 mb-3">
+              To receive incoming messages, you need to configure a webhook URL in your Meta Developer Portal:
+            </p>
+            <div className="bg-white rounded p-3 font-mono text-xs break-all border border-yellow-200">
+              {typeof window !== 'undefined' ? window.location.origin : ''}/api/whatsapp/webhooks
             </div>
-          </CardContent>
-        </Card>
+            <p className="text-xs text-yellow-600 mt-2">
+              Add this URL in Meta Developer Portal → Webhooks → Subscribe to messages field
+            </p>
+          </div>
+          
+          <Button 
+            onClick={() => window.location.href = '/dashboard/settings/whatsapp'}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <Plug className="h-4 w-4 mr-2" />
+            Go to WhatsApp Settings
+          </Button>
+        </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-transparent px-2.5 lg:px-0">
-      <div className="container mx-auto relative border-l border-r border-slate-300 px-5 h-[calc(100vh-10rem)] p-0 m-0 overflow-hidden">
+    <div className="bg-transparent px-2.5 border h-full lg:px-0">
+      <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 space-y-6">
+      {/* Header Actions */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Inbox</h1>
+          <p className="text-gray-500">
+            Manage your WhatsApp conversations and messages
+          </p>
+        </div>
+        <Button className="gap-2" onClick={handleRefresh}>
+          <RefreshCw className="w-4 h-4" />
+          Refresh
+        </Button>
+      </div>
+
       {/* Chat Interface */}
-      <Card className="h-full  p-0 border-0 shadow-none rounded-none">
-        <CardContent className="p-0 gap-2 bg-gray-200 flex h-full">
+      <div className="border rounded-lg bg-white overflow-hidden" style={{ height: 'calc(87vh - 200px)' }}>
+        <div className="p-0 gap-2 bg-gray-200 flex h-full">
           {/* Conversations List */}
           <div className="w-80 border border-border flex flex-col bg-white">
             <div className="p-4 border-b border-border shrink-0 flex items-center justify-between">
@@ -772,8 +806,8 @@ export default function InboxPage() {
               </div>
             </ScrollArea>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
       </div>
     </div>
   )
