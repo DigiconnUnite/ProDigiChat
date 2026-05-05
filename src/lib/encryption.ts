@@ -15,11 +15,19 @@ const ENCRYPTION_KEY_ENV = "ENCRYPTION_KEY";
 let encryptionKeyWarningLogged = false;
 
 /**
- * Check if encryption key is configured
+ * Check if encryption key is configured (i.e. encryption is active).
+ *
+ * The sentinel value used to opt into plaintext development storage
+ * does NOT count as configured — callers will store and read plaintext
+ * instead of attempting to (de)encrypt with it.
  */
 export function isEncryptionConfigured(): boolean {
   const key = process.env[ENCRYPTION_KEY_ENV];
-  return !!(key && key.length >= 32);
+  if (!key) return false;
+  if (key === "dev-only-do-not-use-in-prod-allow-plaintext-credentials") {
+    return false;
+  }
+  return key.length >= 32;
 }
 
 /**
@@ -39,43 +47,65 @@ function deriveKey(encryptionKey: string, salt: Buffer): Buffer {
 }
 
 /**
- * Initialize or validate the encryption key
- * Should be called on application startup
- * @throws Error if encryption key is not configured in production
+ * Sentinel that an operator can set in `ENCRYPTION_KEY` to acknowledge
+ * that they really do want to run with encryption disabled in
+ * non-production environments. The value is intentionally unwieldy so
+ * it cannot be set by accident.
+ */
+const ALLOW_PLAINTEXT_DEV_SENTINEL =
+  "dev-only-do-not-use-in-prod-allow-plaintext-credentials";
+
+/**
+ * Initialize or validate the encryption key.
+ *
+ * Behaviour:
+ *  - In production, ENCRYPTION_KEY must be set to a >=32-character
+ *    value. Otherwise the application refuses to start.
+ *  - In development, the same rule applies, except the developer can
+ *    set ENCRYPTION_KEY to the sentinel above to opt into plaintext
+ *    storage explicitly. This makes "I forgot to set ENCRYPTION_KEY"
+ *    fail loudly in dev too, instead of silently writing plaintext.
+ *
+ * @throws Error if encryption key is not configured.
  */
 export function initializeEncryption(): void {
   const encryptionKey = process.env[ENCRYPTION_KEY_ENV];
 
   if (!encryptionKey) {
-    const isProduction = process.env.NODE_ENV === 'production';
-    if (isProduction) {
+    throw new Error(
+      "ENCRYPTION_KEY environment variable must be configured. " +
+        "Sensitive credentials cannot be stored without encryption. " +
+        `For local development, you may set ENCRYPTION_KEY to the literal ` +
+        `string '${ALLOW_PLAINTEXT_DEV_SENTINEL}' to disable encryption ` +
+        "(do NOT use this in production).",
+    );
+  }
+
+  if (encryptionKey === ALLOW_PLAINTEXT_DEV_SENTINEL) {
+    if (process.env.NODE_ENV === "production") {
       throw new Error(
-        "ENCRYPTION_KEY environment variable must be configured in production. " +
-        "Sensitive credentials cannot be stored without encryption."
+        "ENCRYPTION_KEY is set to the development plaintext sentinel " +
+          "but NODE_ENV=production. Refusing to start. Set a real " +
+          "encryption key (>=32 chars).",
       );
     }
-
     if (!encryptionKeyWarningLogged) {
       console.warn(
-        "[Encryption] WARNING: ENCRYPTION_KEY environment variable is not set. " +
-        "Sensitive credentials will be stored in plaintext. " +
-        "This is not recommended for production environments."
+        "[Encryption] WARNING: ENCRYPTION_KEY sentinel set; sensitive " +
+          "credentials will be stored in plaintext. Development only.",
       );
       encryptionKeyWarningLogged = true;
     }
     return;
   }
-  
+
   if (encryptionKey.length < 32) {
-    console.error(
-      `[Encryption] ERROR: ENCRYPTION_KEY must be at least 32 characters. ` +
-      `Current length: ${encryptionKey.length}`
-    );
     throw new Error(
-      "ENCRYPTION_KEY must be at least 32 characters long for secure encryption"
+      `ENCRYPTION_KEY must be at least 32 characters long for secure encryption ` +
+        `(current length: ${encryptionKey.length})`,
     );
   }
-  
+
   console.log("[Encryption] Encryption key initialized successfully");
 }
 

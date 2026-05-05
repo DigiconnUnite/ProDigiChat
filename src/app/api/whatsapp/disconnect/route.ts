@@ -1,64 +1,75 @@
 /**
  * WhatsApp Disconnect API
- * 
- * Disconnects the WhatsApp Business Account from the organization.
- * Removes all stored credentials and phone numbers.
+ *
+ * Disconnects WhatsApp Business Account credentials from the caller's
+ * organization. Removes phone numbers and credentials.
+ *
+ * Authorization:
+ *  - Caller must be authenticated.
+ *  - Caller's session must have an active membership in the org with
+ *    role >= manager (managers, admins, owners can disconnect).
+ *  - The organizationId is always taken from the verified JWT — the
+ *    request body is no longer trusted to specify which org to disconnect.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireOrg } from "@/lib/api-auth";
 
 export async function POST(request: NextRequest) {
+  const auth = await requireOrg(request, "manager");
+  if (!auth.ok) return auth.response;
+  const { organizationId } = auth.context;
+
   try {
-    const body = await request.json();
-    const { organizationId, accountId } = body;
+    const body = await request.json().catch(() => ({}));
+    const { accountId } = body as { accountId?: string };
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'Organization ID is required' },
-        { status: 400 }
-      );
-    }
-
-    // If accountId is provided, delete specific account
     if (accountId) {
-      // Delete phone numbers linked to this credential
+      const owned = await prisma.whatsAppCredential.findFirst({
+        where: { id: accountId, organizationId },
+        select: { id: true },
+      });
+      if (!owned) {
+        return NextResponse.json(
+          { error: "Credential not found in this organization" },
+          { status: 404 },
+        );
+      }
+
       await prisma.whatsAppPhoneNumber.deleteMany({
-        where: { credentialId: accountId }
+        where: { credentialId: accountId },
       });
 
-      // Delete the credential
       await prisma.whatsAppCredential.deleteMany({
-        where: { id: accountId, organizationId }
+        where: { id: accountId, organizationId },
       });
     } else {
-      // Delete all phone numbers for this organization
       const credentials = await prisma.whatsAppCredential.findMany({
         where: { organizationId },
-        select: { id: true }
+        select: { id: true },
       });
-      
+
       for (const cred of credentials) {
         await prisma.whatsAppPhoneNumber.deleteMany({
-          where: { credentialId: cred.id }
+          where: { credentialId: cred.id },
         });
       }
 
-      // Delete all credentials
       await prisma.whatsAppCredential.deleteMany({
-        where: { organizationId }
+        where: { organizationId },
       });
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'WhatsApp account disconnected successfully' 
+    return NextResponse.json({
+      success: true,
+      message: "WhatsApp account disconnected successfully",
     });
-  } catch (error: any) {
-    console.error('Error disconnecting WhatsApp account:', error);
+  } catch (error) {
+    console.error("Error disconnecting WhatsApp account:", error);
     return NextResponse.json(
-      { error: 'Failed to disconnect WhatsApp account' },
-      { status: 500 }
+      { error: "Failed to disconnect WhatsApp account" },
+      { status: 500 },
     );
   }
 }
