@@ -76,6 +76,15 @@ async function validateApiCredentials(
   businessAccountId: string
 ): Promise<{ valid: boolean; error?: string; businessAccountName?: string }> {
   try {
+    const maskToken = (t?: string | null) => {
+      if (!t) return 'null';
+      if (t.length <= 10) return '****';
+      return `${t.slice(0, 6)}...${t.slice(-4)}`;
+    };
+
+    console.info(
+      `[HealthCheck] validateApiCredentials: phoneNumberId=${phoneNumberId}, businessAccountId=${businessAccountId}, apiKey=${maskToken(apiKey)}`
+    );
     // Test phone number access
     const phoneResponse = await axios.get(
       `${META_API_BASE_URL}/${phoneNumberId}`,

@@ -319,7 +319,7 @@ export async function POST(
         type: 'template',
         templateId: messageContent.templateId,
         templateName: template.name,
-        templateLanguage,
+        language: templateLanguage,
         components,
         mediaAttachments: messageContent.mediaAttachments
       }

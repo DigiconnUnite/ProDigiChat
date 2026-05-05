@@ -228,20 +228,6 @@ function SettingsPageContent() {
   return (
     <div className="bg-transparent px-2.5 border h-full lg:px-0">
       <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Settings</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage your account and platform configuration
-          </p>
-        </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Clock className="h-4 w-4" />
-          Last updated: {new Date().toLocaleDateString()}
-        </div>
-      </div>
-
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}

@@ -473,11 +473,17 @@ async function processIncomingMessage(
 
   // Extract organization ID from webhook metadata
   let organizationId: string | null = null;
-  if (value.metadata?.phone_number_id) {
-    // Look up the organization that owns this phone number
-    const phoneNumber = await prisma.whatsAppPhoneNumber.findUnique({
-      where: { id: value.metadata.phone_number_id },
-      include: { credential: true }
+  const metaPhoneNumberId = value.metadata?.phone_number_id;
+  if (metaPhoneNumberId) {
+    // Look up the organization that owns this Meta phone number id.
+    const phoneNumber = await prisma.whatsAppPhoneNumber.findFirst({
+      where: {
+        OR: [
+          { metaPhoneNumberId },
+          { id: metaPhoneNumberId },
+        ],
+      },
+      include: { credential: true },
     });
     organizationId = phoneNumber?.credential?.organizationId || null;
   }
@@ -644,6 +650,27 @@ async function processStatusUpdate(
       updatedAt: new Date(timestamp * 1000),
     },
   });
+
+  const queueStatus =
+    messageStatus === "failed"
+      ? "failed"
+      : messageStatus === "sent"
+        ? "sent"
+        : messageStatus === "delivered" || messageStatus === "read"
+          ? "delivered"
+          : null;
+
+  if (queueStatus) {
+    await prisma.whatsAppMessageQueue.updateMany({
+      where: { whatsappMessageId: id },
+      data: {
+        status: queueStatus,
+        ...(queueStatus === "delivered"
+          ? { deliveredAt: new Date(timestamp * 1000) }
+          : {}),
+      },
+    });
+  }
 
   // If it's a campaign message, update campaign stats
   if (existingMessage.campaignId) {

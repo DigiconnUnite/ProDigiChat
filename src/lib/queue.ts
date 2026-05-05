@@ -319,12 +319,14 @@ export async function getReadyMessages(
         {
           OR: [
             { scheduledAt: null },
+            { scheduledAt: { isSet: false } },
             { scheduledAt: { lte: now } },
           ],
         },
         {
           OR: [
             { nextRetryAt: null },
+            { nextRetryAt: { isSet: false } },
             { nextRetryAt: { lte: now } },
           ],
         },

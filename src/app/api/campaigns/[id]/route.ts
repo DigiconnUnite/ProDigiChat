@@ -26,14 +26,19 @@ export async function GET(
 
   try {
     const userId = token.sub as string
+    const organizationId = token.organizationId as string | undefined
     const { id } = await params
     
-    // Get campaign only if it belongs to the authenticated user
+    const campaignWhere: { id: string; createdBy?: string; organizationId?: string } = { id }
+    if (organizationId) {
+      campaignWhere.organizationId = organizationId
+    } else {
+      campaignWhere.createdBy = userId
+    }
+
+    // Get campaign only if it belongs to the authenticated user/org
     const campaign = await prisma.campaign.findFirst({
-      where: { 
-        id,
-        createdBy: userId
-      },
+      where: campaignWhere,
       include: {
         audience: {
           include: {
