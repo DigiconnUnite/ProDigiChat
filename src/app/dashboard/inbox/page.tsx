@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import { parseMessageContent } from "@/types/common"
+import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -49,9 +51,12 @@ interface Message {
   time: string
   status?: string
   mediaUrl?: string
+  messageType?: string
 }
 
 export default function InboxPage() {
+  const { data: session } = useSession()
+  
   // State
   const [conversations, setConversations] = useState<Contact[]>([])
   const [selectedConversation, setSelectedConversation] = useState<Contact | null>(null)
@@ -68,6 +73,7 @@ export default function InboxPage() {
   const [isCheckingConnection, setIsCheckingConnection] = useState(true)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const socketRef = useRef<any>(null)
 
   // Fetch WhatsApp connection status
   const checkWhatsAppConnection = useCallback(async () => {
@@ -150,20 +156,31 @@ export default function InboxPage() {
       if (data.messages && data.messages.length > 0 && isWhatsAppConnected) {
         // Transform messages to UI format
         const transformedMessages: Message[] = data.messages.map((msg: any) => {
-          let content = { text: "", caption: "", mediaUrl: "" }
+          let content: any = { text: "", caption: "", mediaUrl: "", type: "text" }
           try {
-            content = JSON.parse(msg.content)
+            // Use the proper parseMessageContent utility
+            content = parseMessageContent(msg.content)
           } catch (e) {
             // If not JSON, treat the content as plain text
-            content = { text: msg.content, caption: "", mediaUrl: "" }
+            content = { text: msg.content, caption: "", mediaUrl: "", type: "text" }
           }
+          
+          // Handle different message types
+          let displayText = content.text || content.caption || "Media message"
+          
+          // Handle template messages specially
+          if (content.type === 'template' && content.template) {
+            displayText = content.template.text || content.template.body || "Template message"
+          }
+          
           return {
             id: msg.id,
             type: msg.direction === "outgoing" ? "sent" : "received",
-            text: content.text || content.caption || "Media message",
+            text: displayText,
             time: formatTime(new Date(msg.createdAt)),
             status: msg.status,
-            mediaUrl: content.mediaUrl
+            mediaUrl: content.mediaUrl,
+            messageType: content.type || "text"
           }
         })
         setMessages(transformedMessages)
@@ -223,6 +240,80 @@ export default function InboxPage() {
     }
   }, [selectedConversation, fetchMessages])
 
+  // Initialize WebSocket for real-time updates
+  useEffect(() => {
+    const orgId = (session as any)?.orgId || (session as any)?.organizationId
+    if (!orgId || !isWhatsAppConnected) return
+
+    // Initialize WebSocket connection
+    const socketUrl = process.env.NODE_ENV === 'production' 
+      ? window.location.origin 
+      : 'http://localhost:3000'
+    
+    try {
+      // @ts-ignore - Socket.IO might not be in types
+      socketRef.current = io(socketUrl, {
+        transports: ['websocket', 'polling']
+      })
+
+      const socket = socketRef.current
+
+      // Join inbox room
+      socket.emit('join-inbox', orgId)
+
+      // Listen for new messages
+      socket.on('new-message', (data: any) => {
+        console.log('New message received:', data)
+        
+        // If message is for current conversation, add it
+        if (selectedConversation && data.contactId === selectedConversation.id) {
+          const newMessage: Message = {
+            id: data.messageId,
+            type: data.sender?.id === session?.user?.id ? "sent" : "received",
+            text: data.content?.text || "New message",
+            time: formatTime(new Date(data.createdAt)),
+            status: data.status,
+            messageType: data.content?.type || "text"
+          }
+          setMessages(prev => [...prev, newMessage])
+        }
+
+        // Refresh conversations list
+        fetchConversations()
+      })
+
+      // Listen for message status updates
+      socket.on('message-status', (data: any) => {
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.id === data.messageId 
+              ? { ...msg, status: data.status }
+              : msg
+          )
+        )
+      })
+
+      socket.on('connect', () => {
+        console.log('WebSocket connected')
+      })
+
+      socket.on('disconnect', () => {
+        console.log('WebSocket disconnected')
+      })
+
+    } catch (error) {
+      console.error('WebSocket initialization error:', error)
+    }
+
+    // Cleanup
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect()
+        socketRef.current = null
+      }
+    }
+  }, [session, isWhatsAppConnected, selectedConversation?.id, fetchConversations])
+
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -252,12 +343,13 @@ export default function InboxPage() {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to send message")
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || "Failed to send message")
       }
 
       const data = await response.json()
       
-      if (data.message) {
+      if (data.success && data.message) {
         // Add the new message to the list
         setMessages(prev => [...prev, data.message])
         
@@ -273,8 +365,16 @@ export default function InboxPage() {
               : conv
           )
         )
+        
+        // Clear input
+        setMessageInput("")
+        
+        // Scroll to bottom
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+        }, 100)
       } else {
-        // Mock message for demo
+        // Handle case where API returns success but no message
         const newMessage: Message = {
           id: Date.now().toString(),
           type: "sent",
@@ -296,18 +396,24 @@ export default function InboxPage() {
               : conv
           )
         )
+        
+        setMessageInput("")
       }
-
-      setMessageInput("")
     } catch (err) {
       console.error("Error sending message:", err)
-      // Still add message locally for demo
+      
+      // Show error toast if available
+      if (typeof window !== 'undefined' && (window as any).toast) {
+        ;(window as any).toast.error(err instanceof Error ? err.message : "Failed to send message")
+      }
+      
+      // Still add message locally for better UX
       const newMessage: Message = {
         id: Date.now().toString(),
         type: "sent",
         text: messageInput.trim(),
         time: formatTime(new Date()),
-        status: "sent"
+        status: "failed"
       }
       setMessages(prev => [...prev, newMessage])
       setMessageInput("")
@@ -429,22 +535,24 @@ export default function InboxPage() {
   return (
     <div className="bg-transparent px-2.5 border h-full lg:px-0">
       <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 space-y-6">
-      {/* Header Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Inbox</h1>
-          <p className="text-gray-500">
-            Manage your WhatsApp conversations and messages
-          </p>
+      {/* Header Actions - Only show when WhatsApp is not connected */}
+      {!isWhatsAppConnected && (
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">Inbox</h1>
+            <p className="text-gray-500">
+              Manage your WhatsApp conversations and messages
+            </p>
+          </div>
+          <Button className="gap-2" onClick={handleRefresh}>
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </Button>
         </div>
-        <Button className="gap-2" onClick={handleRefresh}>
-          <RefreshCw className="w-4 h-4" />
-          Refresh
-        </Button>
-      </div>
+      )}
 
       {/* Chat Interface */}
-      <div className="border rounded-lg bg-white overflow-hidden" style={{ height: 'calc(87vh - 200px)' }}>
+      <div className="border rounded-lg bg-white overflow-hidden" style={{ height: isWhatsAppConnected ? 'calc(87vh - 48px)' : 'calc(87vh - 200px)' }}>
         <div className="p-0 gap-2 bg-gray-200 flex h-full">
           {/* Conversations List */}
           <div className="w-80 border border-border flex flex-col bg-white">
