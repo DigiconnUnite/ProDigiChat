@@ -392,10 +392,49 @@ export async function POST(
 
     console.log('[CampaignLaunch] Using WhatsApp account ID:', whatsappAccountId);
 
+    // Atomically claim launch before enqueueing. This makes launch idempotent
+    // when users click twice quickly or two requests arrive concurrently.
+    const launchClaim = await prisma.campaign.updateMany({
+      where: {
+        id,
+        organizationId: campaign.organizationId,
+        status: { in: ['draft', 'scheduled'] },
+      },
+      data: {
+        status: 'running',
+        stats: JSON.stringify({
+          totalSent: 0,
+          delivered: 0,
+          read: 0,
+          failed: 0,
+          clicked: 0,
+        }),
+      },
+    })
+
+    if (launchClaim.count === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Campaign is already launched or currently being launched.',
+        },
+        { status: 409 },
+      )
+    }
+
     // Enqueue all messages - let cron handle processing
     if (queueMessages.length > 0 && orgId) {
       console.log('[CampaignLaunch] Adding messages to queue:', queueMessages.length, 'accountId:', whatsappAccountId)
+      try {
         await addBulkToQueue(orgId, queueMessages, whatsappAccountId)
+      } catch (queueError) {
+        // Roll back launch status so campaign can be launched again.
+        await prisma.campaign.update({
+          where: { id },
+          data: { status: campaign.status },
+        })
+        throw queueError
+      }
 
       // Trigger the queue processing immediately in the background
       // This ensures messages start sending right away in local development
@@ -412,20 +451,6 @@ export async function POST(
         console.error('[CampaignLaunch] Background queue processing error:', err);
       });
 
-      // Set campaign status to running immediately after queuing
-      await prisma.campaign.update({
-        where: { id },
-        data: {
-          status: 'running',
-          stats: JSON.stringify({
-            totalSent: 0,
-            delivered: 0,
-            read: 0,
-            failed: 0,
-            clicked: 0
-          })
-        }
-      })
     } else if (!orgId) {
       console.error('[CampaignLaunch] ERROR: No organization ID - messages will not be sent!')
       return NextResponse.json(
