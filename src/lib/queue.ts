@@ -8,6 +8,7 @@
 import { WhatsAppMessageQueue, Prisma } from '@prisma/client';
 import { sendTextMessage, sendMediaMessage, sendTemplateMessage } from '@/app/api/whatsapp/messages';
 import { prisma } from '@/lib/prisma';
+import { evaluateOutboundPolicy } from '@/lib/messaging-policy';
 
 // Queue status constants
 export const QueueStatus = {
@@ -338,11 +339,39 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
       caption?: string;
       language?: string;
     };
-    
+
     try {
       parsedContent = JSON.parse(messageContent);
     } catch {
       parsedContent = { text: messageContent };
+    }
+
+    // Messaging-policy gate: opt-in for all messages, plus the 24-hour
+    // customer-care window for freeform / non-template messages. We do
+    // this once here, before any Meta API call, so policy denials never
+    // count against rate limits and never produce orphan Message rows.
+    const isTemplate = messageType === MessageType.TEMPLATE;
+    const policy = await evaluateOutboundPolicy({
+      organizationId,
+      contactId: queueItem.contactId,
+      phoneNumber: recipientPhone,
+      isTemplate,
+    });
+
+    if (!policy.ok) {
+      console.warn(
+        `[Queue] Policy denial for message ${id}: ${policy.reason} - ${policy.message}`,
+      );
+      await prisma.whatsAppMessageQueue.update({
+        where: { id },
+        data: {
+          status: QueueStatus.FAILED,
+          errorMessage: `policy:${policy.reason}: ${policy.message}`,
+          errorCode: `POLICY_${policy.reason.toUpperCase()}`,
+          nextRetryAt: null,
+        },
+      });
+      return { success: false, error: policy.message };
     }
 
     let result: any;

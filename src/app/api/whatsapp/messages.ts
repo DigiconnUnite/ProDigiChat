@@ -16,58 +16,61 @@ function formatPhoneNumber(phone: string): string {
   if (cleaned.length < 10 || cleaned.length > 15) {
     console.warn('[WhatsAppMessages] Phone number length seems invalid:', cleaned.length);
   }
-  
-  console.log('[WhatsAppMessages] Formatted phone number:', cleaned);
+
   return cleaned;
+}
+
+/** Mask a phone number for logging — keeps only the last 4 digits. */
+function maskPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length <= 4) return '****';
+  return `****${digits.slice(-4)}`;
 }
 
 export async function sendTextMessage(to: string, message: string, orgId: string, accountId?: string) {
   const formattedTo = formatPhoneNumber(to);
-  console.log('[WhatsAppMessages] sendTextMessage called:', { to: formattedTo, messageLength: message.length, orgId, accountId });
+  console.log('[WhatsAppMessages] sendTextMessage', { to: maskPhone(formattedTo), messageLength: message.length, accountId });
   try {
     const response = await whatsappClient.sendMessage({
       to: formattedTo,
       type: "text",
       text: { body: message },
     }, orgId, accountId);
-    console.log('[WhatsAppMessages] Text message sent successfully:', response.data);
     return response.data;
   } catch (error) {
-    console.error("[WhatsAppMessages] Failed to send text message:", error);
+    console.error('[WhatsAppMessages] Failed to send text message');
     throw error;
   }
 }
 
 export async function sendMediaMessage(to: string, mediaUrl: string, caption: string, orgId: string, accountId?: string) {
   const formattedTo = formatPhoneNumber(to);
-  console.log('[WhatsAppMessages] sendMediaMessage called:', { to: formattedTo, mediaUrl, caption, orgId, accountId });
+  console.log('[WhatsAppMessages] sendMediaMessage', { to: maskPhone(formattedTo), hasCaption: !!caption, accountId });
   try {
     const response = await whatsappClient.sendMessage({
       to: formattedTo,
       type: "image",
       image: { link: mediaUrl, caption },
     }, orgId, accountId);
-    console.log('[WhatsAppMessages] Media message sent successfully:', response.data);
     return response.data;
   } catch (error) {
-    console.error("[WhatsAppMessages] Failed to send media message:", error);
+    console.error('[WhatsAppMessages] Failed to send media message');
     throw error;
   }
 }
 
 export async function sendTemplateMessage(to: string, templateName: string, components: any[], orgId: string, language: string = 'en_US', accountId?: string) {
   const formattedTo = formatPhoneNumber(to);
-  console.log('[WhatsAppMessages] sendTemplateMessage called:', { to: formattedTo, templateName, components, orgId, language, accountId });
+  console.log('[WhatsAppMessages] sendTemplateMessage', { to: maskPhone(formattedTo), templateName, language, components: components?.length ?? 0, accountId });
   try {
     const response = await whatsappClient.sendMessage({
       to: formattedTo,
       type: "template",
       template: { name: templateName, language: { code: language }, components },
     }, orgId, accountId);
-    console.log('[WhatsAppMessages] Template message sent successfully:', response.data);
     return response.data;
   } catch (error) {
-    console.error("[WhatsAppMessages] Failed to send template message:", error);
+    console.error('[WhatsAppMessages] Failed to send template message');
     throw error;
   }
 }
