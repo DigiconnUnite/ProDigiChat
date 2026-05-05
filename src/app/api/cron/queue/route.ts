@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { processQueue } from '@/lib/queue';
 import { prisma } from '@/lib/prisma';
+import { withLock } from '@/lib/distributed-lock';
+
+/**
+ * How long the per-org cron lock is held before being considered
+ * abandoned. Sized to be longer than the worst-case time
+ * `processQueue(orgId, 50)` takes (50 sequential Meta API calls at
+ * ~1s each = ~50s; we double that to 120s for safety) but short
+ * enough that a stuck instance unlocks within a couple of minutes.
+ */
+const PER_ORG_LOCK_TTL_MS = 2 * 60 * 1000;
 
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -92,9 +102,25 @@ export async function GET(request: NextRequest) {
         });
         results.retried += retried.count;
 
-        // Then process the queue
-        const processResult = await processQueue(org.organizationId, 50);
-        
+        // Per-org distributed lock. Two cron invocations (or a cron +
+        // a manual /api/queue/process trigger) targeting the same org
+        // would otherwise race to fan out the same set of queue rows.
+        // The lock is acquired via Upstash Redis SET NX; if the lock
+        // is already held we skip this org for this tick.
+        const lockResult = await withLock(
+          `cron:queue:${org.organizationId}`,
+          PER_ORG_LOCK_TTL_MS,
+          async () => processQueue(org.organizationId, 50),
+        );
+
+        if (!lockResult.ran) {
+          console.log(
+            `[Cron Queue] Skipping org ${org.organizationId} — already being processed`,
+          );
+          continue;
+        }
+
+        const processResult = lockResult.value;
         results.processed += processResult.processed;
         results.succeeded += processResult.succeeded;
         results.failed += processResult.failed;

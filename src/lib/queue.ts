@@ -6,9 +6,19 @@
  */
 
 import { WhatsAppMessageQueue, Prisma } from '@prisma/client';
+import crypto from 'crypto';
 import { sendTextMessage, sendMediaMessage, sendTemplateMessage } from '@/app/api/whatsapp/messages';
 import { prisma } from '@/lib/prisma';
 import { evaluateOutboundPolicy } from '@/lib/messaging-policy';
+import { classifyMetaError } from '@/lib/meta-errors';
+
+/**
+ * How long a `SENDING` row may sit before we consider it stranded by
+ * a crashed worker and reclaim it. Real sends complete in a few
+ * seconds; 10 minutes is a generous safety margin that still recovers
+ * stuck rows quickly enough that downstream campaigns don't stall.
+ */
+export const STALE_CLAIM_THRESHOLD_MS = 10 * 60 * 1000;
 
 // Queue status constants
 export const QueueStatus = {
@@ -34,6 +44,74 @@ export const RetryConfig = {
   MAX_DELAY_MS: 60000, // 60 seconds (1 minute)
   BACKOFF_MULTIPLIER: 2,
 };
+
+/**
+ * Atomically claim a single queue row for processing. Performs a
+ * conditional update from QUEUED/PENDING -> SENDING; if another
+ * worker has already claimed the row the update touches zero rows
+ * and we return null. This is the *only* way the queue worker
+ * obtains rows to send — no caller should set status=SENDING
+ * directly.
+ */
+export async function claimQueueItem(
+  id: string,
+): Promise<WhatsAppMessageQueue | null> {
+  const claimToken = crypto.randomBytes(16).toString('hex');
+  const now = new Date();
+
+  const updated = await prisma.whatsAppMessageQueue.updateMany({
+    where: {
+      id,
+      status: { in: [QueueStatus.QUEUED, QueueStatus.PENDING] },
+    },
+    data: {
+      status: QueueStatus.SENDING,
+      claimToken,
+      claimedAt: now,
+      lastAttemptAt: now,
+      attempts: { increment: 1 },
+    },
+  });
+
+  if (updated.count === 0) {
+    return null;
+  }
+
+  // Re-read so the caller sees the post-update row, including the new
+  // claimToken, status, and incremented attempts count.
+  const claimed = await prisma.whatsAppMessageQueue.findUnique({
+    where: { id },
+  });
+  return claimed;
+}
+
+/**
+ * Reset rows that were claimed but never resolved — typically because
+ * the worker crashed mid-send. Called once per cron tick before any
+ * fan-out happens. Returns the number of rows reclaimed.
+ */
+export async function reclaimStaleClaims(
+  staleThresholdMs: number = STALE_CLAIM_THRESHOLD_MS,
+): Promise<number> {
+  const cutoff = new Date(Date.now() - staleThresholdMs);
+  const result = await prisma.whatsAppMessageQueue.updateMany({
+    where: {
+      status: QueueStatus.SENDING,
+      claimedAt: { lt: cutoff },
+    },
+    data: {
+      status: QueueStatus.QUEUED,
+      claimToken: null,
+      claimedAt: null,
+    },
+  });
+  if (result.count > 0) {
+    console.warn(
+      `[Queue] Reclaimed ${result.count} stale SENDING rows older than ${staleThresholdMs}ms`,
+    );
+  }
+  return result.count;
+}
 
 /**
  * Calculate exponential backoff delay
@@ -273,19 +351,11 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
   const { id, organizationId, recipientPhone, messageContent, messageType, attempts, whatsappAccountId } = queueItem;
   const accountId = whatsappAccountId || undefined;
 
-  console.log(`[Queue] Processing message ${id} (attempt ${attempts + 1}), accountId: ${whatsappAccountId}`);
-
-  // Update status to sending
-  await prisma.whatsAppMessageQueue.update({
-    where: { id },
-    data: {
-      status: QueueStatus.SENDING,
-      attempts: attempts + 1,
-      lastAttemptAt: new Date(),
-    },
-  });
-
-  console.log(`[Queue] Processing message ${id} (attempt ${attempts + 1})`);
+  // The caller (`processQueue`) is responsible for atomically claiming
+  // the row via `claimQueueItem` before invoking us. The row's
+  // `attempts` is therefore already the post-increment value; we do
+  // not increment it again here.
+  console.log(`[Queue] Processing message ${id} (attempt ${attempts}), accountId: ${whatsappAccountId}`);
 
   async function resolveContact(): Promise<{ id: string; organizationId: string | null } | null> {
     if (queueItem.contactId) {
@@ -369,6 +439,8 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
           errorMessage: `policy:${policy.reason}: ${policy.message}`,
           errorCode: `POLICY_${policy.reason.toUpperCase()}`,
           nextRetryAt: null,
+          claimToken: null,
+          claimedAt: null,
         },
       });
       return { success: false, error: policy.message };
@@ -413,7 +485,8 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
     // Extract WhatsApp message ID from response
     const whatsappMessageId = result?.messages?.[0]?.id;
 
-    // Update queue item as sent
+    // Update queue item as sent. Clear the claim so it won't be
+    // mistaken for a stranded SENDING row by stale-claim recovery.
     await prisma.whatsAppMessageQueue.update({
       where: { id },
       data: {
@@ -422,8 +495,22 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
         sentAt: new Date(),
         errorMessage: null,
         errorCode: null,
+        claimToken: null,
+        claimedAt: null,
       },
     });
+
+    // Stamp the contact's lastOutboundAt so we have an accurate record
+    // of the most recent successful send. Currently used only for
+    // analytics; future PRs may use it to suppress duplicate sends.
+    if (queueItem.contactId) {
+      await prisma.contact.update({
+        where: { id: queueItem.contactId },
+        data: { lastOutboundAt: new Date() },
+      }).catch((err) => {
+        console.error('[Queue] Failed to stamp lastOutboundAt:', err);
+      });
+    }
 
     // Persist outgoing message row so webhook status updates can be matched by whatsappMessageId.
     if (whatsappMessageId) {
@@ -460,54 +547,99 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
     return { success: true, whatsappMessageId };
 
   } catch (error: any) {
-    console.error(`[Queue] Failed to send message ${id}:`, error);
+    // Classify the Meta error so we can decide retry vs. no_retry,
+    // detect rate-limit cooldowns, and surface auth failures to the
+    // operator (rather than silently retrying with a dead token).
+    const classification = classifyMetaError(error);
+    const errorMessage = classification.reason;
+    const errorCode = String(
+      error?.response?.data?.error?.code ?? error?.code ?? 'UNKNOWN',
+    );
 
-    // Calculate if we should retry
-    const newAttempts = attempts + 1;
-    const canRetry = newAttempts < queueItem.maxAttempts;
-    
+    console.error(
+      `[Queue] Send failed for ${id} (${classification.category}): ${errorMessage}`,
+    );
+
     let nextRetryAt: Date | null = null;
-    let errorMessage = error.message || 'Unknown error';
-    let errorCode = error.code || error.response?.data?.error?.code || 'UNKNOWN';
+    let nextStatus: typeof QueueStatus[keyof typeof QueueStatus] = QueueStatus.FAILED;
 
-    if (canRetry) {
-      let delay = calculateBackoffDelay(attempts);
-
-      // Special handling for Meta API rate limits (error code 130429)
-      if (errorCode === '130429' || errorCode === 130429) {
-        // Meta rate limit - pause ALL messages for this account for 1 hour
-        delay = 60 * 60 * 1000; // 1 hour
-        console.log(`[Queue] Meta rate limit detected for account ${queueItem.whatsappAccountId}, pausing all messages for 1 hour`);
-
-        // Update all queued messages for this account with longer delay
-        await prisma.whatsAppMessageQueue.updateMany({
-          where: {
-            whatsappAccountId: queueItem.whatsappAccountId,
-            status: { in: [QueueStatus.QUEUED, QueueStatus.PENDING] }
-          },
-          data: {
-            nextRetryAt: new Date(Date.now() + delay)
-          }
-        });
+    switch (classification.category) {
+      case 'rate_limited': {
+        // Meta rate limit — pause ALL messages for this account for the
+        // suggested cooldown. The row itself goes back to QUEUED so it
+        // will be picked up after the cooldown expires.
+        const cooldown = classification.cooldownMs ?? 60 * 60 * 1000;
+        const resumeAt = new Date(Date.now() + cooldown);
+        nextRetryAt = resumeAt;
+        nextStatus = QueueStatus.QUEUED;
+        if (queueItem.whatsappAccountId) {
+          await prisma.whatsAppMessageQueue.updateMany({
+            where: {
+              whatsappAccountId: queueItem.whatsappAccountId,
+              status: { in: [QueueStatus.QUEUED, QueueStatus.PENDING] },
+            },
+            data: { nextRetryAt: resumeAt },
+          });
+          console.warn(
+            `[Queue] Account ${queueItem.whatsappAccountId} rate limited; ` +
+              `pausing all queued/pending sends until ${resumeAt.toISOString()}`,
+          );
+        }
+        break;
       }
 
-      nextRetryAt = new Date(Date.now() + delay);
-      console.log(`[Queue] Message ${id} will retry at ${nextRetryAt} (attempt ${newAttempts + 1})`);
+      case 'reconnect_auth': {
+        // Meta access token is dead. Retrying won't help; the operator
+        // needs to reconnect the account in the WhatsApp settings UI.
+        // Don't retry, mark FAILED, and surface the reason for UI use.
+        nextStatus = QueueStatus.FAILED;
+        nextRetryAt = null;
+        break;
+      }
+
+      case 'no_retry': {
+        nextStatus = QueueStatus.FAILED;
+        nextRetryAt = null;
+        break;
+      }
+
+      case 'retry':
+      default: {
+        const canRetry = attempts < queueItem.maxAttempts;
+        if (canRetry) {
+          // `attempts` is already incremented (claim did it). Use
+          // attempts-1 as the backoff exponent so the first retry
+          // waits INITIAL_DELAY_MS, second waits 2x, etc.
+          const delay = calculateBackoffDelay(Math.max(0, attempts - 1));
+          nextRetryAt = new Date(Date.now() + delay);
+          nextStatus = QueueStatus.QUEUED;
+          console.log(
+            `[Queue] Message ${id} will retry at ${nextRetryAt.toISOString()} (attempt ${attempts + 1}/${queueItem.maxAttempts})`,
+          );
+        } else {
+          nextStatus = QueueStatus.FAILED;
+          nextRetryAt = null;
+        }
+        break;
+      }
     }
 
-    // Update queue item with error
     await prisma.whatsAppMessageQueue.update({
       where: { id },
       data: {
-        status: canRetry ? QueueStatus.QUEUED : QueueStatus.FAILED,
+        status: nextStatus,
         nextRetryAt,
-        errorMessage: errorMessage.substring(0, 1000), // Limit error message length
+        errorMessage: errorMessage.substring(0, 1000),
         errorCode,
+        // Drop the claim now that we've finished handling this
+        // attempt; the next retry will mint a fresh claimToken.
+        claimToken: null,
+        claimedAt: null,
       },
     });
 
-    return { 
-      success: false, 
+    return {
+      success: false,
       error: errorMessage,
     };
   }
@@ -535,41 +667,29 @@ export async function processQueue(
     results: [] as Array<{ queueItemId: string; success: boolean; error?: string }>,
   };
 
-  // Get messages ready to process
-  const messages = await getReadyMessages(organizationId, limit);
-  console.log(`[Queue] Found ${messages.length} messages to process`);
+  // Reclaim any rows stranded by a previous worker crash. Cheap, runs
+  // once per tick.
+  await reclaimStaleClaims();
 
-  // Check for rate-limited accounts and skip their messages
-  const now = new Date();
-  const rateLimitedAccounts = new Set<string>();
-  
-  console.log(`[Queue] Processing ${messages.length} ready messages for org ${organizationId}`);
+  // Find candidates that *look* ready. We then race to claim each one.
+  const candidates = await getReadyMessages(organizationId, limit);
+  console.log(`[Queue] Found ${candidates.length} candidate messages for org ${organizationId}`);
 
-  for (const message of messages) {
- 
-    // getReadyMessages should already filter these out, but we check again for safety.
-    if (message.whatsappAccountId && message.nextRetryAt && new Date(message.nextRetryAt).getTime() > now.getTime()) {
-      rateLimitedAccounts.add(message.whatsappAccountId);
-    }
-  }
+  const claimedMessages: WhatsAppMessageQueue[] = [];
 
-  if (rateLimitedAccounts.size > 0) {
-    console.log(`[Queue] Rate-limited accounts detected: ${Array.from(rateLimitedAccounts).join(', ')} - skipping messages for 60 minutes`);
-  }
-
-  for (const message of messages) {
-    // Skip messages from rate-limited accounts (130429 cooldown)
-    if (message.whatsappAccountId && rateLimitedAccounts.has(message.whatsappAccountId)) {
-      console.log(`[Queue] Skipping message ${message.id} - account ${message.whatsappAccountId} is in rate limit cooldown`);
-      result.skipped++;
-      result.results.push({
-        queueItemId: message.id,
-        success: false,
-        error: 'Account rate limited (130429) - skipped for cooldown period',
-      });
+  for (const candidate of candidates) {
+    // Atomic claim: if another worker has already grabbed this row,
+    // claimQueueItem returns null and we skip without bumping
+    // attempts or producing an error row.
+    const claimed = await claimQueueItem(candidate.id);
+    if (!claimed) {
+      console.log(`[Queue] Lost race on ${candidate.id}; another worker has it.`);
       continue;
     }
+    claimedMessages.push(claimed);
+  }
 
+  for (const message of claimedMessages) {
     const processResult = await processQueueItem(message);
     result.processed++;
 
@@ -587,7 +707,7 @@ export async function processQueue(
   }
 
   // Roll up campaign stats from queue processing results
-  await updateCampaignStatsFromQueue(messages, result.results);
+  await updateCampaignStatsFromQueue(claimedMessages, result.results);
 
   return result;
 }
