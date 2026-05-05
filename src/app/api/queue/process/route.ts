@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { processQueue, retryMessage, retryAllFailed, cancelMessage, cleanupOldMessages } from '@/lib/queue';
 import { requireOrg } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
+import { withLock } from '@/lib/distributed-lock';
 
 export async function POST(request: NextRequest) {
   // All actions on the queue require manager+; the organizationId is
@@ -17,14 +18,28 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'process': {
-        // Process messages in the queue
+        // Process messages in the queue. Uses the same per-org lock
+        // as the cron tick so manual triggers cannot fan out
+        // duplicate sends if a cron run is already in progress.
         const limit = parseInt(searchParams.get('limit') || body.limit || '50');
-        const result = await processQueue(organizationId, limit);
-        
+        const lockResult = await withLock(
+          `cron:queue:${organizationId}`,
+          2 * 60 * 1000,
+          async () => processQueue(organizationId, limit),
+        );
+        if (!lockResult.ran) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Queue is already being processed by another worker. Try again in a few seconds.',
+            },
+            { status: 409 },
+          );
+        }
         return NextResponse.json({
           success: true,
           action: 'process',
-          ...result,
+          ...lockResult.value,
         });
       }
 
