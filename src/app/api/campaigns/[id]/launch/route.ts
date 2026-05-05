@@ -252,31 +252,52 @@ export async function POST(
         )
       }
       
-      // Only check for whatsappTemplateId if the template is in PENDING status on Meta
-      // Approved templates can be used even without whatsappTemplateId if they have local approval
-      if (!template.whatsappTemplateId && template.status === 'PENDING') {
+      // Templates may only be sent if Meta has actually approved them.
+      // Two equivalent signals indicate "approved":
+      //   - template.status === 'approved' (case-insensitive), OR
+      //   - we have a non-empty whatsappTemplateId on file from Meta.
+      // Anything else (PENDING, REJECTED, missing id) is a hard reject.
+      const statusLower = (template.status || '').toLowerCase()
+      const isApprovedOnMeta =
+        !!template.whatsappTemplateId || statusLower === 'approved'
+      if (!isApprovedOnMeta) {
         return NextResponse.json(
-          { success: false, error: `Template "${template.name}" is still pending approval on WhatsApp Meta. Please wait for approval or sync the template.` },
-          { status: 400 }
+          {
+            success: false,
+            error: `Template "${template.name}" has not been approved by WhatsApp Meta (status: ${template.status || 'unknown'}). Please wait for approval or sync the template before launching the campaign.`,
+          },
+          { status: 400 },
         )
       }
-      
+
       console.log('[CampaignLaunch] Template info:', { name: template.name, whatsappTemplateId: template.whatsappTemplateId, status: template.status });
-      
+
       // Build template components with variables (use default values for now)
       const components: any[] = []
-      
-      // Add header if there's a media attachment
+
+      // Add header media using the shape Meta's Cloud API actually
+      // expects: `{type: 'image' | 'video' | 'document', image: {link}}`
+      // (note: `link`, not `url`, and the inner field name must match
+      // the type). The previous shape produced `image: {url: ...}`,
+      // which Meta silently rejects.
       if (messageContent.mediaAttachments && messageContent.mediaAttachments.length > 0) {
         const media = messageContent.mediaAttachments[0]
-        const headerParams: Record<string, { url: string }> = {}
-        headerParams[media.type] = { url: media.url }
+        const mediaType = (media.type || 'image').toLowerCase()
+        const allowedTypes = new Set(['image', 'video', 'document'])
+        if (!allowedTypes.has(mediaType)) {
+          return NextResponse.json(
+            { success: false, error: `Unsupported template header media type: ${media.type}` },
+            { status: 400 },
+          )
+        }
         components.push({
           type: 'header',
-          parameters: [{
-            type: 'media',
-            ...headerParams
-          }] as any
+          parameters: [
+            {
+              type: mediaType,
+              [mediaType]: { link: media.url },
+            },
+          ] as any,
         })
       }
       

@@ -507,6 +507,7 @@ async function processIncomingMessage(
   // as opt-outs. WhatsApp / Meta documentation specifies STOP /
   // UNSUBSCRIBE / OPT-OUT as the canonical keywords.
   const trimmedText = parsedContent.text?.trim() ?? '';
+  let optOutDetected = false;
   if (trimmedText && /^(stop|unsubscribe|opt[\s-]?out)$/i.test(trimmedText)) {
     console.log(`[WhatsApp Webhook] Opt-out detected from ${from}`);
     await prisma.contact.updateMany({
@@ -517,6 +518,7 @@ async function processIncomingMessage(
         optInSource: 'whatsapp_stop_reply',
       }
     });
+    optOutDetected = true;
   }
 
   // Check for system messages indicating opt-out
@@ -531,6 +533,24 @@ async function processIncomingMessage(
   // Find or create the contact with organization context
   const contact = await findOrCreateContact(from, organizationId);
 
+  // Stamp lastInboundAt so the messaging policy gate can apply the
+  // Meta 24-hour customer-care window correctly to subsequent freeform
+  // sends. We use the message timestamp (Meta returns Unix seconds)
+  // rather than `Date.now()` so out-of-order webhooks don't move the
+  // window backwards spuriously.
+  const inboundAt = new Date(Number(timestamp) * 1000);
+  if (!Number.isNaN(inboundAt.getTime())) {
+    await prisma.contact.update({
+      where: { id: contact.id },
+      data: {
+        lastInboundAt: inboundAt,
+        lastContacted: inboundAt,
+      },
+    }).catch((err) => {
+      console.error('[WhatsApp Webhook] Failed to stamp lastInboundAt:', err);
+    });
+  }
+
   // Store the message in the database
   const storedMessage = await storeIncomingMessage(
     contact.id,
@@ -541,6 +561,40 @@ async function processIncomingMessage(
 
   // Send acknowledgment (read receipt) to Meta
   await sendMessageAck(id, "delivered", organizationId);
+
+  // If the customer just opted out, send them a one-shot confirmation
+  // reply ("You have been unsubscribed..."). This is permitted under
+  // Meta's policy as a transactional response and is best-practice for
+  // suppression lists. We send it within the 24-hour window because
+  // they just messaged us, so a freeform reply is allowed.
+  if (optOutDetected) {
+    try {
+      const { sendTextMessage } = await import("@/app/api/whatsapp/messages");
+      await sendTextMessage(
+        from,
+        "You have been unsubscribed from this WhatsApp business account. " +
+          "You will no longer receive messages from us. " +
+          "Reply START at any time to opt back in.",
+        organizationId,
+      );
+    } catch (err) {
+      console.error('[WhatsApp Webhook] Failed to send opt-out confirmation:', err);
+    }
+  }
+
+  // If the customer sent START / UNSTOP / RESUBSCRIBE, treat as
+  // re-opt-in.
+  if (trimmedText && /^(start|unstop|resubscribe|opt[\s-]?in)$/i.test(trimmedText)) {
+    console.log(`[WhatsApp Webhook] Opt-in detected from ${from}`);
+    await prisma.contact.updateMany({
+      where: { phoneNumber: from, organizationId },
+      data: {
+        optInStatus: 'opted_in',
+        optInAt: new Date(),
+        optInSource: 'whatsapp_start_reply',
+      }
+    });
+  }
 
   console.log(`[WhatsApp Webhook] Successfully stored incoming message: ${id}`);
 

@@ -70,6 +70,12 @@ model Contact {
   optInSource   String?
   whatsappNumberId String?
   lastContacted DateTime?
+  // Last time this contact sent us an inbound WhatsApp message. Used
+  // to enforce the Meta 24-hour customer-care window for freeform
+  // (non-template) messages.
+  lastInboundAt DateTime?
+  // Last time we successfully sent this contact a WhatsApp message.
+  lastOutboundAt DateTime?
   tags          String   // JSON array of tags
   attributes    String   // JSON object for custom attributes
   isDeleted     Boolean  @default(false)
