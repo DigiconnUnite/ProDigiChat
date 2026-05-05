@@ -654,7 +654,7 @@ function SettingsPageContent() {
             </CardContent>
           </Card>
 
-          <Card className="border-red-200 bg-red-50/50">
+          <Card className="border-red-400 bg-white">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-destructive">
                 <AlertTriangleIcon className="h-5 w-5" />
@@ -665,7 +665,7 @@ function SettingsPageContent() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-4 rounded-lg border bg-background">
+              <div className="flex items-center justify-between p-4 rounded-lg border border-orange-300 bg-orange-50">
                 <div>
                   <p className="font-medium">Cancel Subscription</p>
                   <p className="text-sm text-muted-foreground">

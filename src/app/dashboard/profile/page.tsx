@@ -591,7 +591,7 @@ export default function ProfilePage() {
           </Card>
 
           {/* Danger Zone */}
-          <Card className="border-destructive/50">
+          <Card className="border-destructive">
             <CardHeader>
               <CardTitle className="text-destructive">Danger Zone</CardTitle>
               <CardDescription>
