@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { sendTextMessage } from "@/app/api/whatsapp/messages";
 import { parseMessageContent, stringifyMessageContent, parseTags } from "@/types/common";
 import { broadcastToInbox } from "@/lib/websocket";
+import { evaluateOutboundPolicy } from "@/lib/messaging-policy";
 
 // GET /api/inbox - Get all conversations
 export async function GET(request: NextRequest) {
@@ -166,7 +167,22 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
+
+    // Messaging-policy gate. Operator inbox replies are freeform, so
+    // they require both opt-in and the 24-hour customer-care window.
+    const policy = await evaluateOutboundPolicy({
+      organizationId: messageOrgId,
+      contactId: contact.id,
+      phoneNumber: contact.phoneNumber,
+      isTemplate: false,
+    });
+    if (!policy.ok) {
+      return NextResponse.json(
+        { error: policy.message, reason: policy.reason },
+        { status: 422 },
+      );
+    }
+
     const message = await prisma.message.create({
       data: {
         contactId,
