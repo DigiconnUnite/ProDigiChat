@@ -23,10 +23,19 @@ pnpm-debug.log*
 
 # Env files (keep .env.example for reference)
 .env
+.env.*
+!.env.example
 .env.local
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
+
+# Build / lint artifacts that shouldn't be committed
+tsc-errors.txt
+*.tsbuildinfo
 
 # Debug
 npm-debug.log*
