@@ -1539,7 +1539,7 @@ export function WhatsAppSettingsTab({ organizationId }: WhatsAppSettingsTabProps
             <Input 
               value={localSettings.webhookUrl || ''}
               onChange={(e) => setLocalSettings({...localSettings, webhookUrl: e.target.value})}
-              placeholder="https://yourdomain.com/api/webhooks/whatsapp"
+              placeholder="https://yourdomain.com/api/whatsapp/webhooks"
               className="text-sm"
             />
             <p className="text-xs text-gray-500">Your Meta webhook endpoint. Must be publicly accessible and use HTTPS.</p>

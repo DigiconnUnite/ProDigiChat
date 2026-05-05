@@ -1,33 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { addToQueue, addBulkToQueue, getQueueStats, getQueueByStatus, QueueStatus } from '@/lib/queue';
+import { addToQueue, addBulkToQueue, getQueueStats, getQueueByStatus } from '@/lib/queue';
+import { requireOrg } from '@/lib/api-auth';
 
 export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  // Authorization: caller must be an active member of an organization
+  // and have role >= member to enqueue messages. The organizationId is
+  // always derived from the JWT — never from the request body.
+  const auth = await requireOrg(request, 'member');
+  if (!auth.ok) return auth.response;
+  const { organizationId } = auth.context;
 
+  try {
     const body = await request.json();
-    const { 
-      recipientPhone, 
-      messageContent, 
+    const {
+      recipientPhone,
+      messageContent,
       messageType,
       campaignId,
       contactId,
       scheduledAt,
-      bulkMessages 
+      bulkMessages,
     } = body;
-
-    // Get organization ID from session or body
-    const organizationId = body.organizationId || session.user.organizationId;
-
-    if (!organizationId) {
-      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
-    }
 
     // Handle bulk message addition
     if (bulkMessages && Array.isArray(bulkMessages)) {
@@ -84,20 +77,15 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  // Read access is open to all org members; we still ignore any
+  // organizationId in the query string and use the session-derived value.
+  const auth = await requireOrg(request, 'viewer');
+  if (!auth.ok) return auth.response;
+  const { organizationId } = auth.context;
 
+  try {
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get('status');
-    const organizationId = searchParams.get('organizationId') || session.user.organizationId;
-
-    if (!organizationId) {
-      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
-    }
 
     // If status is provided, get queue items by status
     if (status) {

@@ -115,17 +115,32 @@ export class WhatsAppClient {
     };
     
     try {
-      console.log('[WhatsAppClient] Sending message payload:', JSON.stringify(messagePayload, null, 2));
+      // Avoid logging the full payload — it can contain customer phone
+      // numbers, message bodies, template variables, and media URLs.
+      // Log only the message shape.
+      console.log('[WhatsAppClient] Sending message', {
+        type: messagePayload.type,
+        hasTemplate: !!messagePayload.template,
+        hasInteractive: !!messagePayload.interactive,
+      });
       const response: AxiosResponse = await this.client.post(
         `/${this.phoneNumberId}/messages`,
         messagePayload
       );
       return response;
     } catch (error: any) {
-      // Log detailed error information from Meta API
-      const errorDetails = error.response?.data || error.message;
-      console.error('[WhatsAppClient] Failed to send message - Status:', error.response?.status);
-      console.error('[WhatsAppClient] Error response from Meta:', JSON.stringify(errorDetails, null, 2));
+      // Log Meta error code + message but not the request payload, since
+      // the request payload may contain customer PII.
+      const errorDetails = error.response?.data?.error;
+      console.error('[WhatsAppClient] Failed to send message', {
+        status: error.response?.status,
+        code: errorDetails?.code,
+        type: errorDetails?.type,
+        // Meta error messages can contain phone numbers — strip them.
+        message: typeof errorDetails?.message === 'string'
+          ? errorDetails.message.replace(/\b\d{8,15}\b/g, '***')
+          : undefined,
+      });
       
       // Handle 401 Unauthorized - try to refresh token and retry
       if (error.response?.status === 401 && this.retryCount < this.maxRetries) {
@@ -183,15 +198,28 @@ export class WhatsAppClient {
 
   async submitTemplate(template: MetaTemplate): Promise<AxiosResponse> {
     try {
-      console.log("Submitting template to Meta:", JSON.stringify(template, null, 2));
+      console.log('[WhatsAppClient] Submitting template', {
+        name: template.name,
+        language: template.language,
+        category: template.category,
+        components: template.components?.length ?? 0,
+      });
       const response: AxiosResponse = await this.client.post(
         `/${this.businessAccountId}/message_templates`,
         template
       );
-      console.log("Meta API response:", JSON.stringify(response.data, null, 2));
+      console.log('[WhatsAppClient] Template submission accepted', {
+        id: (response.data as any)?.id,
+        status: (response.data as any)?.status,
+      });
       return response;
     } catch (error: any) {
-      console.error("Failed to submit template to Meta:", error.response?.data || error.message);
+      const errorDetails = error.response?.data?.error;
+      console.error('[WhatsAppClient] Failed to submit template', {
+        status: error.response?.status,
+        code: errorDetails?.code,
+        message: errorDetails?.message,
+      });
       throw error;
     }
   }

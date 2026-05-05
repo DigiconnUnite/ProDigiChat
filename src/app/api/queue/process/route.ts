@@ -1,27 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { processQueue, retryMessage, retryAllFailed, cancelMessage, cleanupOldMessages } from '@/lib/queue';
+import { requireOrg } from '@/lib/api-auth';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  // All actions on the queue require manager+; the organizationId is
+  // always derived from the JWT, never from the body or query string.
+  const auth = await requireOrg(request, 'manager');
+  if (!auth.ok) return auth.response;
+  const { organizationId } = auth.context;
 
+  try {
     const searchParams = request.nextUrl.searchParams;
-    
     const body = await request.json().catch(() => ({}));
     const action = searchParams.get('action') || body.action;
-    
-    // Get organization ID from session or body
-    let organizationId = searchParams.get('organizationId') || session.user.organizationId || body.organizationId;
-
-    if (!organizationId) {
-      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
-    }
 
     switch (action) {
       case 'process': {
@@ -39,11 +31,23 @@ export async function POST(request: NextRequest) {
       case 'retry': {
         // Retry a specific failed message
         const queueItemId = body.queueItemId;
-        
+
         if (!queueItemId) {
           return NextResponse.json(
             { error: 'queueItemId is required' },
             { status: 400 }
+          );
+        }
+
+        // Ensure the queue item belongs to the caller's organization
+        const owned = await prisma.whatsAppMessageQueue.findFirst({
+          where: { id: queueItemId, organizationId },
+          select: { id: true },
+        });
+        if (!owned) {
+          return NextResponse.json(
+            { error: 'Queue item not found in this organization' },
+            { status: 404 }
           );
         }
 
@@ -77,11 +81,23 @@ export async function POST(request: NextRequest) {
       case 'cancel': {
         // Cancel a queued message
         const queueItemId = body.queueItemId;
-        
+
         if (!queueItemId) {
           return NextResponse.json(
             { error: 'queueItemId is required' },
             { status: 400 }
+          );
+        }
+
+        // Ensure the queue item belongs to the caller's organization
+        const owned = await prisma.whatsAppMessageQueue.findFirst({
+          where: { id: queueItemId, organizationId },
+          select: { id: true },
+        });
+        if (!owned) {
+          return NextResponse.json(
+            { error: 'Queue item not found in this organization' },
+            { status: 404 }
           );
         }
 
