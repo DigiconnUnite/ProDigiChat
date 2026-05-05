@@ -7,6 +7,7 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
+  setupFiles: ['<rootDir>/jest.setup.cjs'],
   testMatch: ['**/*.test.(ts|js)'],
   testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.next/'],
 };

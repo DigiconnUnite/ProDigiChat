@@ -516,6 +516,15 @@ model WhatsAppMessageQueue {
   nextRetryAt      DateTime?
   lastAttemptAt    DateTime?
 
+  // Atomic-claim bookkeeping for the queue worker. A row is "claimed"
+  // by exactly one worker via a status=QUEUED -> status=SENDING
+  // transition that also stamps claimToken + claimedAt. Stale claims
+  // (claimedAt older than the stall threshold) are reset back to
+  // QUEUED at the start of each cron tick so a crashed worker can't
+  // permanently strand a row.
+  claimToken       String?
+  claimedAt        DateTime?
+
   // Scheduling
   scheduledAt      DateTime?
 
