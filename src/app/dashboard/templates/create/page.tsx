@@ -44,14 +44,14 @@ export default function CreateTemplatePage() {
   };
 
   return (
-    <div className="container mx-auto py-6">
-
-
-      <TemplateWizard
-        onSave={handleSave}
-        onCancel={handleCancel}
-        isLoading={isSaving}
-      />
+    <div className="bg-background">
+      <div className="container mx-auto relative border-l border-r border-slate-300 min-h-screen">
+        <TemplateWizard
+          onSave={handleSave}
+          onCancel={handleCancel}
+          isLoading={isSaving}
+        />
+      </div>
     </div>
   );
 }

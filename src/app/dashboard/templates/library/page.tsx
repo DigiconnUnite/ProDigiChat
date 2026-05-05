@@ -156,21 +156,22 @@ ${template.preview.footer ? `\n${template.preview.footer}` : ''}
   };
 
   return (
-    <div className="container mx-auto py-6 min-h-screen">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold ">Template Library</h1>
-            <p className="text-neutral-500">
-              Browse pre-made templates for your campaigns
-            </p>
+    <div className="bg-background px-2.5 lg:px-0">
+      <div className="container mx-auto relative border-l border-r border-slate-300 px-5 py-6 min-h-screen">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="text-2xl font-bold ">Template Library</h1>
+              <p className="text-neutral-500">
+                Browse pre-made templates for your campaigns
+              </p>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center mb-6">
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center mb-6">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
           <Input
@@ -280,11 +281,11 @@ ${template.preview.footer ? `\n${template.preview.footer}` : ''}
           {sortedTemplates.map((template) => (
             <Card
               key={template.id}
-              className="bg-green-950 py-0 px-1 pt-1  cursor-pointer overflow-hidden group"
+              className="bg-white border-2 border-green-950 py-0 px-1 pt-1  cursor-pointer overflow-hidden group hover:shadow-card transition-all"
               onClick={() => handlePreview(template)}
             >
               {/* WhatsApp Chat Preview with Doodle Background */}
-              <div className="relative h-48 pb-20 rounded-lg overflow-hidden">
+              <div className="relative h-48 pb-20 rounded-lg  border border-neutral-800 overflow-hidden">
                 {/* WhatsApp Doodle Background */}
                 <div
                   className="absolute inset-0 bg-cover bg-center   transition-opacity"
@@ -320,7 +321,7 @@ ${template.preview.footer ? `\n${template.preview.footer}` : ''}
               {/* Card Content */}
               <CardContent className="p-3  pt-0">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-white text-sm truncate">
+                  <h3 className="font-semibold text-foreground text-sm truncate">
                     {template.displayName}
                   </h3>
                   <Badge
@@ -336,7 +337,7 @@ ${template.preview.footer ? `\n${template.preview.footer}` : ''}
                     <Badge
                       key={tag}
                       variant="secondary"
-                      className="text-[10px] py-0 h-5 bg-white/10 text-neutral-100"
+                      className="text-[10px] py-0 h-5 bg-gray-100 text-gray-700 border border-gray-200"
                     >
                       {tag}
                     </Badge>
@@ -351,14 +352,14 @@ ${template.preview.footer ? `\n${template.preview.footer}` : ''}
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 h-8 text-xs  border-neutral-700 text-neutral-500 hover:bg-neutral-800 hover:text-white"
+                    className="flex-1 h-8 text-xs border-green-950 text-green-950 hover:bg-green-950 hover:text-white transition-all"
                     onClick={() => handleCopyTemplate(template)}
                   >
                     {isCopied ? "Copied!" : "Copy"}
                   </Button>
                   <Button
                     size="sm"
-                    className="flex-1 h-8 text-xs bg-primary hover:bg-emerald-700 text-white border-none"
+                    className="flex-1 h-8 text-xs bg-green-950 hover:bg-green-800 text-white border-2 border-green-950 transition-all"
                     onClick={() => handleUseTemplate(template)}
                   >
                     Use
@@ -370,6 +371,7 @@ ${template.preview.footer ? `\n${template.preview.footer}` : ''}
         </div>
       )}
 
+      </div>
     </div>
   );
 }

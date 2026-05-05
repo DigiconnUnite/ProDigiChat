@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Trash2, GripVertical, X, Upload, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Trash2, GripVertical, X, Upload, Loader2, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -17,10 +17,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { TemplatePreview } from './template-preview';
-import { 
-  CreateTemplateInput, 
-  TemplateTranslation, 
-  HeaderContent, 
+import {
+  CreateTemplateInput,
+  TemplateTranslation,
+  HeaderContent,
   Button as ButtonType,
   TemplateVariable,
   TemplateCategory,
@@ -45,6 +45,7 @@ const WIZARD_STEPS = [
 
 export function TemplateWizard({ initialData, onSave, onCancel, isLoading = false }: TemplateWizardProps) {
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [formData, setFormData] = useState<CreateTemplateInput>({
     name: initialData?.name || '',
     category: initialData?.category || 'marketing',
@@ -68,7 +69,7 @@ export function TemplateWizard({ initialData, onSave, onCancel, isLoading = fals
     const regex = /\{\{(\d+)\}\}/g;
     const matches = [...bodyText.matchAll(regex)];
     const foundIndices = new Set(matches.map(m => parseInt(m[1])));
-    
+
     const newVariables: TemplateVariable[] = [];
     foundIndices.forEach(index => {
       const existing = variables.find(v => v.index === index);
@@ -84,7 +85,7 @@ export function TemplateWizard({ initialData, onSave, onCancel, isLoading = fals
   const updateTranslation = (updates: Partial<TemplateTranslation>) => {
     setFormData(prev => ({
       ...prev,
-      translations: prev.translations.map((t, i) => 
+      translations: prev.translations.map((t, i) =>
         i === 0 ? { ...t, ...updates } : t
       ),
     }));
@@ -171,402 +172,353 @@ export function TemplateWizard({ initialData, onSave, onCancel, isLoading = fals
   };
 
   return (
-    <div className="flex gap-6 h-[calc(100vh-200px)]">
-      {/* Wizard Panel */}
-      <div className="flex-1 overflow-y-auto">
-        {/* Stepper */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between">
-            {WIZARD_STEPS.map((step, index) => (
-              <React.Fragment key={step.id}>
-                <div className="flex flex-col items-center">
-                  <div
-                    className={cn(
-                      'w-10 h-10 rounded-full flex items-center justify-center font-medium',
-                      currentStep >= step.id
-                        ? 'bg-green-500 text-white'
-                        : 'bg-gray-200 text-gray-500'
-                    )}
-                  >
-                    {currentStep > step.id ? '✓' : step.id}
-                  </div>
-                  <p className="text-xs mt-1 text-center hidden sm:block">{step.title}</p>
-                </div>
-                {index < WIZARD_STEPS.length - 1 && (
-                  <div
-                    className={cn(
-                      'flex-1 h-1 mx-2',
-                      currentStep > step.id ? 'bg-green-500' : 'bg-gray-200'
-                    )}
-                  />
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-
-        {/* Step Content */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{WIZARD_STEPS[currentStep - 1].title}</CardTitle>
-            <p className="text-sm text-gray-500">{WIZARD_STEPS[currentStep - 1].description}</p>
-          </CardHeader>
-          <CardContent>
-            {/* Step 1: Name & Category */}
-            {currentStep === 1 && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Template Name *</Label>
-                  <Input
-                    id="name"
-                    placeholder="e.g., welcome_offer_01"
-                    value={formData.name}
-                    onChange={(e) => updateFormData({ name: e.target.value })}
-                    className={cn(errors.name && 'border-red-500')}
-                  />
-                  {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
-                  <p className="text-xs text-gray-500">
-                    Lowercase, alphanumeric with underscores only. Must start with a letter.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Category *</Label>
-                  <Tabs value={formData.category} onValueChange={(v) => updateFormData({ category: v as TemplateCategory })}>
-                    <TabsList className="grid w-full grid-cols-3">
-                      <TabsTrigger value="marketing">Marketing</TabsTrigger>
-                      <TabsTrigger value="utility">Utility</TabsTrigger>
-                      <TabsTrigger value="authentication">Auth</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="marketing" className="text-sm text-gray-500 mt-2">
-                      Promotions, newsletters, announcements, special offers
-                    </TabsContent>
-                    <TabsContent value="utility" className="text-sm text-gray-500 mt-2">
-                      Order confirmations, delivery alerts, account notifications
-                    </TabsContent>
-                    <TabsContent value="authentication" className="text-sm text-gray-500 mt-2">
-                      One-time passwords (OTP), login verification codes
-                    </TabsContent>
-                  </Tabs>
-                  {errors.category && <p className="text-sm text-red-500">{errors.category}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Primary Language</Label>
-                  <Select 
-                    value={currentTranslation?.language} 
-                    onValueChange={(lang) => updateTranslation({ language: lang })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="es">Spanish</SelectItem>
-                      <SelectItem value="pt">Portuguese</SelectItem>
-                      <SelectItem value="ar">Arabic</SelectItem>
-                      <SelectItem value="hi">Hindi</SelectItem>
-                      <SelectItem value="zh">Chinese</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+    <div className="w-full  bg-red-500 mx-auto">
+      {/* Main Content */}
+      <div className={`grid gap-0 transition-all duration-300 ${isSidebarOpen ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1'}`}>
+        {/* Left Panel - Form Sections */}
+        <div className={`${isSidebarOpen ? 'lg:col-span-2' : 'col-span-1'} flex flex-col h-[calc(100vh-140px)]`}>
+          {/* Fixed Header */}
+          <div className="sticky top-0 bg-background z-10 px-6 pt-4 pb-4 mb-4 border-b border-border shrink-0">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground mb-1">Template Details</h2>
+                <p className="text-sm text-muted-foreground">Fill in all sections to create your template</p>
               </div>
-            )}
+              
+              {/* Sidebar Toggle Button */}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="shrink-0 hover:bg-muted"
+              >
+                {isSidebarOpen ? (
+                  <PanelLeftClose className="w-4 h-4" />
+                ) : (
+                  <PanelLeftOpen className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+          </div>
 
-            {/* Step 2: Content Builder */}
-            {currentStep === 2 && (
-              <div className="space-y-6">
-                {/* Header */}
-                <div className="space-y-3">
-                  <Label>Header (Optional)</Label>
-                  <Tabs 
-                    value={currentTranslation?.header?.type || 'none'} 
-                    onValueChange={(v) => updateHeader({ type: v as HeaderType, mediaUrl: undefined })}
-                  >
-                    <TabsList>
-                      <TabsTrigger value="none">None</TabsTrigger>
-                      <TabsTrigger value="text">Text</TabsTrigger>
-                      <TabsTrigger value="image">Image</TabsTrigger>
-                      <TabsTrigger value="video">Video</TabsTrigger>
-                      <TabsTrigger value="document">Document</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="text" className="mt-3">
-                      <Input
-                        placeholder="Header text..."
-                        value={currentTranslation?.header?.text || ''}
-                        onChange={(e) => updateHeader({ text: e.target.value })}
-                      />
-                    </TabsContent>
-                    <TabsContent value="image" className="mt-3">
-                      <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                        <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                        <p className="text-sm text-gray-500">Upload an image for the header</p>
-                        <Button variant="outline" size="sm" className="mt-2">
-                          Choose File
-                        </Button>
-                      </div>
-                    </TabsContent>
-                    <TabsContent value="video" className="mt-3">
-                      <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                        <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                        <p className="text-sm text-gray-500">Upload a video for the header</p>
-                        <Button variant="outline" size="sm" className="mt-2">
-                          Choose File
-                        </Button>
-                      </div>
-                    </TabsContent>
-                    <TabsContent value="document" className="mt-3">
-                      <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                        <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                        <p className="text-sm text-gray-500">Upload a PDF document</p>
-                        <Button variant="outline" size="sm" className="mt-2">
-                          Choose File
-                        </Button>
-                      </div>
-                    </TabsContent>
-                  </Tabs>
+          {/* Scrollable Content */}
+          <div className="flex-1 scrollbar-hide overflow-y-auto px-6 pr-2 space-y-6">
+
+          {/* Step 1: Name & Category Card */}
+          <Card className="border shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-green-950 text-white flex items-center justify-center text-sm font-semibold">
+                  1
                 </div>
+                Name & Category
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">Basic template information</p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="name">Template Name *</Label>
+                <Input
+                  id="name"
+                  placeholder="e.g., welcome_offer_01"
+                  value={formData.name}
+                  onChange={(e) => updateFormData({ name: e.target.value })}
+                  className={cn(errors.name && 'border-red-500')}
+                />
+                {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+                <p className="text-xs text-muted-foreground">
+                  Lowercase, alphanumeric with underscores only. Must start with a letter.
+                </p>
+              </div>
 
-                {/* Body */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <Label>Body *</Label>
-                    <Badge variant="outline">{currentTranslation?.body.length || 0}/1024</Badge>
-                  </div>
-                  <Textarea
-                    placeholder="Hi {{1}}, your discount code is {{2}}"
-                    value={currentTranslation?.body || ''}
-                    onChange={(e) => updateTranslation({ body: e.target.value })}
-                    className={cn('min-h-[150px]', errors.body && 'border-red-500')}
-                  />
-                  {errors.body && <p className="text-sm text-red-500">{errors.body}</p>}
-                  <p className="text-xs text-gray-500">
-                    Use {'{{1}}'}, {'{{2}}'}, etc. for variables. Support **bold**, *italic*, and `monospace`
-                  </p>
-                  <div className="flex gap-2 mt-2">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => updateTranslation({ body: currentTranslation?.body + ' {{1}}' })}
-                    >
-                      Add Variable {'{{1}}'}
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => updateTranslation({ body: currentTranslation?.body + ' {{2}}' })}
-                    >
-                      Add Variable {'{{2}}'}
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => updateTranslation({ body: currentTranslation?.body + ' **text**' })}
-                    >
-                      Bold
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => updateTranslation({ body: currentTranslation?.body + ' *text*' })}
-                    >
-                      Italic
-                    </Button>
-                  </div>
+              <div className="space-y-2">
+                <Label htmlFor="category">Category *</Label>
+                <Select
+                  value={formData.category}
+                  onValueChange={(value) => updateFormData({ category: value as TemplateCategory })}
+                >
+                  <SelectTrigger className={cn(errors.category && 'border-red-500')}>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="marketing">Marketing</SelectItem>
+                    <SelectItem value="utility">Utility</SelectItem>
+                    <SelectItem value="authentication">Authentication</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.category && <p className="text-sm text-red-500">{errors.category}</p>}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Step 2: Content Builder Card */}
+          <Card className="border shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-green-950 text-white flex items-center justify-center text-sm font-semibold">
+                  2
                 </div>
+                Content Builder
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">Design your message</p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label>Header Type</Label>
+                <Select
+                  value={currentTranslation?.header?.type || 'none'}
+                  onValueChange={(value) => updateHeader({ type: value as HeaderType })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Header</SelectItem>
+                    <SelectItem value="text">Text</SelectItem>
+                    <SelectItem value="image">Image</SelectItem>
+                    <SelectItem value="video">Video</SelectItem>
+                    <SelectItem value="document">Document</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                {/* Footer */}
+              {currentTranslation?.header?.type === 'text' && (
                 <div className="space-y-2">
-                  <Label>Footer (Optional)</Label>
+                  <Label>Header Text</Label>
                   <Input
-                    placeholder="Reply STOP to unsubscribe"
-                    value={currentTranslation?.footer || ''}
-                    onChange={(e) => updateTranslation({ footer: e.target.value })}
+                    placeholder="Enter header text (max 60 characters)"
+                    value={currentTranslation.header.text || ''}
+                    onChange={(e) => updateHeader({ text: e.target.value })}
                     maxLength={60}
                   />
-                  <p className="text-xs text-gray-500">Maximum 60 characters</p>
+                  <p className="text-xs text-muted-foreground">
+                    {currentTranslation.header.text?.length || 0}/60 characters
+                  </p>
                 </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="body">Message Body *</Label>
+                <Textarea
+                  id="body"
+                  placeholder="Enter your message content. Use {{1}}, {{2}} for variables."
+                  value={currentTranslation?.body || ''}
+                  onChange={(e) => updateTranslation({ body: e.target.value })}
+                  className={cn(errors.body && 'border-red-500')}
+                  rows={6}
+                />
+                {errors.body && <p className="text-sm text-red-500">{errors.body}</p>}
+                <p className="text-xs text-muted-foreground">
+                  {currentTranslation?.body?.length || 0}/1024 characters
+                </p>
               </div>
-            )}
 
-            {/* Step 3: Buttons */}
-            {currentStep === 3 && (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <Label>Buttons</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={addButton}>
-                    <Plus className="w-4 h-4 mr-1" /> Add Button
-                  </Button>
+              <div className="space-y-2">
+                <Label>Footer</Label>
+                <Input
+                  placeholder="Optional footer text (max 60 characters)"
+                  value={currentTranslation?.footer || ''}
+                  onChange={(e) => updateTranslation({ footer: e.target.value })}
+                  maxLength={60}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {currentTranslation?.footer?.length || 0}/60 characters
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Step 3: Buttons Card */}
+          <Card className="border shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-green-950 text-white flex items-center justify-center text-sm font-semibold">
+                  3
                 </div>
+                Buttons
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">Add interactive buttons</p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <Label>Buttons</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addButton}>
+                  <Plus className="w-4 h-4 mr-1" /> Add Button
+                </Button>
+              </div>
 
-                {currentTranslation?.buttons.length === 0 ? (
-                  <div className="text-center py-8 border-2 border-dashed rounded-lg">
-                    <p className="text-gray-500">No buttons added yet</p>
-                    <p className="text-xs text-gray-400">Add quick reply or call-to-action buttons</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {currentTranslation?.buttons.map((button, index) => (
-                      <Card key={button.id}>
-                        <CardContent className="p-4">
-                          <div className="flex items-start gap-3">
-                            <GripVertical className="w-4 h-4 text-gray-400 cursor-move mt-4" />
-                            <div className="flex-1 space-y-3">
-                              <div className="flex items-center gap-2">
+              {currentTranslation?.buttons.length === 0 ? (
+                <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                  <p className="text-muted-foreground">No buttons added yet</p>
+                  <p className="text-xs text-muted-foreground">Add quick reply or call-to-action buttons</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {currentTranslation?.buttons.map((button, index) => (
+                    <Card key={button.id} className="border border-border/50">
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <GripVertical className="w-4 h-4 text-muted-foreground cursor-move mt-2" />
+                          <div className="flex-1 space-y-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                              <Select
+                                value={button.type}
+                                onValueChange={(v) => updateButton(button.id, { type: v as ButtonCategory })}
+                              >
+                                <SelectTrigger className="w-full sm:w-[160px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="quick_reply">Quick Reply</SelectItem>
+                                  <SelectItem value="call_to_action">Call to Action</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Input
+                                placeholder="Button text"
+                                value={button.text}
+                                onChange={(e) => updateButton(button.id, { text: e.target.value })}
+                                className="flex-1"
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeButton(button.id)}
+                                className="shrink-0"
+                              >
+                                <Trash2 className="w-4 h-4 text-red-500" />
+                              </Button>
+                            </div>
+
+                            {button.type === 'call_to_action' && (
+                              <div className="flex flex-col sm:flex-row gap-2">
                                 <Select
-                                  value={button.type}
-                                  onValueChange={(v) => updateButton(button.id, { type: v as ButtonCategory })}
+                                  value={button.actionType || 'url'}
+                                  onValueChange={(v) => updateButton(button.id, { actionType: v as any })}
                                 >
-                                  <SelectTrigger className="w-[140px]">
+                                  <SelectTrigger className="w-full sm:w-[160px]">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="quick_reply">Quick Reply</SelectItem>
-                                    <SelectItem value="call_to_action">Call to Action</SelectItem>
+                                    <SelectItem value="url">Visit Website</SelectItem>
+                                    <SelectItem value="phone">Call Number</SelectItem>
                                   </SelectContent>
                                 </Select>
                                 <Input
-                                  placeholder="Button text"
-                                  value={button.text}
-                                  onChange={(e) => updateButton(button.id, { text: e.target.value })}
+                                  placeholder={button.actionType === 'phone' ? '+1234567890' : 'https://example.com'}
+                                  value={button.actionValue || ''}
+                                  onChange={(e) => updateButton(button.id, { actionValue: e.target.value })}
                                   className="flex-1"
                                 />
-                                <Button 
-                                  type="button" 
-                                  variant="ghost" 
-                                  size="icon"
-                                  onClick={() => removeButton(button.id)}
-                                >
-                                  <Trash2 className="w-4 h-4 text-red-500" />
-                                </Button>
                               </div>
-                              
-                              {button.type === 'call_to_action' && (
-                                <div className="flex gap-3">
-                                  <Select
-                                    value={button.actionType || 'url'}
-                                    onValueChange={(v) => updateButton(button.id, { actionType: v as any })}
-                                  >
-                                    <SelectTrigger className="w-[140px]">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="url">Visit Website</SelectItem>
-                                      <SelectItem value="phone">Call Number</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <Input
-                                    placeholder={button.actionType === 'phone' ? '+1234567890' : 'https://example.com'}
-                                    value={button.actionValue || ''}
-                                    onChange={(e) => updateButton(button.id, { actionValue: e.target.value })}
-                                    className="flex-1"
-                                  />
-                                </div>
-                              )}
-                            </div>
+                            )}
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
 
-                <p className="text-xs text-gray-500">
-                  Maximum 3 quick reply buttons or 2 call-to-action buttons. 
-                  Marketing templates should include at least one CTA button.
+              <p className="text-xs text-muted-foreground">
+                Maximum 3 quick reply buttons or 2 call-to-action buttons.
+                Marketing templates should include at least one CTA button.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Step 4: Sample Data Card */}
+          <Card className="border shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-green-950 text-white flex items-center justify-center text-sm font-semibold">
+                  4
+                </div>
+                Sample Data
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">Preview with sample values</p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h4 className="font-medium text-yellow-800">Sample Data Required</h4>
+                <p className="text-sm text-yellow-700 mt-1">
+                  Meta requires sample values for all variables to preview your template.
                 </p>
               </div>
-            )}
 
-            {/* Step 4: Sample Data */}
-            {currentStep === 4 && (
-              <div className="space-y-4">
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <h4 className="font-medium text-yellow-800">Sample Data Required</h4>
-                  <p className="text-sm text-yellow-700 mt-1">
-                    Meta requires sample values for all variables to preview your template.
-                  </p>
+              {variables.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No variables detected in your template body</p>
+                  <p className="text-sm text-muted-foreground">Add {'{{1}}'}, {'{{2}}'}, etc. in the body text</p>
                 </div>
+              ) : (
+                <div className="space-y-4">
+                  {variables.map((variable) => (
+                    <div key={variable.index} className="space-y-2">
+                      <Label className="text-sm font-medium">Variable {'{{' + variable.index + '}}'}</Label>
+                      <Input
+                        placeholder={`Sample value for {{${variable.index}}}`}
+                        value={variable.sampleValue}
+                        onChange={(e) => setVariables(prev =>
+                          prev.map(v => v.index === variable.index
+                            ? { ...v, sampleValue: e.target.value }
+                            : v
+                          )
+                        )}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          </div>
 
-                {variables.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">No variables detected in your template body</p>
-                    <p className="text-sm text-gray-400">Add {'{{1}}'}, {'{{2}}'}, etc. in the body text</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {variables.map((variable) => (
-                      <div key={variable.index} className="space-y-2">
-                        <Label>Variable {'{{' + variable.index + '}}'}</Label>
-                        <Input
-                          placeholder={`Sample value for {{${variable.index}}}`}
-                          value={variable.sampleValue}
-                          onChange={(e) => setVariables(prev => 
-                            prev.map(v => v.index === variable.index 
-                              ? { ...v, sampleValue: e.target.value } 
-                              : v
-                            )
-                          )}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Navigation */}
-            <div className="flex justify-between mt-6 pt-4 border-t">
-              <Button 
-                type="button" 
-                variant="outline" 
+          {/* Fixed Action Buttons */}
+          <div className="sticky bottom-0 bg-background z-10 px-6 pt-4 pb-4 border-t border-b border-border shrink-0">
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
                 onClick={onCancel}
+                disabled={isLoading}
               >
                 Cancel
               </Button>
-              <div className="flex gap-2">
-                {currentStep > 1 && (
-                  <Button type="button" variant="outline" onClick={handleBack}>
-                    <ChevronLeft className="w-4 h-4 mr-1" /> Back
-                  </Button>
-                )}
-                {currentStep < WIZARD_STEPS.length ? (
-                  <Button type="button" onClick={handleNext} disabled={isLoading}>
-                    Next <ChevronRight className="w-4 h-4 ml-1" />
-                  </Button>
+              <Button
+                onClick={handleSave}
+                disabled={isLoading}
+                className="bg-green-950 hover:bg-green-800 text-white min-w-[140px]"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
                 ) : (
-                  <Button type="button" onClick={handleSave} disabled={isLoading} className="bg-green-500 hover:bg-green-600">
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      'Submit for Approval'
-                    )}
-                  </Button>
+                  'Submit for Approval'
                 )}
-              </div>
+              </Button>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Preview Panel */}
-      <div className="w-[360px]  shrink-0">
-        <div className="sticky top-4">
-          <TemplatePreview preview={previewData} />
-          
-          {currentStep === 4 && variables.some(v => !v.sampleValue) && (
-            <p className="text-xs text-red-500 text-center mt-2">
-              Please provide sample values for all variables
-            </p>
-          )}
+          </div>
         </div>
+
+        {/* Right Panel - Preview */}
+        {isSidebarOpen && (
+          <div className="lg:col-span-1 border sticky top-6 h-[calc(100vh-140px)] overflow-hidden bg-gradient-to-br from-lime-50 to-green-50">
+            <div className="h-full flex items-center justify-center p-6">
+              <TemplatePreview
+                preview={{
+                  header: currentTranslation?.header,
+                  body: currentTranslation?.body || 'Your message will appear here...',
+                  footer: currentTranslation?.footer,
+                  buttons: currentTranslation?.buttons,
+                  variables: variables,
+                }}
+                className="flex justify-center"
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

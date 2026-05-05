@@ -306,8 +306,8 @@ function TemplatesPageContent() {
   };
 
   return (
-    <div className="bg-transparent px-2.5 border h-full lg:px-0">
-      <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6">
+    <div className="bg-background px-2.5 lg:px-0">
+      <div className="container mx-auto relative border-l border-r border-slate-300 px-5 py-6 min-h-screen">
       {viewMode === 'Manage' && (
         <>
           <TemplateManagement
@@ -338,25 +338,27 @@ function TemplatesPageContent() {
 
       {/* Template Preview Drawer */}
       <Sheet open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <SheetContent className="w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl max-h-[100vh] overflow-y-auto flex flex-col">
-          <SheetHeader className="pb-4 border-b">
-            <SheetTitle className="text-xl">
+        <SheetContent className="w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl max-h-[100vh] overflow-y-auto flex flex-col border-l border-r border-t border-slate-300">
+          <SheetHeader className="pb-4 border-b-2 border-green-950 bg-gray-50 px-6 py-4 -mx-6 -mt-6">
+            <SheetTitle className="text-xl font-semibold text-foreground">
               {previewTemplate?.name}
             </SheetTitle>
           </SheetHeader>
           {previewTemplate && previewTemplate.translations.length > 0 && (
-            <div className="py-4 flex-1 overflow-y-auto">
+            <div className="py-6 flex-1 overflow-y-auto">
               {/* Template Preview - show first translation */}
-              <TemplatePreview
-                preview={{
-                  header: previewTemplate.translations[0].header,
-                  body: previewTemplate.translations[0].body,
-                  footer: previewTemplate.translations[0].footer,
-                  buttons: previewTemplate.translations[0].buttons,
-                  variables: extractVariables(previewTemplate.translations[0].body),
-                }}
-                className="flex justify-center"
-              />
+              <div className="border-2 border-green-950 rounded-xl p-6 bg-white">
+                <TemplatePreview
+                  preview={{
+                    header: previewTemplate.translations[0].header,
+                    body: previewTemplate.translations[0].body,
+                    footer: previewTemplate.translations[0].footer,
+                    buttons: previewTemplate.translations[0].buttons,
+                    variables: extractVariables(previewTemplate.translations[0].body),
+                  }}
+                  className="flex justify-center"
+                />
+              </div>
             </div>
           )}
         </SheetContent>

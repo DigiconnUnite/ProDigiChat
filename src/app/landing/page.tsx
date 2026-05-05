@@ -169,7 +169,7 @@ export default function LandingPage() {
                   <div className="text-foreground text-3xl font-bold mb-2">
                     {stat.value}
                   </div>
-                  <div className="text-gray-300 text-sm">{stat.label}</div>
+                  <div className="text-muted-foreground text-sm">{stat.label}</div>
                 </div>
               ))}
             </div>
@@ -186,7 +186,7 @@ export default function LandingPage() {
               <h2 className="text-foreground text-4xl font-bold mb-4">
                 Everything You Need to Succeed
               </h2>
-              <p className="text-gray-300 text-xl max-w-3xl mx-auto">
+              <p className="text-muted-foreground text-xl max-w-3xl mx-auto">
                 Powerful features designed to help you connect with customers and
                 grow your business through WhatsApp.
               </p>
@@ -197,12 +197,12 @@ export default function LandingPage() {
               {features.map((feature, i) => (
                 <div
                   key={i}
-                  className="p-8 rounded-sm border border-slate-300 bg-white transition-all hover:shadow-card"
+                  className="p-8 rounded-xl border-2 border-green-950 bg-white transition-all hover:shadow-card group"
                 >
-                  <div className="bg-primary/10 w-14 h-14 rounded-sm flex items-center justify-center mb-6">
+                  <div className="bg-primary/10 w-14 h-14 rounded-lg flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
                     <feature.icon className="h-7 w-7 text-primary" />
                   </div>
-                  <h3 className="text-foreground text-xl font-semibold mb-3">
+                  <h3 className="text-foreground text-xl font-semibold mb-3 group-hover:text-primary transition-colors">
                     {feature.title}
                   </h3>
                   <p className="text-gray-700 leading-relaxed">
@@ -469,7 +469,7 @@ export default function LandingPage() {
             CAPABILITIES – dark section, dark cards
         ══════════════════════════════════════════ */}
         <section className="bg-transparent px-2.5 lg:px-0">
-          <div className="container mx-auto relative border-t border-l border-r border-slate-300 px-5">
+          <div className="container mx-auto relative border-l border-r border-slate-300 px-5">
             <div className="grid lg:grid-cols-2 gap-16 items-center py-20">
               {/* Left – copy + checklist */}
               <div>
@@ -493,7 +493,7 @@ export default function LandingPage() {
                   ].map((item, i) => (
                     <div key={i} className="flex items-center gap-3">
                       <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
-                      <span className="text-gray-300">{item}</span>
+                      <span className="text-muted-foreground">{item}</span>
                     </div>
                   ))}
                 </div>
@@ -504,7 +504,7 @@ export default function LandingPage() {
                 {capabilities.map((capability, i) => (
                   <div
                     key={i}
-                    className="bg-card p-6 rounded-sm border border-slate-300 transition-colors hover:bg-card/80"
+                    className="bg-card p-6 rounded-xl border-2 border-green-950 transition-colors hover:bg-card/80"
                   >
                     <capability.icon className="h-8 w-8 text-primary mb-4" />
                     <h3 className="font-semibold text-card-foreground mb-2">
@@ -524,8 +524,8 @@ export default function LandingPage() {
         {/* ══════════════════════════════════════════
             FINAL CTA – dark, mirrors hero button style
         ══════════════════════════════════════════ */}
-        <section className="bg-transparent  border-slate-300 px-2.5 lg:px-0">
-          <div className="container mx-auto relative border-t border-l border-r border-slate-300 px-5">
+        <section className="relative overflow-hidden bg-transparent  border-slate-300 px-2.5 lg:px-0">
+          <div className="container mx-auto relative bg-linear-30 from-lime-50 to-green-100 border-t border-l border-r border-slate-300 px-5">
             <div className="text-center py-20">
               <h2 className="text-foreground text-4xl font-bold mb-4">
                 Ready to Transform Your WhatsApp Marketing?
@@ -535,18 +535,16 @@ export default function LandingPage() {
                 effectively.
               </p>
               <div className="flex flex-wrap gap-4 justify-center">
-                <Link
-                  href="/signup"
-                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm text-sm font-semibold transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring bg-card text-card-foreground shadow-sm hover:bg-card/90 border border-slate-300 h-12 px-6 py-[14px]"
-                >
-                  Get Started Free
-                </Link>
-                <Link
-                  href="/demo"
-                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm text-sm font-semibold transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80 h-12 px-6 py-[14px]"
-                >
-                  Schedule Demo
-                </Link>
+                <Button asChild size="lg" className="rounded-full">
+                  <Link href="/signup">
+                    Get Started Free
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="lg" className="rounded-full">
+                  <Link href="/demo">
+                    Schedule Demo
+                  </Link>
+                </Button>
               </div>
             </div>
           </div>

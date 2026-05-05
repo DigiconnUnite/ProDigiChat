@@ -6,10 +6,20 @@ export async function middleware(request: NextRequest) {
   const token = await getToken({ req: request });
   const { pathname } = request.nextUrl;
   
+  // Skip middleware for static files and Next.js internals
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname.startsWith('/static') ||
+    pathname.includes('.') // static files with extensions
+  ) {
+    return NextResponse.next();
+  }
+  
   // Public routes that don't require authentication
   const publicRoutes = [
     "/login",
-    "/signup",
+    "/signup", 
     "/landing",
     "/blog",
     "/features",
@@ -17,29 +27,20 @@ export async function middleware(request: NextRequest) {
     "/support",
     "/privacy",
     "/terms",
-    "/api/auth",
-    "/api/whatsapp/webhooks",
   ];
-  const isPublicRoute = publicRoutes.some(route => 
-    pathname.startsWith(route)
-  );
-
-  // Allow direct requests for static files in /public to pass through.
-  const isStaticAsset = /\.[a-zA-Z0-9]+$/.test(pathname);
-
-  // Check if user is trying to access the landing page or root
-  const isLandingPage = pathname === "/landing" || pathname === "/";
-
-  // If trying to access protected route without token (and not on public/landing routes)
-  if (!token && !isPublicRoute && !isLandingPage && !isStaticAsset) {
+  
+  const isPublicRoute = publicRoutes.some(route => pathname === route);
+  
+  // If user is not authenticated and trying to access protected route
+  if (!token && !isPublicRoute && pathname !== "/") {
     return NextResponse.redirect(new URL("/login", request.url));
   }
-
-  // If already logged in and trying to access login page, redirect to dashboard
+  
+  // If user is authenticated and trying to access login page
   if (token && pathname === "/login") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
-
+  
   return NextResponse.next();
 }
 
@@ -47,11 +48,11 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - login, signup, api/auth (authentication routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - api (API routes)
      */
-    "/((?!login|signup|api/auth|_next/static|_next/image|favicon.ico).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api).*)",
   ],
 };

@@ -161,26 +161,28 @@ export default function EditTemplatePage() {
   }
 
   return (
-    <div className="container mx-auto py-6">
-      {/* Header  */}
-      <div className="mb-6">
-        
-        <h1 className="text-2xl font-bold">Edit Template</h1>
-        <p className="text-gray-500">
-          Modify your template: <span className="font-mono">{template.name}</span>
-        </p>
-      </div>
+    <div className="bg-background px-2.5 lg:px-0">
+      <div className="container mx-auto relative border-l border-r border-slate-300 px-5 py-6 min-h-screen">
+        {/* Header  */}
+        <div className="mb-6">
+          
+          <h1 className="text-2xl font-bold">Edit Template</h1>
+          <p className="text-gray-500">
+            Modify your template: <span className="font-mono">{template.name}</span>
+          </p>
+        </div>
 
-      <TemplateWizard
-        initialData={{
-          name: template.name,
-          category: template.category,
-          translations: template.translations,
-        }}
-        onSave={handleSave}
-        onCancel={handleCancel}
-        isLoading={isSaving}
-      />
+        <TemplateWizard
+          initialData={{
+            name: template.name,
+            category: template.category,
+            translations: template.translations,
+          }}
+          onSave={handleSave}
+          onCancel={handleCancel}
+          isLoading={isSaving}
+        />
+      </div>
     </div>
   );
 }

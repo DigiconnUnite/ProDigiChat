@@ -2,162 +2,397 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Header } from "@/components/header"
 import { PublicFooter } from "@/components/public-footer"
-import { PublicCTA } from "@/components/public-cta"
 import {
-  Send,
+  MessageSquare,
   Users,
   BarChart3,
+  CheckCircle2,
+  XCircle,
   Zap,
-  MessageCircle,
-  Workflow,
   Shield,
-  Clock,
+  Smartphone,
   Globe,
+  Clock,
+  Target,
+  TrendingUp,
   ArrowRight,
-  CheckCircle2
+  Star,
+  Bot,
+  Settings,
 } from "lucide-react"
 
-const featureCategories = [
+const features = [
   {
-    title: "Messaging",
-    icon: Send,
-    features: [
-      { name: "Bulk Messaging", description: "Send personalized messages to thousands of contacts simultaneously." },
-      { name: "Rich Media Support", description: "Send images, videos, documents, and interactive buttons." },
-      { name: "Template Management", description: "Create and manage WhatsApp message templates." },
+    icon: MessageSquare,
+    title: "Bulk Messaging",
+    description: "Send personalized messages to thousands of contacts instantly with advanced scheduling and delivery tracking.",
+    highlights: [
+      "Send up to 100,000 messages/day",
+      "Personalized message templates",
+      "Schedule campaigns in advance",
+      "Real-time delivery tracking"
     ]
   },
   {
-    title: "Automation",
-    icon: Zap,
-    features: [
-      { name: "Workflow Automation", description: "Create automation flows without coding." },
-      { name: "Chatbots", description: "AI-powered chatbots for 24/7 customer support." },
-      { name: "Auto Responses", description: "Instant replies for common queries." },
-    ]
-  },
-  {
-    title: "Contact Management",
     icon: Users,
-    features: [
-      { name: "Contact Import", description: "Import contacts from CSV, Excel, or CRM." },
-      { name: "Segmentation", description: "Create targeted segments based on behavior." },
-      { name: "Contact Profiles", description: "Complete profiles with interaction history." },
+    title: "Contact Management",
+    description: "Organize and segment your contacts with advanced filtering, tagging, and smart group management.",
+    highlights: [
+      "Unlimited contact storage",
+      "Advanced segmentation",
+      "Custom tags and labels",
+      "Import/Export functionality"
     ]
   },
   {
-    title: "Analytics",
     icon: BarChart3,
-    features: [
-      { name: "Real-time Dashboard", description: "Live monitoring of campaigns and performance." },
-      { name: "Campaign Reports", description: "Detailed reports with actionable insights." },
-      { name: "Export Data", description: "Export reports in multiple formats." },
+    title: "Analytics Dashboard",
+    description: "Track delivery rates, open rates, and campaign performance with comprehensive analytics and reporting.",
+    highlights: [
+      "Real-time campaign metrics",
+      "Detailed performance reports",
+      "Conversion tracking",
+      "Custom dashboard views"
     ]
   },
   {
-    title: "Collaboration",
-    icon: MessageCircle,
-    features: [
-      { name: "Team Inbox", description: "Unified inbox for team collaboration." },
-      { name: "Role Management", description: "Define roles and permissions." },
-      { name: "Internal Chat", description: "Built-in team communication." },
+    icon: Bot,
+    title: "AI-Powered Automation",
+    description: "Set up intelligent automated responses and chatbots to handle customer inquiries 24/7.",
+    highlights: [
+      "Smart chatbot builder",
+      "Natural language processing",
+      "Automated workflows",
+      "Multi-language support"
     ]
   },
   {
-    title: "Integration",
-    icon: Workflow,
-    features: [
-      { name: "WhatsApp Business API", description: "Official API integration." },
-      { name: "Third-party Tools", description: "Connect with Shopify, Zapier, and more." },
-      { name: "Developer API", description: "Build custom integrations." },
+    icon: Shield,
+    title: "Enterprise Security",
+    description: "Bank-level security with end-to-end encryption, GDPR compliance, and advanced data protection.",
+    highlights: [
+      "End-to-end encryption",
+      "GDPR compliant",
+      "Role-based access control",
+      "Audit logs and monitoring"
     ]
   },
+  {
+    icon: Smartphone,
+    title: "Mobile Apps",
+    description: "Manage your WhatsApp marketing on the go with our native iOS and Android mobile applications.",
+    highlights: [
+      "Native iOS & Android apps",
+      "Push notifications",
+      "Offline mode support",
+      "Biometric authentication"
+    ]
+  },
+  {
+    icon: Globe,
+    title: "Multi-Language Support",
+    description: "Connect with customers globally with support for 50+ languages and automatic translation.",
+    highlights: [
+      "50+ languages supported",
+      "Auto-translation features",
+      "Localized templates",
+      "Regional compliance"
+    ]
+  },
+  {
+    icon: Zap,
+    title: "Lightning Fast",
+    description: "Experience blazing-fast performance with optimized infrastructure and instant message delivery.",
+    highlights: [
+      "99.9% uptime guarantee",
+      "Sub-second delivery",
+      "Global CDN network",
+      "Auto-scaling infrastructure"
+    ]
+  },
+  {
+    icon: Target,
+    title: "Smart Targeting",
+    description: "Reach the right audience with AI-powered targeting and behavioral analysis.",
+    highlights: [
+      "Behavioral targeting",
+      "Predictive analytics",
+      "Customer journey mapping",
+      "A/B testing tools"
+    ]
+  },
+  {
+    icon: Clock,
+    title: "24/7 Support",
+    description: "Get help whenever you need it with our round-the-clock customer support team.",
+    highlights: [
+      "24/7 live chat support",
+      "Dedicated account managers",
+      "Comprehensive knowledge base",
+      "Video tutorials and guides"
+    ]
+  },
+  {
+    icon: TrendingUp,
+    title: "Growth Tools",
+    description: "Scale your business with advanced growth tools and conversion optimization features.",
+    highlights: [
+      "Conversion optimization",
+      "Growth hacking tools",
+      "Performance insights",
+      "Competitor analysis"
+    ]
+  },
+  {
+    icon: Settings,
+    title: "Custom Integrations",
+    description: "Connect with your favorite tools through our extensive API and integration marketplace.",
+    highlights: [
+      "REST API access",
+      "Webhook support",
+      "Zapier integration",
+      "Custom app development"
+    ]
+  }
 ]
 
-const platformFeatures = [
-  { text: "Enterprise-grade security" },
-  { text: "180+ countries supported" },
-  { text: "99.9% uptime guarantee" },
-  { text: "24/7 customer support" },
+const categories = [
+  {
+    name: "Messaging & Communication",
+    features: ["Bulk Messaging", "AI-Powered Automation", "Multi-Language Support", "Mobile Apps"]
+  },
+  {
+    name: "Analytics & Insights",
+    features: ["Analytics Dashboard", "Smart Targeting", "Growth Tools"]
+  },
+  {
+    name: "Management & Organization",
+    features: ["Contact Management", "Custom Integrations"]
+  },
+  {
+    name: "Security & Reliability",
+    features: ["Enterprise Security", "Lightning Fast", "24/7 Support"]
+  }
 ]
 
 export default function FeaturesPage() {
   return (
     <>
-      <Header variant="public" className="fixed top-0 left-0 right-0 z-50" />
-      
-      <main className="bg-background">
-        {/* Hero */}
-        <section className="pt-32 pb-16 bg-background rounded-b-[3rem]">
-          <div className="container mx-auto px-4 text-center">
-            <h1 className="text-4xl md:text-5xl font-bold">
-              Features
-            </h1>
-            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-              Everything you need for successful WhatsApp marketing.
-            </p>
-          </div>
-        </section>
+      {/* ─── HEADER ─── */}
+      <Header
+        variant="public"
+        className="fixed top-0 left-0 right-0 z-50 border-b border-slate-300 bg-slate-900"
+      />
 
-        {/* Feature Categories */}
-        <section className="py-16 bg-muted/30">
-          <div className="container mx-auto px-4">
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featureCategories.map((category, index) => (
-                <Card key={index} className="border-border">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <category.icon className="h-5 w-5 text-primary" />
-                      </div>
-                      <h3 className="text-lg font-semibold">{category.title}</h3>
-                    </div>
-                    <ul className="space-y-3">
-                      {category.features.map((feature, fIndex) => (
-                        <li key={fIndex} className="text-sm">
-                          <p className="font-medium">{feature.name}</p>
-                          <p className="text-muted-foreground">{feature.description}</p>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              ))}
+      <main className="bg-background pt-16">
+
+        {/* ══════════════════════════════════════════
+            HERO SECTION – Features introduction
+        ══════════════════════════════════════════ */}
+        <section className="relative overflow-hidden bg-transparent px-2.5 lg:px-0">
+          <div className="container mx-auto relative bg-linear-30 from-lime-50 to-green-100 border-l border-r border-slate-300 px-5">
+            <div className="text-center py-20">
+              <div className="bg-primary/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Star className="h-10 w-10 text-primary" />
+              </div>
+              <h1 className="text-foreground text-4xl font-bold mb-4">
+                Powerful Features for WhatsApp Marketing
+              </h1>
+              <p className="text-muted-foreground text-xl max-w-3xl mx-auto mb-8">
+                Everything you need to supercharge your WhatsApp marketing, engage customers, and grow your business.
+              </p>
+              <div className="flex flex-wrap gap-4 justify-center">
+                <Button asChild size="lg" className="rounded-full">
+                  <Link href="/signup">
+                    Start Free Trial
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="lg" className="rounded-full">
+                  <Link href="/demo">
+                    Schedule Demo
+                  </Link>
+                </Button>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Platform Features */}
-        <section className="py-16 bg-green-950 text-white">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold">Platform Benefits</h2>
+        {/* ══════════════════════════════════════════
+            CATEGORIES SECTION – Feature categories
+        ══════════════════════════════════════════ */}
+        <section className="bg-transparent border-slate-300 px-2.5 lg:px-0">
+          <div className="container mx-auto relative border-t border-l border-r border-slate-300 px-5">
+            <div className="text-center mb-16 pt-20 pb-4">
+              <h2 className="text-foreground text-4xl font-bold mb-4">
+                Organized by Category
+              </h2>
+              <p className="text-muted-foreground text-xl max-w-3xl mx-auto">
+                Find exactly what you need with our organized feature categories
+              </p>
             </div>
-            <div className="flex flex-wrap justify-center gap-8">
-              {platformFeatures.map((feature, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-400" />
-                  <span>{feature.text}</span>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 pb-20">
+              {categories.map((category, index) => (
+                <div
+                  key={index}
+                  className="p-6 rounded-xl border-2 border-green-950 bg-white transition-all hover:shadow-card"
+                >
+                  <h3 className="text-foreground text-lg font-semibold mb-4 text-center">
+                    {category.name}
+                  </h3>
+                  <ul className="space-y-2">
+                    {category.features.map((feature, featureIndex) => (
+                      <li key={featureIndex} className="flex items-center gap-2 text-sm text-gray-600">
+                        <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* CTA */}
-        <PublicCTA
-          title="Ready to get started?"
-          description="Start your 14-day free trial today."
-          primaryButtonText="Start Free Trial"
-          primaryButtonHref="/signup"
-          secondaryButtonText="View Pricing"
-          secondaryButtonHref="/pricing"
-        />
+        {/* ══════════════════════════════════════════
+            FEATURES GRID – Main features with detailed cards
+        ══════════════════════════════════════════ */}
+        <section className="bg-transparent px-2.5 lg:px-0">
+          <div className="container mx-auto relative border-t border-l border-r border-slate-300 px-5">
+            <div className="text-center mb-16 pt-20 pb-4">
+              <h2 className="text-foreground text-4xl font-bold mb-4">
+                All Features at a Glance
+              </h2>
+              <p className="text-muted-foreground text-xl max-w-3xl mx-auto">
+                Comprehensive tools designed to make WhatsApp marketing simple and effective
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
+              {features.map((feature, index) => (
+                <div
+                  key={index}
+                  className="p-8 rounded-xl border-2 border-green-950 bg-white transition-all hover:shadow-card group"
+                >
+                  <div className="bg-primary/10 w-14 h-14 rounded-lg flex items-center justify-center mb-6">
+                    <feature.icon className="h-7 w-7 text-primary" />
+                  </div>
+                  <h3 className="text-foreground text-xl font-semibold mb-3 group-hover:text-primary transition-colors">
+                    {feature.title}
+                  </h3>
+                  <p className="text-gray-700 leading-relaxed mb-6">
+                    {feature.description}
+                  </p>
+                  <ul className="space-y-2">
+                    {feature.highlights.map((highlight, highlightIndex) => (
+                      <li key={highlightIndex} className="flex items-center gap-2 text-sm text-gray-600">
+                        <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                        {highlight}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════
+            COMPARISON SECTION – Feature comparison
+        ══════════════════════════════════════════ */}
+        <section className="bg-transparent border-slate-300 px-2.5 lg:px-0">
+          <div className="container mx-auto relative border-t border-l border-r border-slate-300 px-5">
+            <div className="text-center mb-16 pt-20 pb-4">
+              <h2 className="text-foreground text-4xl font-bold mb-4">
+                Compare Plans & Features
+              </h2>
+              <p className="text-muted-foreground text-xl max-w-3xl mx-auto">
+                See which features are included in each plan
+              </p>
+            </div>
+
+            <div className="overflow-x-auto pb-20">
+              <div className="min-w-full">
+                <div className="grid grid-cols-12 gap-4 text-sm">
+                  <div className="col-span-5 font-semibold text-foreground">Feature</div>
+                  <div className="col-span-2 text-center font-semibold text-foreground">Free</div>
+                  <div className="col-span-2 text-center font-semibold text-foreground">Professional</div>
+                  <div className="col-span-3 text-center font-semibold text-foreground">Enterprise</div>
+                </div>
+                <div className="mt-4 space-y-3">
+                  {features.map((feature, index) => (
+                    <div key={index} className="grid grid-cols-12 gap-4 text-sm border-t border-gray-200 pt-3">
+                      <div className="col-span-5">
+                        <div className="flex items-center gap-2">
+                          <feature.icon className="h-4 w-4 text-primary" />
+                          <span className="font-medium text-gray-700">{feature.title}</span>
+                        </div>
+                      </div>
+                      <div className="col-span-2 text-center">
+                        {index < 3 ? (
+                          <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto" />
+                        ) : (
+                          <XCircle className="h-5 w-5 text-gray-400 mx-auto" />
+                        )}
+                      </div>
+                      <div className="col-span-2 text-center">
+                        {index < 8 ? (
+                          <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto" />
+                        ) : (
+                          <XCircle className="h-5 w-5 text-gray-400 mx-auto" />
+                        )}
+                      </div>
+                      <div className="col-span-3 text-center">
+                        <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════
+            CTA SECTION – Final call to action
+        ══════════════════════════════════════════ */}
+        <section className="relative overflow-hidden bg-transparent px-2.5 lg:px-0">
+          <div className="container mx-auto relative bg-linear-30 from-lime-50 to-green-100 border-l border-r border-t border-slate-300 px-5">
+            <div className="text-center py-20">
+              <h2 className="text-foreground text-4xl font-bold mb-4">
+                Ready to Experience These Features?
+              </h2>
+              <p className="text-muted-foreground text-xl max-w-3xl mx-auto mb-10">
+                Join thousands of businesses using ProDigiChat to transform their WhatsApp marketing.
+              </p>
+              <div className="flex flex-wrap gap-4 justify-center">
+                <Button
+                  asChild
+                  size="lg"
+                  className="rounded-full border border-slate-300"
+                >
+                  <Link href="/signup">
+                    Start Free Trial
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="rounded-full"
+                >
+                  <Link href="/pricing">
+                    View Pricing
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
-      
+
       <PublicFooter />
     </>
   )
