@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
             messages: {
               where: {
                 direction: "incoming",
-                status: "sent", // Consider unread as 'sent' status
+                status: "delivered", // Incoming messages are stored as 'delivered' status
               },
             },
           },
@@ -326,7 +326,7 @@ export async function PATCH(request: NextRequest) {
         contactId,
         organizationId: orgId,
         direction: "incoming",
-        status: "sent",
+        status: "delivered",
       },
       data: {
         status: "read",

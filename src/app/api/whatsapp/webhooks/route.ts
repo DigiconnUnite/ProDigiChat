@@ -565,6 +565,34 @@ async function processIncomingMessage(
     timestamp
   );
 
+  // Broadcast new incoming message to WebSocket clients
+  try {
+    const { broadcastToInbox } = await import("@/lib/websocket");
+    broadcastToInbox(organizationId, 'new-message', {
+      messageId: storedMessage.id,
+      contactId: contact.id,
+      content: {
+        text: parsedContent.text || parsedContent.caption || "",
+        type: parsedContent.type,
+        mediaUrl: parsedContent.mediaUrl,
+        mediaType: parsedContent.mediaType,
+        caption: parsedContent.caption,
+        filename: parsedContent.filename,
+        interactive: parsedContent.interactive,
+        location: parsedContent.location
+      },
+      status: "delivered",
+      direction: "incoming",
+      sender: {
+        id: null,
+        name: contact.firstName ? `${contact.firstName} ${contact.lastName || ""}`.trim() : from
+      },
+      createdAt: storedMessage.createdAt
+    });
+  } catch (broadcastError) {
+    console.error('[WhatsApp Webhook] Failed to broadcast incoming message:', broadcastError);
+  }
+
   // Send acknowledgment (read receipt) to Meta
   await sendMessageAck(id, "delivered", organizationId);
 

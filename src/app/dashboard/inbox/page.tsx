@@ -157,20 +157,58 @@ export default function InboxPage() {
         // Transform messages to UI format
         const transformedMessages: Message[] = data.messages.map((msg: any) => {
           let content: any = { text: "", caption: "", mediaUrl: "", type: "text" }
+          let displayText = ""
+          
           try {
             // Use the proper parseMessageContent utility
             content = parseMessageContent(msg.content)
+            
+            // Handle different message types
+            displayText = content.text || content.caption || ""
+            
+            // Handle template messages specially
+            if (content.type === 'template' && content.template) {
+              displayText = content.template.text || content.template.body || ""
+            }
+            
+            // If still no text found, try to extract from nested structures
+            if (!displayText && typeof content === 'object') {
+              // Look for common text fields in nested objects
+              displayText = content.body || content.message || content.content || ""
+            }
+            
+            // If still no text and content is a string that looks like JSON, try to extract text from it
+            if (!displayText && typeof msg.content === 'string') {
+              try {
+                const parsed = JSON.parse(msg.content)
+                displayText = parsed.text || parsed.body || parsed.message || parsed.content || ""
+              } catch (e) {
+                // If parsing fails, use the raw content if it's not obviously JSON
+                if (!msg.content.trim().startsWith('{') && !msg.content.trim().startsWith('[')) {
+                  displayText = msg.content
+                }
+              }
+            }
+            
+            // Final fallback: if we still have no display text, use a default
+            if (!displayText) {
+              displayText = content.type === 'image' ? "📷 Image" : 
+                           content.type === 'video' ? "🎥 Video" : 
+                           content.type === 'document' ? "📄 Document" : 
+                           content.type === 'template' ? "📋 Template" : 
+                           "Message"
+            }
+            
           } catch (e) {
-            // If not JSON, treat the content as plain text
-            content = { text: msg.content, caption: "", mediaUrl: "", type: "text" }
-          }
-          
-          // Handle different message types
-          let displayText = content.text || content.caption || "Media message"
-          
-          // Handle template messages specially
-          if (content.type === 'template' && content.template) {
-            displayText = content.template.text || content.template.body || "Template message"
+            // If parsing fails completely, treat as plain text if it doesn't look like JSON
+            if (typeof msg.content === 'string' && 
+                !msg.content.trim().startsWith('{') && 
+                !msg.content.trim().startsWith('[')) {
+              displayText = msg.content
+            } else {
+              displayText = "Unable to display message"
+            }
+            content = { text: displayText, caption: "", mediaUrl: "", type: "text" }
           }
           
           return {
@@ -269,8 +307,9 @@ export default function InboxPage() {
         if (selectedConversation && data.contactId === selectedConversation.id) {
           const newMessage: Message = {
             id: data.messageId,
-            type: data.sender?.id === session?.user?.id ? "sent" : "received",
-            text: data.content?.text || "New message",
+            type: data.direction === "incoming" ? "received" : 
+                   data.sender?.id === session?.user?.id ? "sent" : "received",
+            text: data.content?.text || data.content?.caption || "New message",
             time: formatTime(new Date(data.createdAt)),
             status: data.status,
             messageType: data.content?.type || "text"
