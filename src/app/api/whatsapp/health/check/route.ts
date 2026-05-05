@@ -19,6 +19,7 @@ import { prisma } from '@/lib/prisma';
 import { getToken } from 'next-auth/jwt';
 import axios from 'axios';
 import { META_API_BASE } from '@/lib/meta-config';
+import { requireOrg } from '@/lib/api-auth';
 
 const META_API_BASE_URL = META_API_BASE;
 
@@ -543,16 +544,26 @@ async function updateHealthCheckStatus(
 }
 
 /**
- * GET handler - Retrieve health status
+ * GET handler - Retrieve health status for the caller's organization.
+ *
+ * Authorization: caller must be authenticated and a member of the org.
+ * Any `orgId` query parameter is ignored — we always derive the
+ * organization from the verified JWT to prevent cross-tenant reads.
  */
 export async function GET(request: NextRequest) {
+  const auth = await requireOrg(request, 'viewer');
+  if (!auth.ok) return auth.response;
+  const { organizationId: callerOrgId } = auth.context;
+
   try {
     const { searchParams } = new URL(request.url);
-    const orgId = searchParams.get('orgId');
     const forceRefresh = searchParams.get('force') === 'true';
+    const orgId = callerOrgId;
 
-    // If orgId is provided, get health status for that organization
-    if (orgId) {
+    // We always have an orgId now (from the JWT). The previous "no orgId
+    // = list every organization" admin path was removed because it
+    // exposed health/status data across tenants without any admin guard.
+    {
       // Get credentials from database - use findFirst since organizationId is not unique
       const credential = await prisma.whatsAppCredential.findFirst({
         where: { organizationId: orgId },
@@ -616,36 +627,6 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // No orgId - get status for all organizations (admin view)
-    const credentials = await prisma.whatsAppCredential.findMany({
-      where: { isActive: true },
-      select: {
-        organizationId: true,
-        businessAccountName: true,
-        healthCheckStatus: true,
-        healthCheckLastRun: true,
-        healthCheckError: true,
-        lastVerifiedAt: true,
-        tokenExpiresAt: true
-      },
-      orderBy: { healthCheckLastRun: 'desc' }
-    });
-
-    // Calculate summary
-    const summary = {
-      total: credentials.length,
-      healthy: credentials.filter(c => c.healthCheckStatus === 'healthy').length,
-      degraded: credentials.filter(c => c.healthCheckStatus === 'degraded').length,
-      unhealthy: credentials.filter(c => c.healthCheckStatus === 'unhealthy').length,
-      unknown: credentials.filter(c => c.healthCheckStatus === 'unknown').length
-    };
-
-    return NextResponse.json({
-      success: true,
-      summary,
-      organizations: credentials
-    });
-
   } catch (error: any) {
     console.error('[HealthCheck] Error:', error);
     return NextResponse.json({
@@ -656,20 +637,18 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST handler - Trigger health check for specific organization
+ * POST handler - Trigger a health check for the caller's organization.
+ *
+ * Authorization: caller must be authenticated and a member of the org
+ * (manager+). The organizationId is taken from the verified JWT — the
+ * request body is no longer trusted to specify which org to scan.
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireOrg(request, 'manager');
+  if (!auth.ok) return auth.response;
+  const { organizationId } = auth.context;
+
   try {
-    const body = await request.json();
-    const { organizationId } = body;
-
-    if (!organizationId) {
-      return NextResponse.json({
-        success: false,
-        error: 'Organization ID is required'
-      }, { status: 400 });
-    }
-
     // Get credentials from database - use findFirst since organizationId is not unique
     const credential = await prisma.whatsAppCredential.findFirst({
       where: { organizationId },

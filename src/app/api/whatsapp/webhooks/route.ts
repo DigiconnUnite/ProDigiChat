@@ -53,6 +53,43 @@ function isValidPhoneNumber(phone: string): boolean {
   return phoneRegex.test(phone);
 }
 
+/**
+ * Redact PII from webhook payloads before logging. Returns a shallow
+ * copy of the payload with phone numbers, message bodies, and other
+ * customer data masked. Used in non-production environments only.
+ */
+function redactWebhookPayload(payload: unknown): unknown {
+  try {
+    const cloned = JSON.parse(JSON.stringify(payload));
+    const masked = (s: unknown) =>
+      typeof s === 'string' && s.length > 4 ? `${s.slice(0, 2)}***${s.slice(-2)}` : '***';
+
+    for (const entry of cloned?.entry ?? []) {
+      for (const change of entry?.changes ?? []) {
+        const value = change?.value;
+        if (!value) continue;
+        for (const c of value.contacts ?? []) {
+          if (c?.wa_id) c.wa_id = masked(c.wa_id);
+          if (c?.profile?.name) c.profile.name = '***';
+        }
+        for (const m of value.messages ?? []) {
+          if (m?.from) m.from = masked(m.from);
+          if (m?.text?.body) m.text.body = '***';
+          if (m?.image) m.image = { ...m.image, caption: '***' };
+          if (m?.button?.text) m.button.text = '***';
+          if (m?.interactive) m.interactive = '***';
+        }
+        for (const s of value.statuses ?? []) {
+          if (s?.recipient_id) s.recipient_id = masked(s.recipient_id);
+        }
+      }
+    }
+    return cloned;
+  } catch {
+    return { redacted: true };
+  }
+}
+
 // Meta sends a GET request with a challenge for webhook verification
  
 
@@ -99,13 +136,14 @@ export async function POST(request: Request) {
     // SECURITY: Get Meta's HMAC-SHA256 signature header
     const signature = request.headers.get("x-hub-signature-256");
     
-    // SECURITY: Verify the webhook signature before processing any data
+    // SECURITY: Verify the webhook signature before processing any data.
+    //
+    // We respond 200 even on bad signatures so Meta does not retry the
+    // payload (Meta retries on non-2xx and will eventually disable the
+    // webhook). The request is silently dropped without further work.
     if (!verifyMetaSignature(rawBody, signature)) {
-      console.log("[Webhook Security] Invalid signature - rejecting request");
-      return NextResponse.json(
-        { error: "Invalid webhook signature" },
-        { status: 403 }
-      );
+      console.warn("[Webhook Security] Invalid signature - dropping payload silently");
+      return NextResponse.json({ success: true });
     }
 
     // ✅ CRITICAL: Acknowledge immediately before any processing
@@ -136,8 +174,18 @@ async function processWebhookAsync(rawBody: string): Promise<void> {
     // Now parse the JSON after signature verification
     const payload = JSON.parse(rawBody);
     
-    // Log the full payload for debugging
-    console.log("[WhatsApp Webhook] Received payload:", JSON.stringify(payload, null, 2));
+    // Avoid logging the raw webhook payload — it may contain customer
+    // phone numbers, message content, and other PII. Log a redacted
+    // shape instead.
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(
+        '[WhatsApp Webhook] Received payload (redacted):',
+        JSON.stringify(redactWebhookPayload(payload), null, 2),
+      );
+    } else {
+      console.log('[WhatsApp Webhook] Received payload',
+        { object: payload?.object, entries: payload?.entry?.length ?? 0 });
+    }
 
     // Handle Meta WhatsApp Cloud API webhook format
     if (payload.object === "whatsapp_business_account") {
@@ -451,13 +499,26 @@ async function processIncomingMessage(
   // Parse the message content based on type
   const parsedContent = await parseIncomingMessage(message, organizationId);
 
-  // Check for opt-out keywords in text messages
-  if (parsedContent.text && parsedContent.text.match(/stop|unsubscribe|opt.?out|quit|cancel/i)) {
-    console.log(`[WhatsApp Webhook] Opt-out detected from ${from}: ${parsedContent.text}`);
+  // Check for opt-out keywords in text messages.
+  //
+  // We use a strict, anchored match to avoid false positives. Words
+  // like "cancel" or "quit" are common in unrelated business messages
+  // (e.g. "I want to cancel my appointment") and should not be treated
+  // as opt-outs. WhatsApp / Meta documentation specifies STOP /
+  // UNSUBSCRIBE / OPT-OUT as the canonical keywords.
+  const trimmedText = parsedContent.text?.trim() ?? '';
+  let optOutDetected = false;
+  if (trimmedText && /^(stop|unsubscribe|opt[\s-]?out)$/i.test(trimmedText)) {
+    console.log(`[WhatsApp Webhook] Opt-out detected from ${from}`);
     await prisma.contact.updateMany({
       where: { phoneNumber: from, organizationId },
-      data: { optInStatus: 'opted_out' }
+      data: {
+        optInStatus: 'opted_out',
+        optOutAt: new Date(),
+        optInSource: 'whatsapp_stop_reply',
+      }
     });
+    optOutDetected = true;
   }
 
   // Check for system messages indicating opt-out
@@ -472,6 +533,24 @@ async function processIncomingMessage(
   // Find or create the contact with organization context
   const contact = await findOrCreateContact(from, organizationId);
 
+  // Stamp lastInboundAt so the messaging policy gate can apply the
+  // Meta 24-hour customer-care window correctly to subsequent freeform
+  // sends. We use the message timestamp (Meta returns Unix seconds)
+  // rather than `Date.now()` so out-of-order webhooks don't move the
+  // window backwards spuriously.
+  const inboundAt = new Date(Number(timestamp) * 1000);
+  if (!Number.isNaN(inboundAt.getTime())) {
+    await prisma.contact.update({
+      where: { id: contact.id },
+      data: {
+        lastInboundAt: inboundAt,
+        lastContacted: inboundAt,
+      },
+    }).catch((err) => {
+      console.error('[WhatsApp Webhook] Failed to stamp lastInboundAt:', err);
+    });
+  }
+
   // Store the message in the database
   const storedMessage = await storeIncomingMessage(
     contact.id,
@@ -482,6 +561,40 @@ async function processIncomingMessage(
 
   // Send acknowledgment (read receipt) to Meta
   await sendMessageAck(id, "delivered", organizationId);
+
+  // If the customer just opted out, send them a one-shot confirmation
+  // reply ("You have been unsubscribed..."). This is permitted under
+  // Meta's policy as a transactional response and is best-practice for
+  // suppression lists. We send it within the 24-hour window because
+  // they just messaged us, so a freeform reply is allowed.
+  if (optOutDetected) {
+    try {
+      const { sendTextMessage } = await import("@/app/api/whatsapp/messages");
+      await sendTextMessage(
+        from,
+        "You have been unsubscribed from this WhatsApp business account. " +
+          "You will no longer receive messages from us. " +
+          "Reply START at any time to opt back in.",
+        organizationId,
+      );
+    } catch (err) {
+      console.error('[WhatsApp Webhook] Failed to send opt-out confirmation:', err);
+    }
+  }
+
+  // If the customer sent START / UNSTOP / RESUBSCRIBE, treat as
+  // re-opt-in.
+  if (trimmedText && /^(start|unstop|resubscribe|opt[\s-]?in)$/i.test(trimmedText)) {
+    console.log(`[WhatsApp Webhook] Opt-in detected from ${from}`);
+    await prisma.contact.updateMany({
+      where: { phoneNumber: from, organizationId },
+      data: {
+        optInStatus: 'opted_in',
+        optInAt: new Date(),
+        optInSource: 'whatsapp_start_reply',
+      }
+    });
+  }
 
   console.log(`[WhatsApp Webhook] Successfully stored incoming message: ${id}`);
 

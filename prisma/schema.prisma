@@ -70,6 +70,12 @@ model Contact {
   optInSource   String?
   whatsappNumberId String?
   lastContacted DateTime?
+  // Last time this contact sent us an inbound WhatsApp message. Used
+  // to enforce the Meta 24-hour customer-care window for freeform
+  // (non-template) messages.
+  lastInboundAt DateTime?
+  // Last time we successfully sent this contact a WhatsApp message.
+  lastOutboundAt DateTime?
   tags          String   // JSON array of tags
   attributes    String   // JSON object for custom attributes
   isDeleted     Boolean  @default(false)
@@ -509,6 +515,15 @@ model WhatsAppMessageQueue {
   maxAttempts      Int       @default(3)
   nextRetryAt      DateTime?
   lastAttemptAt    DateTime?
+
+  // Atomic-claim bookkeeping for the queue worker. A row is "claimed"
+  // by exactly one worker via a status=QUEUED -> status=SENDING
+  // transition that also stamps claimToken + claimedAt. Stale claims
+  // (claimedAt older than the stall threshold) are reset back to
+  // QUEUED at the start of each cron tick so a crashed worker can't
+  // permanently strand a row.
+  claimToken       String?
+  claimedAt        DateTime?
 
   // Scheduling
   scheduledAt      DateTime?
