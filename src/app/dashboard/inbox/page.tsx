@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { parseMessageContent } from "@/types/common"
 import { useSession } from "next-auth/react"
+import { io } from 'socket.io-client'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
