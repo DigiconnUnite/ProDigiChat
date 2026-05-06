@@ -144,7 +144,7 @@ export function Header({ variant = "public", className }: HeaderProps) {
                       className="h-5 min-w-5 rounded-full px-1.5 text-xs font-medium"
                     >
                       {item.badge}
-                    </Badge>
+                    </Badge> 
                   )}
                 </Link>
               );
@@ -585,7 +585,7 @@ function MobilePublicNavigation({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive"
-                  onClick={() => signOut({ callbackUrl: "/landing" })}
+                  onClick={() => signOut({ callbackUrl: "/landing" })}     
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   Log out

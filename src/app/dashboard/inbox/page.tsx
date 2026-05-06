@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { StandardLayout } from "@/components/ui/standard-layout"
 import {
   Search,
   Send,
@@ -656,9 +657,9 @@ export default function InboxPage() {
 
   if (isCheckingConnection) {
     return (
-      <div className="bg-transparent px-2.5 lg:px-0">
-        <div className="container mx-auto relative border-t border-l border-r border-slate-300 px-5 py-10">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+      <StandardLayout>
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h1 className="text-foreground text-3xl font-bold mb-2">Inbox</h1>
               <p className="text-muted-foreground text-lg">Manage your WhatsApp conversations</p>
@@ -670,7 +671,7 @@ export default function InboxPage() {
             </div>
           </div>
         </div>
-      </div>
+      </StandardLayout>
     )
   }
 
@@ -680,9 +681,9 @@ export default function InboxPage() {
 
   if (!isWhatsAppConnected) {
     return (
-      <div className="bg-transparent px-2.5 lg:px-0">
-        <div className="container mx-auto relative border-t border-l border-r border-slate-300 px-5 py-10 pb-20">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+      <StandardLayout>
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h1 className="text-foreground text-3xl font-bold mb-2">Inbox</h1>
               <p className="text-muted-foreground text-lg">Manage your WhatsApp conversations</p>
@@ -732,7 +733,7 @@ export default function InboxPage() {
             </Button>
           </div>
         </div>
-      </div>
+      </StandardLayout>
     )
   }
 
@@ -741,11 +742,8 @@ export default function InboxPage() {
   // ═════════════════════════════════════════════════════════════
 
   return (
-    <div className="bg-transparent px-2.5 lg:px-0">
-      <div className="container mx-auto relative border-t border-l border-r border-slate-300 h-[87vh]">
-
-        {/* ═══ Chat Interface ═══ */}
-        <div className="w-full h-full flex">
+    <StandardLayout className="h-[87vh]">
+      <div className="w-full h-full flex rounded-xl border-2 border-green-950 bg-white overflow-hidden">
 
             {/* ─── Conversations List ─── */}
             <div className="w-80 border-r-2 border-slate-100 flex flex-col bg-white shrink-0">
@@ -1047,8 +1045,7 @@ export default function InboxPage() {
                 </div>
               )}
             </div>
-          </div>
         </div>
-      </div>
+    </StandardLayout>
   )
 }
