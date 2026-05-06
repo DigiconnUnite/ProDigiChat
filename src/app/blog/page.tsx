@@ -104,7 +104,7 @@ export default function BlogPage() {
             FEATURED POSTS – highlighted articles
         ══════════════════════════════════════════ */}
         <section className="bg-transparent border-slate-300 px-2.5 lg:px-0">
-          <div className="container mx-auto relative border-t border-l border-r border-slate-300 px-5">
+          <div className="container mx-auto relative bg-linear-30 from-lime-50 to-green-100 border-t border-l border-r border-slate-300 px-5">
             <div className="text-center mb-16 pt-20 pb-4">
               <h2 className="text-foreground text-4xl font-bold mb-4">
                 Featured Articles
@@ -118,40 +118,42 @@ export default function BlogPage() {
               {blogPosts.slice(0, 3).map((post) => (
                 <div
                   key={post.id}
-                  className="p-4 rounded-xl border-2 border-green-950 bg-white transition-all hover:shadow-card group"
+                  className="rounded-xl border-2 border-green-950 bg-white transition-all hover:shadow-card group overflow-hidden"
                 >
-                  <div className="aspect-video relative overflow-hidden bg-linear-to-br from-primary/10 to-primary/5 rounded-md mb-6">
+                  <div className="aspect-video relative overflow-hidden bg-linear-to-br from-primary/10 to-primary/5 rounded-md mb-6 border border-slate-300">
                     <img
-                      src={post.image || "/images/blog/default.jpg"}
+                      src="/blog-1.png"
                       alt={post.title}
                       className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      {new Date(post.publishedAt).toLocaleDateString()}
+                  <div className="p-4 pt-0">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        {new Date(post.publishedAt).toLocaleDateString()}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        {post.readTime} min read
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      {post.readTime} min read
+                    <h3 className="text-foreground text-xl font-semibold mb-3 group-hover:text-primary transition-colors">
+                      <Link href={`/blog/${post.id}`}>{post.title}</Link>
+                    </h3>
+                    <p className="text-gray-700 leading-relaxed mb-4">{post.excerpt}</p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">{post.author}</span>
+                      </div>
+                      <Link href={`/blog/${post.id}`}>
+                        <Button variant="ghost" size="sm" className="group-hover:bg-primary group-hover:text-primary-foreground">
+                          Read More
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </Link>
                     </div>
-                  </div>
-                  <h3 className="text-foreground text-xl font-semibold mb-3 group-hover:text-primary transition-colors">
-                    <Link href={`/blog/${post.id}`}>{post.title}</Link>
-                  </h3>
-                  <p className="text-gray-700 leading-relaxed mb-4">{post.excerpt}</p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">{post.author}</span>
-                    </div>
-                    <Link href={`/blog/${post.id}`}>
-                      <Button variant="ghost" size="sm" className="group-hover:bg-primary group-hover:text-primary-foreground">
-                        Read More
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </Link>
                   </div>
                 </div>
               ))}
@@ -177,17 +179,17 @@ export default function BlogPage() {
               {blogPosts.map((post) => (
                 <div
                   key={post.id}
-                  className="p-3 rounded-xl border-2 border-green-950 bg-white transition-all hover:shadow-card group"
+                  className="rounded-xl border-2 border-green-950 bg-white transition-all hover:shadow-card group"
                 >
-                  <div className="flex gap-6">
-                    <div className="aspect-square w-32 relative overflow-hidden bg-linear-to-br from-primary/10 to-primary/5 rounded-md flex-shrink-0">
+                  <div className="flex gap-6  pr-3">
+                    <div className="aspect-video w-64 relative overflow-hidden bg-linear-to-br from-primary/10 to-primary/5 rounded-xl shrink-0 border border-slate-300">
                       <img
-                        src={post.image || "/images/blog/default.jpg"}
+                        src="/blog-1.png"
                         alt={post.title}
                         className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 py-3 pr-0">
                       <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-4 w-4" />

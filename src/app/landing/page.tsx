@@ -141,7 +141,7 @@ export default function LandingPage() {
               </div>
 
               <div className="flex items-center justify-center">
-                <div className="relative w-full max-w-[522px] aspect-[522/572] overflow-hidden rounded-md ">
+                <div className="relative w-full max-w-130.5 aspect-522/572 overflow-hidden rounded-md ">
                   <img
                     src="/hero-image.png"
                     alt="ProDigiChat dashboard showing messaging interface"
@@ -394,11 +394,11 @@ export default function LandingPage() {
               <h1 className="text-foreground text-3xl font-semibold tracking-tight">See Every Message, Understand Every Campaign, and Act with Unmatched Speed</h1>
               <p className="text-gray-600 text-base">Our unified dashboard brings all your contacts, campaigns, and analytics into a single panoramic view—updated in real time.</p>
             </div>
-            <div className="relative bg-linear-0 bg-gradient-to-br from-lime-50 to-green-50">
+            <div className="relative bg-linear-0 bg-linear-to-brrom-lime-50 to-green-50">
               <div className="z-10 p-5 lg:p-20">
                 <div className="bg-white border rounded-sm p-2 sm:p-3 md:p-4 lg:rounded-md">
                   <div className="relative  aspect-video size-4xl overflow-hidden rounded-sm lg:rounded-md">
-                    <img src="/images/homepage/dashboard/dashboard.webp" alt="ProDigiChat product interface showing messaging dashboard" className="absolute inset-0 size-full object-contain object-left-top" />
+                    <img src="/blog-1.png" alt="ProDigiChat product interface showing messaging dashboard" className="absolute inset-0 size-full object-contain object-top-left" />
                   </div>
                 </div>
               </div>
@@ -417,7 +417,7 @@ export default function LandingPage() {
                   </svg>
                 </div>
               </div>
-              <div className="text-foreground h-full min-h-56 w-full px-6 py-12 text-start lg:p-8 border-b border-gray-300 last:border-0 lg:border-b-0 lg:border-r border-gray-300">
+              <div className="text-foreground h-full min-h-56 w-full px-6 py-12 text-start lg:p-8 border-b  last:border-0 lg:border-b-0 lg:border-r border-gray-300">
                 <div className="flex h-full w-full justify-between gap-2">
                   <div>
                     <h3 className="text-base font-semibold">One-Click Campaigns</h3>

@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
+import { StandardLayout } from "@/components/ui/standard-layout"
 import { useSession } from "next-auth/react"
 import { WhatsAppConnectionStatus } from "@/components/whatsapp"
 import {
@@ -25,6 +25,9 @@ import {
   Play,
   Pause,
   Plus,
+  BarChart3,
+  Activity,
+  ChevronRight,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -34,7 +37,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Area, AreaChart, Bar, BarChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 
-// Type definitions for Analytics API response
+// ═══════════════════════════════════════════════════════════════
+// TYPE DEFINITIONS
+// ═══════════════════════════════════════════════════════════════
+
 interface AnalyticsOverview {
   totalContacts: number
   messagesSent: number
@@ -96,109 +102,186 @@ interface AnalyticsData {
   contactGrowth: ContactGrowth
 }
 
-// Default/fallback data for when API returns null
+// Default/fallback data
 const defaultAnalyticsData: AnalyticsData = {
-  overview: {
-    totalContacts: 0,
-    messagesSent: 0,
-    activeCampaigns: 0,
-    activeAutomations: 0
-  },
-  performance: {
-    deliveryRate: 0,
-    readRate: 0,
-    dateRange: "7d"
-  },
+  overview: { totalContacts: 0, messagesSent: 0, activeCampaigns: 0, activeAutomations: 0 },
+  performance: { deliveryRate: 0, readRate: 0, dateRange: "7d" },
   messageVolume: [],
   campaignDetails: [],
   recentActivity: [],
-  trends: {
-    messagesSent: 0,
-    deliveryRate: 0,
-    readRate: 0,
-    newContacts: 0
-  },
-  contactGrowth: {
-    newContacts: 0,
-    trend: 0
-  }
+  trends: { messagesSent: 0, deliveryRate: 0, readRate: 0, newContacts: 0 },
+  contactGrowth: { newContacts: 0, trend: 0 }
 }
 
-// Mock data for metrics (used as fallback)
 const fallbackMetrics = [
-  {
-    title: "Messages Sent",
-    value: "0",
-    change: "+0%",
-    trend: "up" as const,
-    icon: Send,
-  },
-  {
-    title: "Delivery Rate",
-    value: "0%",
-    change: "+0%",
-    trend: "up" as const,
-    icon: CheckCircle2,
-  },
-  {
-    title: "Read Rate",
-    value: "0%",
-    change: "+0%",
-    trend: "up" as const,
-    icon: MessageSquare,
-  },
-  {
-    title: "New Contacts",
-    value: "0",
-    change: "+0%",
-    trend: "up" as const,
-    icon: Users,
-  },
-  {
-    title: "Active Campaigns",
-    value: "0",
-    change: "+0",
-    trend: "up" as const,
-    icon: TrendingUp,
-  },
-  {
-    title: "Pending Messages",
-    value: "0",
-    change: "-0",
-    trend: "up" as const,
-    icon: Clock,
-  },
+  { title: "Messages Sent", value: "0", change: "+0%", trend: "up" as const, icon: Send },
+  { title: "Delivery Rate", value: "0%", change: "+0%", trend: "up" as const, icon: CheckCircle2 },
+  { title: "Read Rate", value: "0%", change: "+0%", trend: "up" as const, icon: MessageSquare },
+  { title: "New Contacts", value: "0", change: "+0%", trend: "up" as const, icon: Users },
+  { title: "Active Campaigns", value: "0", change: "+0", trend: "up" as const, icon: TrendingUp },
+  { title: "Active Automations", value: "0", change: "+0", trend: "up" as const, icon: Clock },
 ]
 
-// Fallback message volume data
-const fallbackMessageVolumeData = [
-  { name: "No data", sent: 0, delivered: 0, read: 0 },
-]
+const fallbackMessageVolumeData = [{ name: "No data", sent: 0, delivered: 0, read: 0 }]
+const fallbackCampaignPerformanceData = [{ name: "No campaigns", sent: 0, read: 0, clicked: 0 }]
 
-// Fallback campaign performance data
-const fallbackCampaignPerformanceData = [
-  { name: "No campaigns", sent: 0, read: 0, clicked: 0 },
-]
-
-// Fallback recent activities
 const fallbackRecentActivities = [
-  {
-    id: "0",
-    type: "info",
-    title: "No recent activity",
-    description: "Start a campaign to see activity here",
-    time: "",
-    icon: Clock,
-  },
+  { id: "0", type: "info", title: "No recent activity", description: "Start a campaign to see activity here", time: "", icon: Clock },
 ]
 
-// Fallback campaign status
-const fallbackCampaignStatus = {
-  active: 0,
-  scheduled: 0,
-  paused: 0,
-  completed: 0,
+const fallbackCampaignStatus = { active: 0, scheduled: 0, paused: 0, completed: 0 }
+
+// ═══════════════════════════════════════════════════════════════
+// REUSABLE STYLED COMPONENTS
+// ═══════════════════════════════════════════════════════════════
+
+function StyledCard({
+  children,
+  className = "",
+  title,
+  description,
+  titleIcon: TitleIcon,
+  headerRight,
+  accent = false,
+  danger = false,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  title?: React.ReactNode;
+  description?: string;
+  titleIcon?: any;
+  headerRight?: React.ReactNode;
+  accent?: boolean;
+  danger?: boolean;
+}) {
+  const borderClass = danger
+    ? "border-2 border-red-400"
+    : accent
+      ? "border-l-4 border-l-green-500 border-2 border-green-200 bg-green-50/50"
+      : "border-2 border-green-950";
+
+  return (
+    <div className={`p-5 rounded-xl bg-white transition-all ${borderClass} ${className}`}>
+      {(title || headerRight) && (
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex-1 min-w-0">
+            {title && (
+              <h3 className="text-lg font-semibold flex items-center gap-2 text-foreground">
+                {TitleIcon && <TitleIcon className="h-5 w-5" />}
+                {title}
+              </h3>
+            )}
+            {description && (
+              <p className="text-muted-foreground text-sm mt-1">{description}</p>
+            )}
+          </div>
+          {headerRight && <div className="flex items-center gap-2 ml-4 flex-shrink-0">{headerRight}</div>}
+        </div>
+      )}
+      <div className="space-y-0">{children}</div>
+    </div>
+  );
 }
+
+function MetricCard({
+  title,
+  value,
+  change,
+  trend,
+  icon: Icon,
+}: {
+  title: string;
+  value: string;
+  change: string;
+  trend: "up" | "down";
+  icon: any;
+}) {
+  return (
+    <div className="p-5 rounded-xl bg-white border-2 border-green-950 transition-all hover:shadow-md group">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm font-medium text-muted-foreground">{title}</p>
+        <div className="h-10 w-10 rounded-xl bg-green-50 flex items-center justify-center group-hover:bg-green-100 transition-colors">
+          <Icon className="h-5 w-5 text-green-600" />
+        </div>
+      </div>
+      <div className="text-2xl font-bold text-foreground">{value}</div>
+      <div className={`flex items-center text-xs mt-2 ${trend === "up" ? "text-green-600" : "text-red-600"}`}>
+        {trend === "up" ? (
+          <ArrowUpRight className="mr-1 h-3 w-3" />
+        ) : (
+          <ArrowDownRight className="mr-1 h-3 w-3" />
+        )}
+        <span className="font-medium">{change}</span>
+        <span className="ml-1 text-muted-foreground">from last period</span>
+      </div>
+    </div>
+  );
+}
+
+function MetricCardSkeleton() {
+  return (
+    <div className="p-5 rounded-xl bg-white border-2 border-green-950">
+      <div className="flex items-center justify-between mb-3">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-10 w-10 rounded-xl" />
+      </div>
+      <Skeleton className="h-8 w-20 mb-2" />
+      <Skeleton className="h-3 w-28" />
+    </div>
+  );
+}
+
+function ChartSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Skeleton className="h-5 w-36" />
+        <Skeleton className="h-4 w-48" />
+      </div>
+      <Skeleton className="h-[300px] w-full rounded-lg" />
+    </div>
+  );
+}
+
+function ActivitySkeleton() {
+  return (
+    <div className="space-y-5">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <div key={index} className="flex items-start gap-4">
+          <Skeleton className="h-10 w-10 rounded-xl" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-4 w-56" />
+            <Skeleton className="h-3 w-40" />
+          </div>
+          <Skeleton className="h-3 w-16" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CampaignStatusSkeleton() {
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div key={index} className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-10 w-10 rounded-xl" />
+            <div className="space-y-1">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          </div>
+          <Skeleton className="h-6 w-8 rounded-full" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN DASHBOARD COMPONENT
+// ═══════════════════════════════════════════════════════════════
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -208,19 +291,12 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const { data: session } = useSession()
   
-  // Get user name for welcome message
   const userName = session?.user?.name || session?.user?.email?.split('@')[0] || 'User'
   const firstName = userName.split(' ')[0]
-  
-  // Use session orgId - REQUIRED for security
-  // If no valid orgId exists, the user should not have access to the dashboard
   const organizationId = (session?.user as Record<string, unknown>)?.organizationId as string
   
-  // Add guard inside useEffect to check session and organizationId before fetching
   useEffect(() => {
-    if (!session || !organizationId) {
-      return
-    }
+    if (!session || !organizationId) return
     
     const fetchAnalyticsData = async () => {
       setIsLoading(true)
@@ -243,7 +319,6 @@ export default function DashboardPage() {
       } catch (err) {
         console.error("Error fetching analytics:", err)
         setError(err instanceof Error ? err.message : "An error occurred")
-        // Keep using default/fallback data
         setAnalyticsData(defaultAnalyticsData)
       } finally {
         setIsLoading(false)
@@ -253,27 +328,33 @@ export default function DashboardPage() {
     fetchAnalyticsData()
   }, [dateRange, session, organizationId])
 
-  // Show loading if session is being fetched, or error if no orgId
-  // These conditional returns now come AFTER the useEffect (which is correct per React rules)
   if (!session) {
     return (
-      <div className="container mx-auto py-6">
-        <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Loading...</p>
+      <StandardLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-center py-20">
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
         </div>
-      </div>
+      </StandardLayout>
     )
   }
   
   if (!organizationId) {
     return (
-      <div className="container mx-auto py-6">
-        <Card className="border-destructive/50 bg-destructive/10">
-          <CardContent className="pt-6">
-            <p className="text-destructive">No organization found. Please log in again.</p>
-          </CardContent>
-        </Card>
-      </div>
+      <StandardLayout>
+        <div className="space-y-6">
+          <StyledCard danger>
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+              <div>
+                <h4 className="text-sm font-semibold text-red-800">Access Denied</h4>
+                <p className="text-xs text-red-700 mt-1">No organization found. Please log in again.</p>
+              </div>
+            </div>
+          </StyledCard>
+        </div>
+      </StandardLayout>
     )
   }
 
@@ -319,25 +400,20 @@ export default function DashboardPage() {
       value: analyticsData.overview.activeAutomations.toString(),
       change: "+0",
       trend: "up" as const,
-      icon: Clock,
+      icon: Activity,
     },
   ] : fallbackMetrics
 
-  // Process message volume data for chart
+  // Process message volume data
   const messageVolumeData = analyticsData?.messageVolume && analyticsData.messageVolume.length > 0
     ? analyticsData.messageVolume.slice(-7).map((item) => {
         const date = new Date(item.date)
         const dayName = date.toLocaleDateString('en-US', { weekday: 'short' })
-        return {
-          name: dayName,
-          sent: item.sent,
-          delivered: item.delivered,
-          read: item.read
-        }
+        return { name: dayName, sent: item.sent, delivered: item.delivered, read: item.read }
       })
     : fallbackMessageVolumeData
 
-  // Process campaign performance data for chart
+  // Process campaign performance data
   const campaignPerformanceData = analyticsData?.campaignDetails && analyticsData.campaignDetails.length > 0
     ? analyticsData.campaignDetails.slice(0, 5).map((campaign) => ({
         name: campaign.name.length > 12 ? campaign.name.substring(0, 12) + "..." : campaign.name,
@@ -368,7 +444,6 @@ export default function DashboardPage() {
 
         const { icon: Icon, type } = getIconAndType(activity.action)
         
-        // Format time ago
         const activityDate = new Date(activity.createdAt)
         const now = new Date()
         const diffMs = now.getTime() - activityDate.getTime()
@@ -378,9 +453,9 @@ export default function DashboardPage() {
         
         let timeAgo = ""
         if (diffMins < 1) timeAgo = "Just now"
-        else if (diffMins < 60) timeAgo = `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
-        else if (diffHours < 24) timeAgo = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
-        else timeAgo = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+        else if (diffMins < 60) timeAgo = `${diffMins}m ago`
+        else if (diffHours < 24) timeAgo = `${diffHours}h ago`
+        else timeAgo = `${diffDays}d ago`
 
         return {
           id: activity.id,
@@ -395,7 +470,7 @@ export default function DashboardPage() {
       })
     : fallbackRecentActivities
 
-  // Calculate campaign status from campaign details
+  // Calculate campaign status
   const campaignStatus = analyticsData?.campaignDetails
     ? {
         active: analyticsData.campaignDetails.filter(c => c.status === 'running').length,
@@ -405,426 +480,387 @@ export default function DashboardPage() {
       }
     : fallbackCampaignStatus
 
+  const totalCampaigns = campaignStatus.active + campaignStatus.scheduled + campaignStatus.paused + campaignStatus.completed
+
   return (
-    <div className="bg-transparent px-2.5 lg:px-0">
-      <div className="container mx-auto relative border-l border-r border-slate-300 ">
-        {/* Dark Welcome Banner with WhatsApp Connection Status */}
-        <div className="relative overflow-hidden bg-linear-to-br from-lime-50 to-green-50 border-b ">
-        {/* Content */}
-        <div className="relative px-8 py-8 ">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            {/* Welcome Message */}
-            <div className="space-y-2">
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                Welcome back,{" "}
-                <span className="text-green-500">{firstName}</span> 👋
-              </h1>
-              <p className="text-slate-400 text-lg max-w-xl">
-                Here's what's happening with your WhatsApp marketing campaigns
-                today.
-              </p>
-            </div>
+    <StandardLayout>
+      <div className="space-y-6">
+      {/* Welcome Banner */}
+      
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">
+              Welcome back,{" "}
+              <span className="text-green-600">{firstName}</span> 👋
+            </h1>
+            <p className="text-muted-foreground text-lg max-w-xl">
+              Here&apos;s what&apos;s happening with your WhatsApp marketing campaigns today.
+            </p>
           </div>
         </div>
-      </div>
+      
 
       {/* Error Message */}
       {error && (
-        <Card className="border-destructive/50 bg-destructive/10">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-destructive">
-              <AlertCircle className="h-4 w-4" />
-              <p className="text-sm">
-                Error loading data: {error}. Showing fallback data.
-              </p>
+        <StyledCard danger>
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold text-red-800">Error Loading Data</h4>
+              <p className="text-xs text-red-700 mt-1">{error}. Showing fallback data.</p>
             </div>
-          </CardContent>
-        </Card>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="rounded-lg border-red-300 text-red-700 hover:bg-red-50 text-xs"
+              onClick={() => window.location.reload()}
+            >
+              Retry
+            </Button>
+          </div>
+        </StyledCard>
       )}
 
-      {/* Key Metrics */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      {/* Key Metrics Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         {isLoading
-          ? // Skeleton loaders for metrics
-            Array.from({ length: 6 }).map((_, index) => (
-              <Card className={`rounded-none border ${index % 6 !== 5 ? 'border-r' : 'border-r-0'} ${index >= 6 ? 'border-t' : ''}`} key={index}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-4 w-4 rounded-full" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-8 w-16 mb-2" />
-                  <Skeleton className="h-3 w-20" />
-                </CardContent>
-              </Card>
-            ))
-          : metrics.map((metric, index) => {
-              const Icon = metric.icon;
-              return (
-                <Card className={`rounded-none border ${index % 6 !== 5 ? 'border-r' : 'border-r-0'} ${index >= 6 ? 'border-t' : ''}`} key={index}>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      {metric.title}
-                    </CardTitle>
-                    <Icon className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{metric.value}</div>
-                    <div
-                      className={`flex items-center text-xs ${metric.trend === "up" ? "text-primary" : "text-destructive"}`}
-                    >
-                      {metric.trend === "up" ? (
-                        <ArrowUpRight className="mr-1 h-3 w-3" />
-                      ) : (
-                        <ArrowDownRight className="mr-1 h-3 w-3" />
-                      )}
-                      {metric.change}
-                      <span className="ml-1 text-muted-foreground">
-                        from last period
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+          ? Array.from({ length: 6 }).map((_, index) => <MetricCardSkeleton key={index} />)
+          : metrics.map((metric, index) => <MetricCard key={index} {...metric} />)
+        }
       </div>
 
       {/* Charts Row */}
-      <div className="grid lg:grid-cols-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Message Volume Chart */}
-        <Card className="col-span-1 rounded-none border-r">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Message Volume</CardTitle>
-                <CardDescription>
-                  Messages sent, delivered, and read over time
-                </CardDescription>
-              </div>
-              <Button variant="ghost" size="icon">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
+        <StyledCard
+          title="Message Volume"
+          description="Messages sent, delivered, and read over time"
+          titleIcon={BarChart3}
+          headerRight={
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="rounded-lg border-slate-300 text-xs">
+                  {dateRange === "7d" ? "Last 7 days" : dateRange === "30d" ? "Last 30 days" : dateRange === "90d" ? "Last 90 days" : "Custom"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setDateRange("7d")}>Last 7 days</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setDateRange("30d")}>Last 30 days</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setDateRange("90d")}>Last 90 days</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          }
+        >
+          {isLoading ? (
+            <ChartSkeleton />
+          ) : (
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={messageVolumeData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200" />
+                  <XAxis 
+                    dataKey="name" 
+                    className="text-xs" 
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                  />
+                  <YAxis 
+                    className="text-xs" 
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "white",
+                      border: "2px solid hsl(var(--border))",
+                      borderRadius: "12px",
+                      boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                    }}
+                    labelStyle={{ fontWeight: 600, marginBottom: 4 }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="sent"
+                    stroke="#22c55e"
+                    fill="#22c55e"
+                    fillOpacity={0.1}
+                    strokeWidth={2}
+                    name="Sent"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="delivered"
+                    stroke="#16a34a"
+                    fill="#16a34a"
+                    fillOpacity={0.1}
+                    strokeWidth={2}
+                    name="Delivered"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="read"
+                    stroke="#15803d"
+                    fill="#15803d"
+                    fillOpacity={0.1}
+                    strokeWidth={2}
+                    name="Read"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="h-75 flex items-center justify-center">
-                <Skeleton className="h-full w-full" />
-              </div>
-            ) : (
-              <div className="h-75">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={messageVolumeData}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      className="stroke-muted"
-                    />
-                    <XAxis dataKey="name" className="text-xs" />
-                    <YAxis className="text-xs" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "var(--popover)",
-                        border: "1px solid var(--border)",
-                        borderRadius: "var(--radius)",
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="sent"
-                      stroke="var(--chart-3)"
-                      fill="var(--chart-3)"
-                      fillOpacity={0.1}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="delivered"
-                      stroke="var(--chart-2)"
-                      fill="var(--chart-2)"
-                      fillOpacity={0.1}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="read"
-                      stroke="var(--chart-1)"
-                      fill="var(--chart-1)"
-                      fillOpacity={0.1}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          )}
+        </StyledCard>
 
         {/* Campaign Performance Chart */}
-        <Card className="col-span-1 rounded-none">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Campaign Performance</CardTitle>
-                <CardDescription>
-                  Performance of your recent campaigns
-                </CardDescription>
-              </div>
-              <Button variant="ghost" size="icon">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
+        <StyledCard
+          title="Campaign Performance"
+          description="Performance of your recent campaigns"
+          titleIcon={TrendingUp}
+          headerRight={
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="rounded-lg border-slate-300 text-xs"
+              onClick={() => router.push("/dashboard/campaigns")}
+            >
+              View All
+              <ChevronRight className="w-3 h-3 ml-1" />
+            </Button>
+          }
+        >
+          {isLoading ? (
+            <ChartSkeleton />
+          ) : (
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={campaignPerformanceData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200" />
+                  <XAxis
+                    dataKey="name"
+                    className="text-xs"
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                  />
+                  <YAxis 
+                    className="text-xs" 
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "white",
+                      border: "2px solid hsl(var(--border))",
+                      borderRadius: "12px",
+                      boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                    }}
+                    labelStyle={{ fontWeight: 600, marginBottom: 4 }}
+                  />
+                  <Bar dataKey="sent" fill="#22c55e" radius={[6, 6, 0, 0]} name="Sent" />
+                  <Bar dataKey="read" fill="#16a34a" radius={[6, 6, 0, 0]} name="Read" />
+                  <Bar dataKey="clicked" fill="#15803d" radius={[6, 6, 0, 0]} name="Clicked" />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="h-75 flex items-center justify-center">
-                <Skeleton className="h-full w-full" />
-              </div>
-            ) : (
-              <div className="h-75">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={campaignPerformanceData}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      className="stroke-muted"
-                    />
-                    <XAxis
-                      dataKey="name"
-                      className="text-xs"
-                      angle={-45}
-                      textAnchor="end"
-                      height={60}
-                    />
-                    <YAxis className="text-xs" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "var(--popover)",
-                        border: "1px solid var(--border)",
-                        borderRadius: "var(--radius)",
-                      }}
-                    />
-                    <Bar
-                      dataKey="sent"
-                      fill="var(--chart-1)"
-                      radius={[4, 4, 0, 0]}
-                    />
-                    <Bar
-                      dataKey="read"
-                      fill="var(--chart-2)"
-                      radius={[4, 4, 0, 0]}
-                    />
-                    <Bar
-                      dataKey="clicked"
-                      fill="var(--chart-3)"
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          )}
+        </StyledCard>
       </div>
 
       {/* Bottom Row */}
-      <div className="grid lg:grid-cols-3">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Recent Activity */}
-        <Card className="lg:col-span-2 rounded-none border-r">
-          <CardHeader>
+        <StyledCard
+          title="Recent Activity"
+          description="Latest events and updates"
+          titleIcon={Clock}
+          headerRight={
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="rounded-lg border-slate-300 text-xs"
+              onClick={() => router.push("/dashboard/inbox")}
+            >
+              View All
+              <ChevronRight className="w-3 h-3 ml-1" />
+            </Button>
+          }
+          className="lg:col-span-2"
+        >
+          {isLoading ? (
+            <ActivitySkeleton />
+          ) : (
+            <ScrollArea className="h-[400px]">
+              <div className="space-y-1">
+                {recentActivities.map((activity, index) => {
+                  const Icon = activity.icon;
+                  return (
+                    <div key={activity.id} className="group">
+                      <div className="flex items-start gap-4 py-3">
+                        <div
+                          className={`flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0 ${
+                            activity.type === "error"
+                              ? "bg-red-50"
+                              : activity.type === "campaign"
+                                ? "bg-green-50"
+                                : activity.type === "contact"
+                                  ? "bg-blue-50"
+                                  : "bg-slate-50"
+                          }`}
+                        >
+                          <Icon
+                            className={`h-5 w-5 ${
+                              activity.type === "error"
+                                ? "text-red-600"
+                                : activity.type === "campaign"
+                                  ? "text-green-600"
+                                  : activity.type === "contact"
+                                    ? "text-blue-600"
+                                    : "text-slate-500"
+                            }`}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-4">
+                            <p className="font-medium text-sm text-foreground">{activity.title}</p>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">{activity.time}</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-0.5 truncate">{activity.description}</p>
+                        </div>
+                      </div>
+                      {index < recentActivities.length - 1 && (
+                        <Separator className="bg-slate-100" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          )}
+        </StyledCard>
+
+        {/* Inbox Summary */}
+        <StyledCard
+          title="Inbox"
+          description="Manage conversations and replies"
+          titleIcon={MessageSquare}
+        >
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Latest events and updates</CardDescription>
+                <p className="text-sm font-medium text-foreground">Unread Messages</p>
+                <p className="text-xs text-muted-foreground">Latest inbound conversations</p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push("/dashboard/inbox")}
-              >
-                View All
-              </Button>
+              <Badge className="bg-slate-100 text-slate-700 border-slate-200">0</Badge>
             </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="h-100 space-y-4">
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <div key={index} className="flex items-start gap-4">
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-48" />
-                      <Skeleton className="h-3 w-32" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <ScrollArea className="h-100">
-                <div className="space-y-4">
-                  {recentActivities.map((activity, index) => {
-                    const Icon = activity.icon;
-                    return (
-                      <div key={activity.id}>
-                        <div className="flex items-start gap-4">
-                          <div
-                            className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                              activity.type === "error"
-                                ? "bg-destructive/10"
-                                : activity.type === "campaign"
-                                  ? "bg-primary/10"
-                                  : "bg-muted"
-                            }`}
-                          >
-                            <Icon
-                              className={`h-5 w-5 ${
-                                activity.type === "error"
-                                  ? "text-destructive"
-                                  : activity.type === "campaign"
-                                    ? "text-primary"
-                                    : "text-muted-foreground"
-                              }`}
-                            />
-                          </div>
-                          <div className="flex-1 space-y-1">
-                            <div className="flex items-start justify-between">
-                              <p className="font-medium text-sm">
-                                {activity.title}
-                              </p>
-                              <span className="text-xs text-muted-foreground">
-                                {activity.time}
-                              </span>
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              {activity.description}
-                            </p>
-                          </div>
-                        </div>
-                        {index < recentActivities.length - 1 && (
-                          <Separator className="mt-4" />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
-            )}
-          </CardContent>
-        </Card>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full rounded-lg border-slate-300 text-xs"
+              onClick={() => router.push("/dashboard/inbox")}
+            >
+              Open Inbox
+              <ChevronRight className="w-3 h-3 ml-1" />
+            </Button>
+          </div>
+        </StyledCard>
 
         {/* Campaign Status Overview */}
-        <Card className="rounded-none">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Campaign Status</CardTitle>
-                <CardDescription>Overview of all campaigns</CardDescription>
+        <StyledCard
+          title="Campaign Status"
+          description="Overview of all campaigns"
+          titleIcon={Calendar}
+        >
+          {isLoading ? (
+            <CampaignStatusSkeleton />
+          ) : (
+            <div className="space-y-1">
+              {/* Active Campaigns */}
+              <div className="flex items-center justify-between py-3 group">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 group-hover:bg-green-100 transition-colors">
+                    <Play className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Active</p>
+                    <p className="text-xs text-muted-foreground">Currently running</p>
+                  </div>
+                </div>
+                <Badge className="bg-green-100 text-green-800 border-green-200">{campaignStatus.active}</Badge>
               </div>
-              <Button variant="ghost" size="icon">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
+
+              <Separator className="bg-slate-100" />
+
+              {/* Scheduled Campaigns */}
+              <div className="flex items-center justify-between py-3 group">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 group-hover:bg-blue-100 transition-colors">
+                    <Calendar className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Scheduled</p>
+                    <p className="text-xs text-muted-foreground">Awaiting launch</p>
+                  </div>
+                </div>
+                <Badge className="bg-blue-100 text-blue-800 border-blue-200">{campaignStatus.scheduled}</Badge>
+              </div>
+
+              <Separator className="bg-slate-100" />
+
+              {/* Paused Campaigns */}
+              <div className="flex items-center justify-between py-3 group">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-yellow-50 group-hover:bg-yellow-100 transition-colors">
+                    <Pause className="h-5 w-5 text-yellow-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Paused</p>
+                    <p className="text-xs text-muted-foreground">Temporarily stopped</p>
+                  </div>
+                </div>
+                <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">{campaignStatus.paused}</Badge>
+              </div>
+
+              <Separator className="bg-slate-100" />
+
+              {/* Completed Campaigns */}
+              <div className="flex items-center justify-between py-3 group">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 group-hover:bg-slate-100 transition-colors">
+                    <CheckCircle2 className="h-5 w-5 text-slate-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Completed</p>
+                    <p className="text-xs text-muted-foreground">Successfully finished</p>
+                  </div>
+                </div>
+                <Badge className="bg-slate-100 text-slate-700 border-slate-200">{campaignStatus.completed}</Badge>
+              </div>
+
+              <Separator className="bg-slate-200 my-2" />
+
+              {/* Total */}
+              <div className="flex items-center justify-between py-2">
+                <p className="text-sm font-semibold text-foreground">Total Campaigns</p>
+                <p className="text-xl font-bold text-green-600">{totalCampaigns}</p>
+              </div>
+
+              {/* Quick Action */}
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <Button 
+                  onClick={() => router.push("/dashboard/campaigns/new")} 
+                  className="w-full rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create New Campaign
+                </Button>
+              </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-4">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="h-10 w-10 rounded-full" />
-                      <div>
-                        <Skeleton className="h-4 w-16 mb-1" />
-                        <Skeleton className="h-3 w-24" />
-                      </div>
-                    </div>
-                    <Skeleton className="h-6 w-8" />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Active Campaigns */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                      <Play className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Active</p>
-                      <p className="text-xs text-muted-foreground">
-                        Currently running
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant="default" className="bg-primary">
-                    {campaignStatus.active}
-                  </Badge>
-                </div>
-
-                {/* Scheduled Campaigns */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-chart-2/10">
-                      <Calendar className="h-5 w-5 text-chart-2" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Scheduled</p>
-                      <p className="text-xs text-muted-foreground">
-                        Awaiting launch
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant="secondary">{campaignStatus.scheduled}</Badge>
-                </div>
-
-                {/* Paused Campaigns */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-chart-3/10">
-                      <Pause className="h-5 w-5 text-chart-3" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Paused</p>
-                      <p className="text-xs text-muted-foreground">
-                        Temporarily stopped
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant="secondary">{campaignStatus.paused}</Badge>
-                </div>
-
-                {/* Completed Campaigns */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                      <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Completed</p>
-                      <p className="text-xs text-muted-foreground">
-                        Successfully finished
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant="outline">{campaignStatus.completed}</Badge>
-                </div>
-
-                <Separator />
-
-                {/* Total */}
-                <div className="flex items-center justify-between pt-2">
-                  <p className="text-sm font-medium">Total Campaigns</p>
-                  <p className="text-lg font-bold">
-                    {campaignStatus.active +
-                      campaignStatus.scheduled +
-                      campaignStatus.paused +
-                      campaignStatus.completed}
-                  </p>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          )}
+        </StyledCard>
       </div>
       </div>
-    </div>
+    </StandardLayout>
   );
 }

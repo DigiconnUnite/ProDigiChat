@@ -154,14 +154,6 @@ export function Header({ variant = "public", className }: HeaderProps) {
           {isDashboard ? (
             // Dashboard: Show user-specific items
             <>
-              {/* WhatsApp Status Indicator
-              <WhatsAppStatusIndicator
-                organizationId="default"
-                onConnect={() => window.location.href = '/dashboard/connect'}
-                onViewSettings={() => window.location.href = '/dashboard/settings?tab=whatsapp'}
-                onRefresh={() => window.location.href = '/api/whatsapp/token/refresh'}
-              /> */}
-
               {/* Settings */}
               <div className="p-0 rounded-full bg-white/10 border border-white/20">
                 <Link

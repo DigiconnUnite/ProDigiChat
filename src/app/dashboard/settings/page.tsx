@@ -23,11 +23,19 @@ import {
   Check,
   Download as DownloadIcon,
   AlertTriangle as AlertTriangleIcon,
+  AlertCircle,
+  ExternalLink,
+  Info,
+  Shield,
+  Settings2,
+  Trash2,
+  Zap,
+  Globe,
+  Webhook,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Progress } from "@/components/ui/progress"
 import { StandardLayout } from "@/components/ui/standard-layout"
-import { SettingsCard } from "@/components/ui/settings-card"
 
 // Constants
 import {
@@ -40,7 +48,6 @@ import WhatsAppSettingsTab from "@/components/settings/WhatsAppSettingsTab"
 import { TeamSettingsTab } from "@/components/settings/TeamSettingsTab"
 import { ApiKeysTab } from "@/components/settings/ApiKeysTab"
 import { WebhooksTab } from "@/components/settings/WebhooksTab"
-import { PrivacySettingsTab } from "@/components/settings/PrivacySettingsTab"
 
 interface NotificationSettings {
   email: {
@@ -78,6 +85,93 @@ interface BillingInfo {
   }>
 }
 
+// ═══════════════════════════════════════════════════════════════
+// REUSABLE STYLED COMPONENTS (Matching WhatsApp Reference)
+// ═══════════════════════════════════════════════════════════════
+
+function StyledCard({
+  children,
+  className = "",
+  title,
+  description,
+  titleIcon: TitleIcon,
+  headerRight,
+  accent = false,
+  danger = false,
+  warning = false,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  title?: React.ReactNode;
+  description?: string;
+  titleIcon?: any;
+  headerRight?: React.ReactNode;
+  accent?: boolean;
+  danger?: boolean;
+  warning?: boolean;
+}) {
+  const borderClass = danger
+    ? "border-2 border-red-400"
+    : warning
+      ? "border-2 border-yellow-400"
+      : accent
+        ? "border-l-4 border-l-green-500 border-2 border-green-200 bg-green-50/50"
+        : "border-2 border-green-950";
+
+  return (
+    <div className={`p-5 rounded-xl bg-white transition-all ${borderClass} ${className}`}>
+      {(title || headerRight) && (
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex-1 min-w-0">
+            {title && (
+              <h3 className="text-lg font-semibold flex items-center gap-2 text-foreground">
+                {TitleIcon && <TitleIcon className="h-5 w-5" />}
+                {title}
+              </h3>
+            )}
+            {description && (
+              <p className="text-muted-foreground text-sm mt-1">{description}</p>
+            )}
+          </div>
+          {headerRight && <div className="flex items-center gap-2 ml-4 flex-shrink-0">{headerRight}</div>}
+        </div>
+      )}
+      <div className="space-y-0">{children}</div>
+    </div>
+  );
+}
+
+function ToggleRow({
+  title,
+  description,
+  checked,
+  onCheckedChange,
+}: {
+  title: string;
+  description: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between py-4 group">
+      <div className="pr-4">
+        <p className="font-medium text-foreground group-hover:text-primary transition-colors">{title}</p>
+        <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
+      </div>
+      <Switch checked={checked} onCheckedChange={onCheckedChange} className="flex-shrink-0" />
+    </div>
+  );
+}
+
+function SectionHeader({ title, description }: { title: string; description?: string }) {
+  return (
+    <div className="mb-6">
+      <h3 className="text-xl font-semibold text-foreground">{title}</h3>
+      {description && <p className="text-muted-foreground text-sm mt-1">{description}</p>}
+    </div>
+  );
+}
+
 // Main Settings Page Component
 function SettingsPageContent() {
   const { toast } = useToast()
@@ -86,18 +180,21 @@ function SettingsPageContent() {
   const [activeTab, setActiveTab] = useState<string>(SETTINGS_TABS.WHATSAPP)
   
   // Get organization ID from session - REQUIRED for security
-  // If no valid orgId exists, the user should not have access to settings
   const organizationId = (session?.user as any)?.organizationId
   
   // Redirect or show error if no organization ID
   if (!organizationId) {
     return (
       <StandardLayout>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-destructive">No organization found. Please log in again.</p>
-          </CardContent>
-        </Card>
+        <StyledCard danger>
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+            <div>
+              <h4 className="text-sm font-semibold text-red-800">Access Denied</h4>
+              <p className="text-xs text-red-700 mt-1">No organization found. Please log in again.</p>
+            </div>
+          </div>
+        </StyledCard>
       </StandardLayout>
     )
   }
@@ -234,14 +331,43 @@ function SettingsPageContent() {
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
-          <TabsTrigger value={SETTINGS_TABS.WHATSAPP}>WhatsApp</TabsTrigger>
-          <TabsTrigger value={SETTINGS_TABS.TEAM}>Team</TabsTrigger>
-          <TabsTrigger value={SETTINGS_TABS.API}>API Keys</TabsTrigger>
-          <TabsTrigger value={SETTINGS_TABS.WEBHOOKS}>Webhooks</TabsTrigger>
-          <TabsTrigger value={SETTINGS_TABS.PRIVACY}>Privacy</TabsTrigger>
-          <TabsTrigger value={SETTINGS_TABS.NOTIFICATIONS}>Notifications</TabsTrigger>
-          <TabsTrigger value={SETTINGS_TABS.BILLING}>Billing</TabsTrigger>
+        <TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 h-auto p-1 bg-muted border rounded-lg">
+          <TabsTrigger
+            value={SETTINGS_TABS.WHATSAPP}
+            className="text-sm py-2.5 rounded-md text-muted-foreground data-[state=active]:border-2 data-[state=active]:border-green-950 data-[state=active]:bg-white data-[state=active]:shadow-sm"
+          >
+            WhatsApp
+          </TabsTrigger>
+          <TabsTrigger
+            value={SETTINGS_TABS.TEAM}
+            className="text-sm py-2.5 rounded-md text-muted-foreground data-[state=active]:border-2 data-[state=active]:border-green-950 data-[state=active]:bg-white data-[state=active]:shadow-sm"
+          >
+            Team
+          </TabsTrigger>
+          <TabsTrigger
+            value={SETTINGS_TABS.API}
+            className="text-sm py-2.5 rounded-md text-muted-foreground data-[state=active]:border-2 data-[state=active]:border-green-950 data-[state=active]:bg-white data-[state=active]:shadow-sm"
+          >
+            API Keys
+          </TabsTrigger>
+          <TabsTrigger
+            value={SETTINGS_TABS.WEBHOOKS}
+            className="text-sm py-2.5 rounded-md text-muted-foreground data-[state=active]:border-2 data-[state=active]:border-green-950 data-[state=active]:bg-white data-[state=active]:shadow-sm"
+          >
+            Webhooks
+          </TabsTrigger>
+          <TabsTrigger
+            value={SETTINGS_TABS.NOTIFICATIONS}
+            className="text-sm py-2.5 rounded-md text-muted-foreground data-[state=active]:border-2 data-[state=active]:border-green-950 data-[state=active]:bg-white data-[state=active]:shadow-sm"
+          >
+            Notifications
+          </TabsTrigger>
+          <TabsTrigger
+            value={SETTINGS_TABS.BILLING}
+            className="text-sm py-2.5 rounded-md text-muted-foreground data-[state=active]:border-2 data-[state=active]:border-green-950 data-[state=active]:bg-white data-[state=active]:shadow-sm"
+          >
+            Billing
+          </TabsTrigger>
         </TabsList>
 
         {/* ==================== WhatsApp Settings Tab ==================== */}
@@ -264,14 +390,10 @@ function SettingsPageContent() {
           <WebhooksTab organizationId={organizationId} />
         </TabsContent>
 
-        {/* ==================== Privacy Tab ==================== */}
-        <TabsContent value={SETTINGS_TABS.PRIVACY} className="space-y-6">
-          <PrivacySettingsTab organizationId={organizationId} />
-        </TabsContent>
-
         {/* ==================== Notifications Tab ==================== */}
         <TabsContent value={SETTINGS_TABS.NOTIFICATIONS} className="space-y-6">
-          <SettingsCard
+          {/* Email Notifications */}
+          <StyledCard
             title={
               <div className="flex items-center gap-2">
                 <Mail className="h-5 w-5" />
@@ -279,85 +401,85 @@ function SettingsPageContent() {
               </div>
             }
             description="Configure email alerts for important events"
-            headerClassName="flex-row items-center justify-between space-y-0"
-          >
-            <div className="flex items-center gap-2 ml-auto">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => {
-                  setNotificationSettings({
-                    email: {
-                      enabled: true,
-                      frequency: "instant",
-                      events: ["campaign.completed", "campaign.failed", "message.failed"],
-                    },
-                    push: {
-                      enabled: true,
-                      soundEnabled: true,
-                      events: ["new.message", "campaign.status"],
-                    },
-                    slack: {
-                      enabled: false,
-                      webhookUrl: null,
-                      channel: null,
-                      events: ["campaign.completed", "campaign.failed"],
-                    },
-                  })
-                }}
-              >
-                Discard
-              </Button>
-              <Button
-                onClick={saveNotificationSettings}
-                disabled={isSaving}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save
-                  </>
-                )}
-              </Button>
-            </div>
-          </SettingsCard>
-          <SettingsCard className="space-y-4">
-              <div className="flex items-center justify-between py-2">
-                <div>
-                  <p className="font-medium">Enable Email Notifications</p>
-                  <p className="text-sm text-muted-foreground">Receive notifications via email</p>
-                </div>
-                <Switch
-                  checked={notificationSettings.email.enabled}
-                  onCheckedChange={(checked) => setNotificationSettings((prev) => ({ ...prev, email: { ...prev.email, enabled: checked } }))}
-                />
+            headerRight={
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="rounded-lg border-slate-300 text-sm"
+                  onClick={() => {
+                    setNotificationSettings({
+                      email: {
+                        enabled: true,
+                        frequency: "instant",
+                        events: ["campaign.completed", "campaign.failed", "message.failed"],
+                      },
+                      push: {
+                        enabled: true,
+                        soundEnabled: true,
+                        events: ["new.message", "campaign.status"],
+                      },
+                      slack: {
+                        enabled: false,
+                        webhookUrl: null,
+                        channel: null,
+                        events: ["campaign.completed", "campaign.failed"],
+                      },
+                    })
+                  }}
+                >
+                  Discard
+                </Button>
+                <Button
+                  onClick={saveNotificationSettings}
+                  disabled={isSaving}
+                  className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save
+                    </>
+                  )}
+                </Button>
               </div>
+            }
+          >
+            <ToggleRow
+              title="Enable Email Notifications"
+              description="Receive notifications via email"
+              checked={notificationSettings.email.enabled}
+              onCheckedChange={(checked) => setNotificationSettings((prev) => ({ ...prev, email: { ...prev.email, enabled: checked } }))}
+            />
 
-              {notificationSettings.email.enabled && (
-                <>
-                  <Separator />
-                  <div className="space-y-2">
-                    <Label>Email Frequency</Label>
-                    <Select value={notificationSettings.email.frequency} onValueChange={(value) => setNotificationSettings((prev) => ({ ...prev, email: { ...prev.email, frequency: value } }))}>
-                      <SelectTrigger className="w-48">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {NOTIFICATION_FREQUENCY_OPTIONS.map((freq) => (
-                          <SelectItem key={freq.value} value={freq.value}>{freq.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Separator />
-                  <div className="space-y-4">
-                    <Label>Notification Events</Label>
+            {notificationSettings.email.enabled && (
+              <>
+                <Separator className="bg-slate-200" />
+                <div className="space-y-2 py-4">
+                  <Label className="text-sm font-medium text-foreground">Email Frequency</Label>
+                  <Select 
+                    value={notificationSettings.email.frequency} 
+                    onValueChange={(value) => setNotificationSettings((prev) => ({ ...prev, email: { ...prev.email, frequency: value } }))}
+                  >
+                    <SelectTrigger className="w-48 rounded-lg border-slate-300">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {NOTIFICATION_FREQUENCY_OPTIONS.map((freq) => (
+                        <SelectItem key={freq.value} value={freq.value}>{freq.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Separator className="bg-slate-200" />
+                <div className="py-4">
+                  <Label className="text-sm font-medium text-foreground mb-4 block">Notification Events</Label>
+                  <div className="space-y-1">
                     {[
                       { event: "campaign.completed", label: "Campaign completed", desc: "When a campaign finishes sending" },
                       { event: "campaign.failed", label: "Campaign failed", desc: "When a campaign fails to send" },
@@ -370,20 +492,22 @@ function SettingsPageContent() {
                       { event: "team.invite", label: "Team invite", desc: "When a new team member is invited" },
                       { event: "system.update", label: "System update", desc: "When there's a system update" },
                     ].map((item) => (
-                      <div key={item.event} className="flex items-center justify-between py-2">
-                        <div>
-                          <p className="font-medium">{item.label}</p>
-                          <p className="text-sm text-muted-foreground">{item.desc}</p>
-                        </div>
-                        <Switch checked={notificationSettings.email.events.includes(item.event)} onCheckedChange={() => toggleNotificationEvent("email", item.event)} />
-                      </div>
+                      <ToggleRow
+                        key={item.event}
+                        title={item.label}
+                        description={item.desc}
+                        checked={notificationSettings.email.events.includes(item.event)}
+                        onCheckedChange={() => toggleNotificationEvent("email", item.event)}
+                      />
                     ))}
                   </div>
-                </>
-              )}
-          </SettingsCard>
+                </div>
+              </>
+            )}
+          </StyledCard>
 
-          <SettingsCard
+          {/* Push Notifications */}
+          <StyledCard
             title={
               <div className="flex items-center gap-2">
                 <Bell className="h-5 w-5" />
@@ -392,51 +516,48 @@ function SettingsPageContent() {
             }
             description="Configure browser push notifications"
           >
-              <div className="flex items-center justify-between py-2">
-                <div>
-                  <p className="font-medium">Enable Push Notifications</p>
-                  <p className="text-sm text-muted-foreground">Receive browser push notifications</p>
-                </div>
-                <Switch
-                  checked={notificationSettings.push.enabled}
-                  onCheckedChange={(checked) => setNotificationSettings((prev) => ({ ...prev, push: { ...prev.push, enabled: checked } }))}
+            <ToggleRow
+              title="Enable Push Notifications"
+              description="Receive browser push notifications"
+              checked={notificationSettings.push.enabled}
+              onCheckedChange={(checked) => setNotificationSettings((prev) => ({ ...prev, push: { ...prev.push, enabled: checked } }))}
+            />
+            
+            {notificationSettings.push.enabled && (
+              <>
+                <Separator className="bg-slate-200" />
+                <ToggleRow
+                  title="Sound Alerts"
+                  description="Play sound when receiving notifications"
+                  checked={notificationSettings.push.soundEnabled || false}
+                  onCheckedChange={(checked) => setNotificationSettings((prev) => ({ ...prev, push: { ...prev.push, soundEnabled: checked } }))}
                 />
-              </div>
-              {notificationSettings.push.enabled && (
-                <>
-                  <Separator />
-                  <div className="flex items-center justify-between py-2">
-                    <div>
-                      <p className="font-medium">Sound Alerts</p>
-                      <p className="text-sm text-muted-foreground">Play sound when receiving notifications</p>
-                    </div>
-                    <Switch
-                      checked={notificationSettings.push.soundEnabled || false}
-                      onCheckedChange={(checked) => setNotificationSettings((prev) => ({ ...prev, push: { ...prev.push, soundEnabled: checked } }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Notification Events</Label>
+                <Separator className="bg-slate-200" />
+                <div className="py-4">
+                  <Label className="text-sm font-medium text-foreground mb-4 block">Notification Events</Label>
+                  <div className="space-y-1">
                     {[
                       { event: "new.message", label: "New message", desc: "When you receive a new message" },
                       { event: "campaign.status", label: "Campaign status", desc: "When campaign status changes" },
                       { event: "team.activity", label: "Team activity", desc: "When team members take actions" },
                       { event: "system.updates", label: "System updates", desc: "Important system notifications" },
                     ].map((item) => (
-                      <div key={item.event} className="flex items-center justify-between py-2">
-                        <div>
-                          <p className="font-medium">{item.label}</p>
-                          <p className="text-sm text-muted-foreground">{item.desc}</p>
-                        </div>
-                        <Switch checked={notificationSettings.push.events.includes(item.event)} onCheckedChange={() => toggleNotificationEvent("push", item.event)} />
-                      </div>
+                      <ToggleRow
+                        key={item.event}
+                        title={item.label}
+                        description={item.desc}
+                        checked={notificationSettings.push.events.includes(item.event)}
+                        onCheckedChange={() => toggleNotificationEvent("push", item.event)}
+                      />
                     ))}
                   </div>
-                </>
-              )}
-          </SettingsCard>
+                </div>
+              </>
+            )}
+          </StyledCard>
 
-          <SettingsCard
+          {/* Slack Integration */}
+          <StyledCard
             title={
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5" />
@@ -445,52 +566,75 @@ function SettingsPageContent() {
             }
             description="Send notifications to Slack"
           >
-              <div className="flex items-center justify-between py-2">
-                <div>
-                  <p className="font-medium">Enable Slack Notifications</p>
-                  <p className="text-sm text-muted-foreground">Receive notifications in Slack</p>
+            <ToggleRow
+              title="Enable Slack Notifications"
+              description="Receive notifications in Slack"
+              checked={notificationSettings.slack.enabled}
+              onCheckedChange={(checked) => setNotificationSettings((prev) => ({ ...prev, slack: { ...prev.slack, enabled: checked } }))}
+            />
+            
+            {notificationSettings.slack.enabled && (
+              <>
+                <Separator className="bg-slate-200" />
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="slackWebhook" className="text-sm font-medium text-foreground">
+                      Slack Webhook URL
+                    </Label>
+                    <div className="relative">
+                      <Webhook className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="slackWebhook"
+                        type="url"
+                        placeholder="https://hooks.slack.com/services/..."
+                        value={notificationSettings.slack.webhookUrl || ""}
+                        onChange={(e) => setNotificationSettings((prev) => ({ ...prev, slack: { ...prev.slack, webhookUrl: e.target.value } }))}
+                        className="pl-10 text-sm font-mono rounded-lg border-slate-300"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="slackChannel" className="text-sm font-medium text-foreground">
+                      Slack Channel (optional)
+                    </Label>
+                    <Input
+                      id="slackChannel"
+                      placeholder="#general"
+                      value={notificationSettings.slack.channel || ""}
+                      onChange={(e) => setNotificationSettings((prev) => ({ ...prev, slack: { ...prev.slack, channel: e.target.value } }))}
+                      className="text-sm rounded-lg border-slate-300"
+                    />
+                  </div>
                 </div>
-                <Switch
-                  checked={notificationSettings.slack.enabled}
-                  onCheckedChange={(checked) => setNotificationSettings((prev) => ({ ...prev, slack: { ...prev.slack, enabled: checked } }))}
-                />
-              </div>
-              {notificationSettings.slack.enabled && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="slackWebhook">Slack Webhook URL</Label>
-                    <Input id="slackWebhook" type="url" placeholder="https://hooks.slack.com/services/..." value={notificationSettings.slack.webhookUrl || ""} onChange={(e) => setNotificationSettings((prev) => ({ ...prev, slack: { ...prev.slack, webhookUrl: e.target.value } }))} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="slackChannel">Slack Channel (optional)</Label>
-                    <Input id="slackChannel" placeholder="#general" value={notificationSettings.slack.channel || ""} onChange={(e) => setNotificationSettings((prev) => ({ ...prev, slack: { ...prev.slack, channel: e.target.value } }))} />
-                  </div>
-                  <Separator />
-                  <div className="space-y-2">
-                    <Label>Notification Events</Label>
+                <Separator className="bg-slate-200" />
+                <div className="py-4">
+                  <Label className="text-sm font-medium text-foreground mb-4 block">Notification Events</Label>
+                  <div className="space-y-1">
                     {[
                       { event: "campaign.completed", label: "Campaign completed", desc: "When a campaign finishes" },
                       { event: "campaign.failed", label: "Campaign failed", desc: "When a campaign fails" },
                       { event: "message.failed", label: "Message failed", desc: "When message delivery fails" },
                       { event: "low.balance", label: "Low balance", desc: "When credits are low" },
                     ].map((item) => (
-                      <div key={item.event} className="flex items-center justify-between py-2">
-                        <div>
-                          <p className="font-medium">{item.label}</p>
-                          <p className="text-sm text-muted-foreground">{item.desc}</p>
-                        </div>
-                        <Switch checked={notificationSettings.slack.events.includes(item.event)} onCheckedChange={() => toggleNotificationEvent("slack", item.event)} />
-                      </div>
+                      <ToggleRow
+                        key={item.event}
+                        title={item.label}
+                        description={item.desc}
+                        checked={notificationSettings.slack.events.includes(item.event)}
+                        onCheckedChange={() => toggleNotificationEvent("slack", item.event)}
+                      />
                     ))}
                   </div>
-                </>
-              )}
-          </SettingsCard>
+                </div>
+              </>
+            )}
+          </StyledCard>
         </TabsContent>
 
         {/* ==================== Billing Tab ==================== */}
         <TabsContent value={SETTINGS_TABS.BILLING} className="space-y-6">
-          <SettingsCard
+          {/* Current Plan */}
+          <StyledCard
             title={
               <div className="flex items-center gap-2">
                 <CreditCard className="h-5 w-5" />
@@ -499,164 +643,209 @@ function SettingsPageContent() {
             }
             description="Your subscription details"
           >
-                          {billingInfo ? (
-                <div className="flex items-center justify-between p-6 rounded-lg bg-primary/5 border-2 border-primary">
-                  <div>
-                    <p className="text-2xl font-bold capitalize">{billingInfo.subscriptionTier}</p>
-                    <p className="text-muted-foreground">
-                      {billingInfo.plans.find((p) => p.id === billingInfo.subscriptionTier)?.price || 0}/month
-                    </p>
-                    <Badge className="mt-2 bg-green-100 text-green-800">{billingInfo.subscriptionStatus}</Badge>
-                  </div>
-                  <Button variant="outline">Upgrade Plan</Button>
+            {billingInfo ? (
+              <div className="flex items-center justify-between p-6 rounded-xl border-2 border-green-950 bg-green-50/50">
+                <div>
+                  <p className="text-2xl font-bold capitalize text-foreground">{billingInfo.subscriptionTier}</p>
+                  <p className="text-muted-foreground mt-1">
+                    ${billingInfo.plans.find((p) => p.id === billingInfo.subscriptionTier)?.price || 0}/month
+                  </p>
+                  <Badge className="mt-3 bg-green-100 text-green-800 border-green-200">{billingInfo.subscriptionStatus}</Badge>
                 </div>
-              ) : (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              )}
-          </SettingsCard>
+                <Button variant="outline" className="rounded-lg border-slate-300 text-sm">
+                  Upgrade Plan
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            )}
+          </StyledCard>
 
-          <SettingsCard
+          {/* Usage This Month */}
+          <StyledCard
             title="Usage This Month"
             description="Your current usage statistics"
           >
-                          {billingInfo ? (
-                <div className="space-y-6">
-                  {[
-                    { key: 'messagesThisMonth', label: 'Messages Sent' },
-                    { key: 'contacts', label: 'Contacts' },
-                    { key: 'campaigns', label: 'Campaigns' },
-                  ].map((item) => {
-                    const usage = billingInfo.usage[item.key as keyof typeof billingInfo.usage]
-                    return (
-                      <div key={item.key}>
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-sm font-medium">{item.label}</p>
-                          <p className="font-medium">{usage.current.toLocaleString()} / {usage.limit.toLocaleString()}</p>
+            {billingInfo ? (
+              <div className="space-y-6">
+                {[
+                  { key: 'messagesThisMonth', label: 'Messages Sent', icon: MessageSquare },
+                  { key: 'contacts', label: 'Contacts', icon: Globe },
+                  { key: 'campaigns', label: 'Campaigns', icon: Zap },
+                ].map((item) => {
+                  const usage = billingInfo.usage[item.key as keyof typeof billingInfo.usage]
+                  const Icon = item.icon
+                  return (
+                    <div key={item.key}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Icon className="h-4 w-4 text-muted-foreground" />
+                          <p className="text-sm font-medium text-foreground">{item.label}</p>
                         </div>
-                        <Progress value={Math.min(usage.percentage, 100)} className="h-2" />
-                        <p className="text-xs text-muted-foreground mt-1">{usage.percentage.toFixed(1)}% used</p>
+                        <p className="font-medium text-foreground">{usage.current.toLocaleString()} / {usage.limit.toLocaleString()}</p>
                       </div>
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              )}
-          </SettingsCard>
+                      <Progress 
+                        value={Math.min(usage.percentage, 100)} 
+                        className="h-2"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">{usage.percentage.toFixed(1)}% used</p>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            )}
+          </StyledCard>
 
-          <SettingsCard
+          {/* Available Plans */}
+          <StyledCard
             title="Available Plans"
             description="Compare plans and upgrade"
           >
-              {billingInfo ? (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  {billingInfo.plans.map((plan) => (
-                    <div key={plan.id} className={`p-4 rounded-lg border ${plan.id === billingInfo.subscriptionTier ? "border-primary bg-primary/5" : "border-border"}`}>
-                      <p className="font-semibold">{plan.name}</p>
-                      <p className="text-2xl font-bold mt-2">
-                        ${plan.price}<span className="text-sm font-normal text-muted-foreground">/mo</span>
-                      </p>
-                      <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-                        <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500" />{plan.limits.contacts.toLocaleString()} contacts</li>
-                        <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500" />{plan.limits.messagesPerMonth.toLocaleString()} messages/mo</li>
-                      </ul>
-                      {plan.id !== billingInfo.subscriptionTier && (
-                        <Button variant={plan.price === 0 ? "outline" : "default"} size="sm" className="w-full mt-4" onClick={() => toast({ title: "Coming Soon", description: "Plan upgrades will be available soon!" })}>
-                          {plan.price === 0 ? "Current" : "Upgrade"}
-                        </Button>
+            {billingInfo ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {billingInfo.plans.map((plan) => (
+                  <div 
+                    key={plan.id} 
+                    className={`p-5 rounded-xl border-2 transition-all ${
+                      plan.id === billingInfo.subscriptionTier 
+                        ? "border-green-950 bg-green-50/50" 
+                        : "border-slate-200 bg-white hover:border-green-950/50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-foreground">{plan.name}</p>
+                      {plan.id === billingInfo.subscriptionTier && (
+                        <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">Current</Badge>
                       )}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              )}
-          </SettingsCard>
-
-          <SettingsCard
-            title="Payment Method"
-            description="Manage your payment details"
-          >
-              <div className="flex items-center justify-between p-4 rounded-lg border bg-secondary/50">
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-16 rounded bg-gradient-to-r from-blue-600 to-blue-800 flex items-center justify-center">
-                    <CreditCard className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Visa ending in 4242</p>
-                    <p className="text-sm text-muted-foreground">Expires 12/2025</p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm">Update</Button>
-              </div>
-          </SettingsCard>
-
-          <SettingsCard
-            title="Invoices"
-            description="View and download your invoices"
-          >
-                          <div className="space-y-4">
-                {[
-                  { id: "INV-2024-001", date: "March 2024", amount: 79, status: "paid" },
-                  { id: "INV-2024-002", date: "February 2024", amount: 79, status: "paid" },
-                  { id: "INV-2024-003", date: "January 2024", amount: 79, status: "paid" },
-                ].map((invoice) => (
-                  <div key={invoice.id} className="flex items-center justify-between p-4 rounded-lg border">
-                    <div>
-                      <p className="font-medium">{invoice.id}</p>
-                      <p className="text-sm text-muted-foreground">{invoice.date}</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <p className="font-medium">${invoice.amount}</p>
-                      <Badge className="bg-green-100 text-green-800 border-green-200">{invoice.status}</Badge>
-                      <Button variant="ghost" size="sm">
-                        <DownloadIcon className="h-4 w-4" />
+                    <p className="text-2xl font-bold mt-3 text-foreground">
+                      ${plan.price}<span className="text-sm font-normal text-muted-foreground">/mo</span>
+                    </p>
+                    <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-green-500" />
+                        {plan.limits.contacts.toLocaleString()} contacts
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-green-500" />
+                        {plan.limits.messagesPerMonth.toLocaleString()} messages/mo
+                      </li>
+                    </ul>
+                    {plan.id !== billingInfo.subscriptionTier && (
+                      <Button 
+                        variant={plan.price === 0 ? "outline" : "default"} 
+                        size="sm" 
+                        className="w-full mt-4 rounded-lg bg-green-600 hover:bg-green-700 text-white"
+                        onClick={() => toast({ title: "Coming Soon", description: "Plan upgrades will be available soon!" })}
+                      >
+                        Upgrade
                       </Button>
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>
-            </SettingsCard>
+            ) : (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            )}
+          </StyledCard>
 
-          <SettingsCard
+          {/* Payment Method */}
+          <StyledCard
+            title="Payment Method"
+            description="Manage your payment details"
+          >
+            <div className="flex items-center justify-between p-5 rounded-xl border-2 border-slate-200 bg-slate-50/50">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-16 rounded-lg bg-gradient-to-r from-blue-600 to-blue-800 flex items-center justify-center">
+                  <CreditCard className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">Visa ending in 4242</p>
+                  <p className="text-sm text-muted-foreground">Expires 12/2025</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" className="rounded-lg border-slate-300 text-sm">
+                Update
+              </Button>
+            </div>
+          </StyledCard>
+
+          {/* Invoices */}
+          <StyledCard
+            title="Invoices"
+            description="View and download your invoices"
+          >
+            <div className="space-y-3">
+              {[
+                { id: "INV-2024-001", date: "March 2024", amount: 79, status: "paid" },
+                { id: "INV-2024-002", date: "February 2024", amount: 79, status: "paid" },
+                { id: "INV-2024-003", date: "January 2024", amount: 79, status: "paid" },
+              ].map((invoice) => (
+                <div 
+                  key={invoice.id} 
+                  className="flex items-center justify-between p-4 rounded-xl border-2 border-slate-200 bg-white hover:border-green-950/50 transition-all"
+                >
+                  <div>
+                    <p className="font-medium text-foreground">{invoice.id}</p>
+                    <p className="text-sm text-muted-foreground">{invoice.date}</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <p className="font-medium text-foreground">${invoice.amount}</p>
+                    <Badge className="bg-green-100 text-green-800 border-green-200">{invoice.status}</Badge>
+                    <Button variant="ghost" size="sm" className="rounded-lg text-muted-foreground hover:text-foreground">
+                      <DownloadIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </StyledCard>
+
+          {/* Danger Zone */}
+          <StyledCard
             title={
-              <div className="flex items-center gap-2 text-destructive">
+              <div className="flex items-center gap-2 text-red-700">
                 <AlertTriangleIcon className="h-5 w-5" />
                 Danger Zone
               </div>
             }
             description="Irreversible and destructive actions"
-            className="border-red-400 bg-white"
+            danger
           >
-              <div className="flex items-center justify-between p-4 rounded-lg border border-orange-300 bg-orange-50">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-5 rounded-xl border-2 border-orange-300 bg-orange-50">
                 <div>
-                  <p className="font-medium">Cancel Subscription</p>
+                  <p className="font-medium text-foreground">Cancel Subscription</p>
                   <p className="text-sm text-muted-foreground">
                     Cancel your subscription and downgrade to the free plan
                   </p>
                 </div>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="rounded-lg border-orange-300 text-orange-700 hover:bg-orange-50 text-sm">
                   Cancel Subscription
                 </Button>
               </div>
-              <div className="flex items-center justify-between p-4 rounded-lg border border-destructive bg-destructive/5">
+              <div className="flex items-center justify-between p-5 rounded-xl border-2 border-red-400 bg-red-50">
                 <div>
-                  <p className="font-medium text-destructive">Delete Organization</p>
+                  <p className="font-medium text-red-700">Delete Organization</p>
                   <p className="text-sm text-muted-foreground">
                     Permanently delete your organization and all its data
                   </p>
                 </div>
-                <Button variant="destructive" size="sm">
+                <Button variant="destructive" size="sm" className="rounded-lg text-sm">
+                  <Trash2 className="w-4 h-4 mr-2" />
                   Delete Organization
                 </Button>
               </div>
-            </SettingsCard>
+            </div>
+          </StyledCard>
         </TabsContent>
       </Tabs>
     </StandardLayout>

@@ -20,12 +20,11 @@ import {
   Image,
   Paperclip,
   Video,
-  FileAudio
+  FileAudio,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
   Select, 
@@ -44,11 +43,89 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
+import { StandardLayout } from "@/components/ui/standard-layout"
 import { cn } from "@/lib/utils"
 import { TemplatePreview } from "@/components/templates/template-preview"
 import { HeaderContent, HeaderType } from "@/types/template"
 
-// Types
+// ═══════════════════════════════════════════════════════════════
+// REUSABLE STYLED COMPONENTS
+// ═══════════════════════════════════════════════════════════════
+
+function StyledCard({
+  children,
+  className = "",
+  title,
+  description,
+  titleIcon: TitleIcon,
+  headerRight,
+  accent = false,
+  danger = false,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  title?: React.ReactNode;
+  description?: string;
+  titleIcon?: any;
+  headerRight?: React.ReactNode;
+  accent?: boolean;
+  danger?: boolean;
+}) {
+  const borderClass = danger
+    ? "border-2 border-red-400"
+    : accent
+      ? "border-l-4 border-l-green-500 border-2 border-green-200 bg-green-50/50"
+      : "border-2 border-green-950";
+
+  return (
+    <div className={`p-5 rounded-xl bg-white transition-all ${borderClass} ${className}`}>
+      {(title || headerRight) && (
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex-1 min-w-0">
+            {title && (
+              <h3 className="text-lg font-semibold flex items-center gap-2 text-foreground">
+                {TitleIcon && <TitleIcon className="h-5 w-5" />}
+                {title}
+              </h3>
+            )}
+            {description && (
+              <p className="text-muted-foreground text-sm mt-1">{description}</p>
+            )}
+          </div>
+          {headerRight && <div className="flex items-center gap-2 ml-4 flex-shrink-0">{headerRight}</div>}
+        </div>
+      )}
+      <div className="space-y-0">{children}</div>
+    </div>
+  );
+}
+
+function ToggleRow({
+  title,
+  description,
+  checked,
+  onCheckedChange,
+}: {
+  title: string;
+  description: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between py-4 group">
+      <div className="pr-4">
+        <p className="font-medium text-foreground group-hover:text-primary transition-colors">{title}</p>
+        <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
+      </div>
+      <Switch checked={checked} onCheckedChange={onCheckedChange} className="flex-shrink-0" />
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TYPE DEFINITIONS
+// ═══════════════════════════════════════════════════════════════
+
 interface CampaignFormData {
   name: string
   type: "broadcast" | "recurring" | "ab_test"
@@ -148,6 +225,10 @@ const steps = [
   { id: 5, name: "Review & Launch", icon: Send },
 ]
 
+// ═══════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════════════════════
+
 export default function NewCampaignPage() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
@@ -167,14 +248,12 @@ export default function NewCampaignPage() {
     const fetchData = async () => {
       setIsLoadingData(true)
       try {
-        // Fetch segments
         const segmentsRes = await fetch('/api/segments?includeCount=true')
         const segmentsData = await segmentsRes.json()
         if (segmentsData.success) {
           setSegments(segmentsData.data || [])
         }
         
-        // Fetch approved templates
         const templatesRes = await fetch('/api/templates?status=approved')
         const templatesData = await templatesRes.json()
         if (templatesData.templates) {
@@ -189,29 +268,24 @@ export default function NewCampaignPage() {
           setTemplates(formattedTemplates)
         }
         
-        // Fetch WhatsApp phone numbers
         const phoneRes = await fetch('/api/whatsapp/phone-numbers')
         const phoneData = await phoneRes.json()
         if (phoneData.success) {
           setPhoneNumbers(phoneData.data || [])
         }
         
-        // Fetch WhatsApp accounts from settings API
         const accountsRes = await fetch('/api/settings/whatsapp')
         const accountsData = await accountsRes.json()
         if (accountsData.accounts) {
           setWhatsAppAccounts(accountsData.accounts || [])
-          // If only one account, default to it
           if (accountsData.accounts.length === 1 && !formData.fromNumber) {
             setFormData(prev => ({ ...prev, fromNumber: accountsData.accounts[0].id }))
           }
-          // Set default account if available
           if (accountsData.defaultAccountId && !formData.fromNumber) {
             setFormData(prev => ({ ...prev, fromNumber: accountsData.defaultAccountId }))
           }
         }
         
-        // Fetch contacts count
         const contactsRes = await fetch('/api/contacts?limit=1')
         const contactsData = await contactsRes.json()
         if (contactsData.success) {
@@ -252,7 +326,6 @@ export default function NewCampaignPage() {
     trackClicks: true,
   })
 
-  // Preview variables state
   const [previewVariables, setPreviewVariables] = useState<{ index: number; sampleValue: string }[]>([])
 
   const updateFormData = useCallback((updates: Partial<CampaignFormData>) => {
@@ -378,7 +451,6 @@ export default function NewCampaignPage() {
   const selectedSegment = segments.find(s => s.id === formData.audienceSegmentId)
   const selectedTemplate = templates.find(t => t.id === formData.templateId)
 
-  // Extract preview variables when template changes
   useEffect(() => {
     if (selectedTemplate && selectedTemplate.variables) {
       const vars = selectedTemplate.variables.map((v, index) => ({
@@ -391,129 +463,124 @@ export default function NewCampaignPage() {
     }
   }, [selectedTemplate, formData.templateVariables])
 
-  // Build preview data for template
   const getTemplatePreviewData = (): CampaignPreviewData => {
     if (!selectedTemplate) {
-      return {
-        body: 'Select a template to preview',
-        buttons: [],
-        variables: []
-      }
+      return { body: 'Select a template to preview', buttons: [], variables: [] }
     }
-
-    // Replace template variables with preview values
     let body = selectedTemplate.content
     previewVariables.forEach(v => {
       const regex = new RegExp(`\\{\\{${v.index}\\}\\}`, 'g')
       body = body.replace(regex, v.sampleValue || `{{${v.index}}}`)
     })
-
-    return {
-      body,
-      footer: '',
-      buttons: [],
-      variables: previewVariables
-    }
+    return { body, footer: '', buttons: [], variables: previewVariables }
   }
 
-  // Build preview data for freeform message
   const getFreeformPreviewData = (): CampaignPreviewData => {
-    // Replace personalization placeholders
     let body = formData.freeformMessage || 'Type your message to preview...'
     body = body.replace(/\{\{contact\.name\}\}/g, 'John Doe')
     body = body.replace(/\{\{contact\.firstName\}\}/g, 'John')
     body = body.replace(/\{\{contact\.lastName\}\}/g, 'Doe')
     body = body.replace(/\{\{contact\.phone\}\}/g, '+1234567890')
-
-    return {
-      body,
-      buttons: [],
-      variables: []
-    }
+    return { body, buttons: [], variables: [] }
   }
 
   const previewData = formData.messageType === 'template' ? getTemplatePreviewData() : getFreeformPreviewData()
 
-  // Render each step's content
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
         return (
           <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold mb-1">Campaign Details</h2>
-              <p className="text-muted-foreground">Enter the basic information about your campaign</p>
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-foreground">Campaign Details</h2>
+              <p className="text-muted-foreground text-sm mt-1">Enter the basic information about your campaign</p>
             </div>
 
             <div className="grid gap-6">
               <div className="space-y-2">
-                <Label htmlFor="name">Campaign Name <span className="text-destructive">*</span></Label>
+                <Label htmlFor="name" className="text-sm font-medium text-foreground">Campaign Name <span className="text-red-500">*</span></Label>
                 <Input
                   id="name"
                   placeholder="e.g., Summer Sale 2024"
                   value={formData.name}
                   onChange={(e) => updateFormData({ name: e.target.value })}
-                  className={cn(errors.name && "border-destructive")}
+                  className={cn("rounded-lg border-slate-300 text-sm", errors.name && "border-destructive")}
                 />
                 {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label>Campaign Type <span className="text-destructive">*</span></Label>
+                <Label className="text-sm font-medium text-foreground">Campaign Type <span className="text-red-500">*</span></Label>
                 <RadioGroup
                   value={formData.type}
                   onValueChange={(value) => updateFormData({ type: value as any })}
-                  className="flex flex-col sm:flex-row gap-4"
+                  className="grid gap-4 sm:grid-cols-3"
                 >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="broadcast" id="broadcast" />
-                    <Label htmlFor="broadcast" className="font-normal cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <Send className="text-lime-500" />
-                        <div>
-                          <span className="font-medium">Broadcast</span>
-                          <p className="text-xs text-muted-foreground">One-time message to all recipients</p>
-                        </div>
+                  <Label
+                    htmlFor="broadcast"
+                    className={cn(
+                      "flex items-center space-x-3 p-4 rounded-xl border-2 bg-white hover:border-green-950 transition-all cursor-pointer",
+                      formData.type === "broadcast" ? "border-green-950 bg-green-50/50" : "border-slate-200"
+                    )}
+                  >
+                    <RadioGroupItem value="broadcast" id="broadcast" className="mt-0.5" />
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-green-100 flex items-center justify-center">
+                        <Send className="h-5 w-5 text-green-600" />
                       </div>
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="recurring" id="recurring" />
-                    <Label htmlFor="recurring" className="font-normal cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <Settings className="text-lime-500" />
-                        <div>
-                          <span className="font-medium">Recurring</span>
-                          <p className="text-xs text-muted-foreground">Scheduled messages on repeat</p>
-                        </div>
+                      <div>
+                        <span className="font-medium text-foreground block">Broadcast</span>
+                        <p className="text-xs text-muted-foreground">One-time message to all recipients</p>
                       </div>
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2 opacity-50">
-                    <RadioGroupItem value="ab_test" id="ab_test" disabled />
-                    <Label htmlFor="ab_test" className="font-normal cursor-not-allowed">
-                      <div className="flex items-center gap-2">
-                        <FileText className="text-lime-500" />
-                        <div>
-                          <span className="font-medium">A/B Test</span>
-                          <p className="text-xs text-muted-foreground">Test different message variants</p>
-                          <span className="inline-block px-2 py-1 text-xs bg-muted text-muted-foreground rounded">Coming Soon</span>
-                        </div>
+                    </div>
+                  </Label>
+                  <Label
+                    htmlFor="recurring"
+                    className={cn(
+                      "flex items-center space-x-3 p-4 rounded-xl border-2 bg-white hover:border-green-950 transition-all cursor-pointer",
+                      formData.type === "recurring" ? "border-green-950 bg-green-50/50" : "border-slate-200"
+                    )}
+                  >
+                    <RadioGroupItem value="recurring" id="recurring" className="mt-0.5" />
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                        <Settings className="h-5 w-5 text-blue-600" />
                       </div>
-                    </Label>
-                  </div>
+                      <div>
+                        <span className="font-medium text-foreground block">Recurring</span>
+                        <p className="text-xs text-muted-foreground">Scheduled messages on repeat</p>
+                      </div>
+                    </div>
+                  </Label>
+                  <Label
+                    htmlFor="ab_test"
+                    className="flex items-center space-x-3 p-4 rounded-xl border-2 border-slate-200 bg-slate-50 opacity-50 cursor-not-allowed"
+                  >
+                    <RadioGroupItem value="ab_test" id="ab_test" disabled className="mt-0.5" />
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-slate-200 flex items-center justify-center">
+                        <FileText className="h-5 w-5 text-slate-500" />
+                      </div>
+                      <div>
+                        <span className="font-medium text-foreground block">A/B Test</span>
+                        <p className="text-xs text-muted-foreground">Test different variants</p>
+                        <Badge variant="secondary" className="mt-1 text-[10px] px-1.5 py-0">Coming Soon</Badge>
+                      </div>
+                    </div>
+                  </Label>
                 </RadioGroup>
                 {errors.type && <p className="text-sm text-destructive">{errors.type}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Description (Optional)</Label>
+                <Label htmlFor="description" className="text-sm font-medium text-foreground">Description (Optional)</Label>
                 <Textarea
                   id="description"
                   placeholder="Describe the purpose of this campaign..."
                   value={formData.description}
                   onChange={(e) => updateFormData({ description: e.target.value })}
                   rows={3}
+                  className="rounded-lg border-slate-300 text-sm"
                 />
               </div>
             </div>
@@ -523,70 +590,83 @@ export default function NewCampaignPage() {
       case 2:
         return (
           <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold mb-1">Select Audience</h2>
-              <p className="text-muted-foreground">Choose who will receive your campaign messages</p>
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-foreground">Select Audience</h2>
+              <p className="text-muted-foreground text-sm mt-1">Choose who will receive your campaign messages</p>
             </div>
 
             <Tabs
               value={formData.audienceType}
               onValueChange={(value) => updateFormData({ audienceType: value as any })}
             >
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="all">All Contacts</TabsTrigger>
-                <TabsTrigger value="existing">Existing Segment</TabsTrigger>
-                <TabsTrigger value="new">Create New</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-3 h-auto p-1 bg-muted border rounded-lg">
+                <TabsTrigger value="all" className="text-sm py-2.5 rounded-md text-muted-foreground data-[state=active]:border-2 data-[state=active]:border-green-950 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  All Contacts
+                </TabsTrigger>
+                <TabsTrigger value="existing" className="text-sm py-2.5 rounded-md text-muted-foreground data-[state=active]:border-2 data-[state=active]:border-green-950 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  Existing Segment
+                </TabsTrigger>
+                <TabsTrigger value="new" className="text-sm py-2.5 rounded-md text-muted-foreground data-[state=active]:border-2 data-[state=active]:border-green-950 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  Create New
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="all" className="mt-4">
-                <div className="bg-muted/50 rounded-lg p-6 text-center">
-                  <Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-                  <h3 className="font-medium mb-1">All Contacts</h3>
+                <div className="p-8 rounded-xl border-2 border-green-950 bg-green-50/50 text-center">
+                  <div className="h-16 w-16 rounded-2xl bg-green-100 flex items-center justify-center mx-auto mb-4">
+                    <Users className="h-8 w-8 text-green-600" />
+                  </div>
+                  <h3 className="font-semibold text-foreground mb-1">All Contacts</h3>
                   <p className="text-sm text-muted-foreground mb-4">
                     This campaign will be sent to all opted-in contacts
                   </p>
-                  <div className="text-3xl font-bold text-primary">
-                    {isLoadingData ? <span className="text-sm text-gray-400">Loading...</span> :
+                  <div className="text-4xl font-bold text-green-600">
+                    {isLoadingData ? <span className="text-sm text-gray-400 font-normal">Loading...</span> :
                       totalContacts > 0 ? totalContacts.toLocaleString() : "0"}
                   </div>
-                  <p className="text-sm text-muted-foreground">Opted-in contacts</p>
+                  <p className="text-sm text-muted-foreground mt-1">Opted-in contacts</p>
                 </div>
               </TabsContent>
 
               <TabsContent value="existing" className="mt-4">
                 <div className="space-y-4">
-                  <Select
-                    value={formData.audienceSegmentId}
-                    onValueChange={(value) => updateFormData({ audienceSegmentId: value })}
-                  >
-                    <SelectTrigger className={cn(errors.audienceSegmentId && "border-destructive")}>
-                      <SelectValue placeholder="Select a segment" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {segments.length > 0 ? segments.map((segment) => (
-                        <SelectItem key={segment.id} value={segment.id}>
-                          <div className="flex items-center justify-between w-full">
-                            <span>{segment.name}</span>
-                            <Badge variant="secondary" className="ml-2">{segment.memberCount}</Badge>
-                          </div>
-                        </SelectItem>
-                      )) : (
-                        <div className="p-2 text-sm text-muted-foreground">No segments available</div>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  {errors.audienceSegmentId && <p className="text-sm text-destructive">{errors.audienceSegmentId}</p>}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-foreground">Select Segment</Label>
+                    <Select
+                      value={formData.audienceSegmentId}
+                      onValueChange={(value) => updateFormData({ audienceSegmentId: value })}
+                    >
+                      <SelectTrigger className={cn("rounded-lg border-slate-300 text-sm", errors.audienceSegmentId && "border-destructive")}>
+                        <SelectValue placeholder="Select a segment" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {segments.length > 0 ? segments.map((segment) => (
+                          <SelectItem key={segment.id} value={segment.id}>
+                            <div className="flex items-center justify-between w-full gap-4">
+                              <span>{segment.name}</span>
+                              <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">{segment.memberCount}</Badge>
+                            </div>
+                          </SelectItem>
+                        )) : (
+                          <div className="p-4 text-sm text-muted-foreground text-center w-full">No segments available</div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {errors.audienceSegmentId && <p className="text-sm text-destructive">{errors.audienceSegmentId}</p>}
+                  </div>
 
                   {selectedSegment && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <StyledCard accent>
                       <div className="flex items-center gap-3">
-                        <Users className="h-5 w-5 text-green-600" />
+                        <div className="h-10 w-10 rounded-xl bg-green-100 flex items-center justify-center">
+                          <Users className="h-5 w-5 text-green-600" />
+                        </div>
                         <div>
                           <p className="font-medium text-green-900">{selectedSegment.name}</p>
                           <p className="text-sm text-green-700">{selectedSegment.memberCount} recipients</p>
                         </div>
                       </div>
-                    </div>
+                    </StyledCard>
                   )}
                 </div>
               </TabsContent>
@@ -594,25 +674,25 @@ export default function NewCampaignPage() {
               <TabsContent value="new" className="mt-4">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="segmentName">Segment Name</Label>
+                    <Label htmlFor="segmentName" className="text-sm font-medium text-foreground">Segment Name</Label>
                     <Input
                       id="segmentName"
                       placeholder="e.g., High-Value Customers"
                       value={formData.segmentName}
                       onChange={(e) => updateFormData({ segmentName: e.target.value })}
-                      className={cn(errors.segmentName && "border-destructive")}
+                      className={cn("rounded-lg border-slate-300 text-sm", errors.segmentName && "border-destructive")}
                     />
                     {errors.segmentName && <p className="text-sm text-destructive">{errors.segmentName}</p>}
                   </div>
-                  <Separator />
+                  <Separator className="bg-slate-200" />
                   <div className="space-y-3">
-                    <Label>Segment Rules</Label>
-                    <p className="text-sm text-muted-foreground">Add rules to define which contacts should be included</p>
+                    <Label className="text-sm font-medium text-foreground">Segment Rules</Label>
+                    <p className="text-xs text-muted-foreground">Add rules to define which contacts should be included</p>
                     {formData.segmentRules.length === 0 ? (
-                      <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                      <div className="text-center py-8 border-2 border-dashed border-slate-300 rounded-xl">
                         <Users className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                         <p className="text-sm text-muted-foreground">No rules added yet</p>
-                        <Button variant="outline" size="sm" className="mt-2" onClick={() => {
+                        <Button variant="outline" size="sm" className="mt-3 rounded-lg border-slate-300 text-xs" onClick={() => {
                           updateFormData({ segmentRules: [{ id: Date.now().toString(), field: "optInStatus", operator: "equals", value: "opted_in" }] })
                         }}>
                           <Plus className="h-4 w-4 mr-1" /> Add Rule
@@ -621,13 +701,13 @@ export default function NewCampaignPage() {
                     ) : (
                       <div className="space-y-3">
                         {formData.segmentRules.map((rule, index) => (
-                          <div key={rule.id} className="flex items-center gap-2">
+                          <div key={rule.id} className="flex items-center gap-2 p-2 rounded-lg border border-slate-200">
                             <Select value={rule.field} onValueChange={(value) => {
                               const newRules = [...formData.segmentRules]
                               newRules[index].field = value
                               updateFormData({ segmentRules: newRules })
                             }}>
-                              <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+                              <SelectTrigger className="w-[150px] rounded-lg border-slate-300 text-sm"><SelectValue /></SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="optInStatus">Opt-in Status</SelectItem>
                                 <SelectItem value="tags">Tags</SelectItem>
@@ -638,15 +718,15 @@ export default function NewCampaignPage() {
                               const newRules = [...formData.segmentRules]
                               newRules[index].value = e.target.value
                               updateFormData({ segmentRules: newRules })
-                            }} className="flex-1" />
+                            }} className="flex-1 rounded-lg border-slate-300 text-sm" />
                             <Button variant="ghost" size="icon" onClick={() => {
                               updateFormData({ segmentRules: formData.segmentRules.filter((_, i) => i !== index) })
-                            }}>
+                            }} className="rounded-lg text-muted-foreground hover:text-foreground">
                               <X className="h-4 w-4" />
                             </Button>
                           </div>
                         ))}
-                        <Button variant="outline" size="sm" onClick={() => {
+                        <Button variant="outline" size="sm" className="rounded-lg border-slate-300 text-xs" onClick={() => {
                           updateFormData({ segmentRules: [...formData.segmentRules, { id: Date.now().toString(), field: "optInStatus", operator: "equals", value: "" }] })
                         }}>
                           <Plus className="h-4 w-4 mr-1" /> Add Another Rule
@@ -663,28 +743,33 @@ export default function NewCampaignPage() {
       case 3:
         return (
           <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold mb-1">Message Content</h2>
-              <p className="text-muted-foreground">Create your WhatsApp message</p>
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-foreground">Message Content</h2>
+              <p className="text-muted-foreground text-sm mt-1">Create your WhatsApp message</p>
             </div>
 
-            <div>
-              <Tabs
-                value={formData.messageType}
-                onValueChange={(value) => updateFormData({ messageType: value as any })}
-              >
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="template">Use Template</TabsTrigger>
-                  <TabsTrigger value="freeform">Freeform Message</TabsTrigger>
-                </TabsList>
+            <Tabs
+              value={formData.messageType}
+              onValueChange={(value) => updateFormData({ messageType: value as any })}
+            >
+              <TabsList className="grid w-full grid-cols-2 h-auto p-1 bg-muted border rounded-lg">
+                <TabsTrigger value="template" className="text-sm py-2.5 rounded-md text-muted-foreground data-[state=active]:border-2 data-[state=active]:border-green-950 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  Use Template
+                </TabsTrigger>
+                <TabsTrigger value="freeform" className="text-sm py-2.5 rounded-md text-muted-foreground data-[state=active]:border-2 data-[state=active]:border-green-950 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  Freeform Message
+                </TabsTrigger>
+              </TabsList>
 
-                <TabsContent value="template" className="mt-4">
-                  <div className="space-y-4">
+              <TabsContent value="template" className="mt-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-foreground">Select Template</Label>
                     <Select
                       value={formData.templateId}
                       onValueChange={(value) => updateFormData({ templateId: value })}
                     >
-                      <SelectTrigger className={cn(errors.templateId && "border-destructive")}>
+                      <SelectTrigger className={cn("rounded-lg border-slate-300 text-sm", errors.templateId && "border-destructive")}>
                         <SelectValue placeholder="Select a template" />
                       </SelectTrigger>
                       <SelectContent>
@@ -692,152 +777,162 @@ export default function NewCampaignPage() {
                           templates.filter(t => t.status === "approved").map((template) => (
                             <SelectItem key={template.id} value={template.id}>
                               <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-xs">{template.category}</Badge>
+                                <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">{template.category}</Badge>
                                 <span>{template.name}</span>
                               </div>
                             </SelectItem>
                           ))
                         ) : (
-                          <div className="p-2 text-sm text-muted-foreground">No approved templates available</div>
+                          <div className="p-4 text-sm text-muted-foreground text-center w-full">No approved templates available</div>
                         )}
                       </SelectContent>
                     </Select>
                     {errors.templateId && <p className="text-sm text-destructive">{errors.templateId}</p>}
+                  </div>
 
-                    {selectedTemplate && (
-                      <Card>
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center justify-between">
-                            <CardTitle className="text-sm font-medium">{selectedTemplate.name}</CardTitle>
-                            <Badge variant="secondary">{selectedTemplate.category}</Badge>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                            <p className="text-sm whitespace-pre-wrap">{selectedTemplate.content}</p>
-                          </div>
-                          {selectedTemplate.variables.length > 0 && (
-                            <div className="mt-4 space-y-2">
-                              <Label className="text-xs text-muted-foreground">Fill Template Variables</Label>
-                              {selectedTemplate.variables.map((variable, index) => (
-                                <div key={variable} className="flex items-center gap-2">
-                                  <span className="text-sm font-medium w-24">{`{{${index + 1}}}`} ({variable}):</span>
-                                  <Input
-                                    placeholder={`Enter ${variable}`}
-                                    value={formData.templateVariables[variable] || ""}
-                                    onChange={(e) => {
-                                      const newVars = { ...formData.templateVariables, [variable]: e.target.value }
-                                      updateFormData({ templateVariables: newVars })
-                                      setPreviewVariables(prev => prev.map(v =>
-                                        v.index === index + 1 ? { ...v, sampleValue: e.target.value } : v
-                                      ))
-                                    }}
-                                  />
-                                </div>
-                              ))}
+                  {selectedTemplate && (
+                    <StyledCard>
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-sm font-semibold text-foreground">{selectedTemplate.name}</span>
+                        <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">{selectedTemplate.category}</Badge>
+                      </div>
+                      <div className="p-4 rounded-lg border-2 border-green-200 bg-green-50/50">
+                        <p className="text-sm whitespace-pre-wrap text-foreground">{selectedTemplate.content}</p>
+                      </div>
+                      {selectedTemplate.variables.length > 0 && (
+                        <div className="mt-6 space-y-3">
+                          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Fill Template Variables</Label>
+                          {selectedTemplate.variables.map((variable, index) => (
+                            <div key={variable} className="flex items-center gap-3">
+                              <span className="text-sm font-medium w-28 text-foreground">{`{{${index + 1}}}`} <span className="text-muted-foreground">({variable})</span></span>
+                              <Input
+                                placeholder={`Enter ${variable}`}
+                                value={formData.templateVariables[variable] || ""}
+                                onChange={(e) => {
+                                  const newVars = { ...formData.templateVariables, [variable]: e.target.value }
+                                  updateFormData({ templateVariables: newVars })
+                                  setPreviewVariables(prev => prev.map(v =>
+                                    v.index === index + 1 ? { ...v, sampleValue: e.target.value } : v
+                                  ))
+                                }}
+                                className="rounded-lg border-slate-300 text-sm"
+                              />
                             </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )}
-                  </div>
-                </TabsContent>
+                          ))}
+                        </div>
+                      )}
+                    </StyledCard>
+                  )}
+                </div>
+              </TabsContent>
 
-                <TabsContent value="freeform" className="mt-4">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="freeformMessage">Message Content</Label>
-                      <Textarea
-                        id="freeformMessage"
-                        placeholder="Type your message here..."
-                        value={formData.freeformMessage}
-                        onChange={(e) => updateFormData({ freeformMessage: e.target.value })}
-                        rows={6}
-                        className={cn(errors.freeformMessage && "border-destructive")}
-                      />
-                      {errors.freeformMessage && <p className="text-sm text-destructive">{errors.freeformMessage}</p>}
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>Use {"{{contact.name}}"} for personalization</span>
-                        <span>{formData.freeformMessage.length}/4096</span>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Media Attachments (Optional)</Label>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm"><Image className="h-4 w-4 mr-1" />Image</Button>
-                        <Button variant="outline" size="sm"><Video className="h-4 w-4 mr-1" />Video</Button>
-                        <Button variant="outline" size="sm"><FileAudio className="h-4 w-4 mr-1" />Audio</Button>
-                        <Button variant="outline" size="sm"><Paperclip className="h-4 w-4 mr-1" />Document</Button>
-                      </div>
+              <TabsContent value="freeform" className="mt-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="freeformMessage" className="text-sm font-medium text-foreground">Message Content</Label>
+                    <Textarea
+                      id="freeformMessage"
+                      placeholder="Type your message here..."
+                      value={formData.freeformMessage}
+                      onChange={(e) => updateFormData({ freeformMessage: e.target.value })}
+                      rows={6}
+                      className={cn("rounded-lg border-slate-300 text-sm", errors.freeformMessage && "border-destructive")}
+                    />
+                    {errors.freeformMessage && <p className="text-sm text-destructive">{errors.freeformMessage}</p>}
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Use {"{{contact.name}}"} for personalization</span>
+                      <span className={formData.freeformMessage.length > 4000 ? "text-red-500 font-medium" : ""}>{formData.freeformMessage.length}/4096</span>
                     </div>
                   </div>
-                </TabsContent>
-              </Tabs>
-            </div>
-
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-foreground">Media Attachments (Optional)</Label>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" className="rounded-lg border-slate-300 text-xs"><Image className="h-4 w-4 mr-1" />Image</Button>
+                      <Button variant="outline" size="sm" className="rounded-lg border-slate-300 text-xs"><Video className="h-4 w-4 mr-1" />Video</Button>
+                      <Button variant="outline" size="sm" className="rounded-lg border-slate-300 text-xs"><FileAudio className="h-4 w-4 mr-1" />Audio</Button>
+                      <Button variant="outline" size="sm" className="rounded-lg border-slate-300 text-xs"><Paperclip className="h-4 w-4 mr-1" />Document</Button>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
-          
-                  
-        )  
-
+        )
+        
       case 4:
         return (
           <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold mb-1">Schedule Campaign</h2>
-              <p className="text-muted-foreground">Choose when to send your campaign</p>
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-foreground">Schedule Campaign</h2>
+              <p className="text-muted-foreground text-sm mt-1">Choose when to send your campaign</p>
             </div>
 
             <div className="space-y-6">
               <div className="space-y-3">
-                <Label>When to Send</Label>
+                <Label className="text-sm font-medium text-foreground">When to Send</Label>
                 <RadioGroup
                   value={formData.sendNow ? "now" : "later"}
                   onValueChange={(value) => updateFormData({ sendNow: value === "now" })}
-                  className="flex flex-col sm:flex-row gap-4"
+                  className="grid gap-4 sm:grid-cols-2"
                 >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="now" id="sendNow" />
-                    <Label htmlFor="sendNow" className="font-normal cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <Send className="h-4 w-4 text-green-500" />
-                        <span>Send Immediately</span>
+                  <Label
+                    htmlFor="sendNow"
+                    className={cn(
+                      "flex items-center space-x-3 p-4 rounded-xl border-2 bg-white hover:border-green-950 transition-all cursor-pointer",
+                      formData.sendNow ? "border-green-950 bg-green-50/50" : "border-slate-200"
+                    )}
+                  >
+                    <RadioGroupItem value="now" id="sendNow" className="mt-0.5" />
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-green-100 flex items-center justify-center">
+                        <Send className="h-5 w-5 text-green-600" />
                       </div>
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="later" id="scheduleLater" />
-                    <Label htmlFor="scheduleLater" className="font-normal cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-blue-500" />
-                        <span>Schedule for Later</span>
+                      <div>
+                        <span className="font-medium text-foreground block">Send Immediately</span>
                       </div>
-                    </Label>
-                  </div>
+                    </div>
+                  </Label>
+                  <Label
+                    htmlFor="scheduleLater"
+                    className={cn(
+                      "flex items-center space-x-3 p-4 rounded-xl border-2 bg-white hover:border-green-950 transition-all cursor-pointer",
+                      !formData.sendNow ? "border-green-950 bg-green-50/50" : "border-slate-200"
+                    )}
+                  >
+                    <RadioGroupItem value="later" id="scheduleLater" className="mt-0.5" />
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                        <Calendar className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <span className="font-medium text-foreground block">Schedule for Later</span>
+                      </div>
+                    </div>
+                  </Label>
                 </RadioGroup>
               </div>
 
               {!formData.sendNow && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="scheduledDate">Date</Label>
+                    <Label htmlFor="scheduledDate" className="text-sm font-medium text-foreground">Date</Label>
                     <Input
                       id="scheduledDate"
                       type="date"
                       value={formData.scheduledDate}
                       onChange={(e) => updateFormData({ scheduledDate: e.target.value })}
-                      className={cn(errors.scheduledDate && "border-destructive")}
+                      className={cn("rounded-lg border-slate-300 text-sm", errors.scheduledDate && "border-destructive")}
                     />
                     {errors.scheduledDate && <p className="text-sm text-destructive">{errors.scheduledDate}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="scheduledTime">Time</Label>
+                    <Label htmlFor="scheduledTime" className="text-sm font-medium text-foreground">Time</Label>
                     <Input
                       id="scheduledTime"
                       type="time"
                       value={formData.scheduledTime}
                       onChange={(e) => updateFormData({ scheduledTime: e.target.value })}
-                      className={cn(errors.scheduledTime && "border-destructive")}
+                      className={cn("rounded-lg border-slate-300 text-sm", errors.scheduledTime && "border-destructive")}
                     />
                     {errors.scheduledTime && <p className="text-sm text-destructive">{errors.scheduledTime}</p>}
                   </div>
@@ -845,9 +940,9 @@ export default function NewCampaignPage() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="timezone">Timezone</Label>
+                <Label htmlFor="timezone" className="text-sm font-medium text-foreground">Timezone</Label>
                 <Select value={formData.timezone} onValueChange={(value) => updateFormData({ timezone: value })}>
-                  <SelectTrigger id="timezone"><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="timezone" className="rounded-lg border-slate-300 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {timezones.map((tz) => (
                       <SelectItem key={tz.value} value={tz.value}>{tz.label}</SelectItem>
@@ -858,14 +953,14 @@ export default function NewCampaignPage() {
 
               {formData.type === "recurring" && (
                 <>
-                  <Separator />
+                  <Separator className="bg-slate-200" />
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="recurringType">Repeat</Label>
+                      <Label htmlFor="recurringType" className="text-sm font-medium text-foreground">Repeat</Label>
                       <Select value={formData.recurringType} onValueChange={(value) => updateFormData({ recurringType: value as any })}>
-                        <SelectTrigger id="recurringType"><SelectValue /></SelectTrigger>
+                        <SelectTrigger id="recurringType" className="rounded-lg border-slate-300 text-sm"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">Don't repeat</SelectItem>
+                          <SelectItem value="none">Don&apos;t repeat</SelectItem>
                           <SelectItem value="daily">Daily</SelectItem>
                           <SelectItem value="weekly">Weekly</SelectItem>
                           <SelectItem value="monthly">Monthly</SelectItem>
@@ -874,12 +969,13 @@ export default function NewCampaignPage() {
                     </div>
                     {formData.recurringType !== "none" && (
                       <div className="space-y-2">
-                        <Label htmlFor="recurringEndDate">End Date (Optional)</Label>
+                        <Label htmlFor="recurringEndDate" className="text-sm font-medium text-foreground">End Date (Optional)</Label>
                         <Input
                           id="recurringEndDate"
                           type="date"
                           value={formData.recurringEndDate}
                           onChange={(e) => updateFormData({ recurringEndDate: e.target.value })}
+                          className="rounded-lg border-slate-300 text-sm"
                         />
                       </div>
                     )}
@@ -887,36 +983,36 @@ export default function NewCampaignPage() {
                 </>
               )}
 
-              <Separator />
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Message Throttling</Label>
-                    <p className="text-xs text-muted-foreground">Control how fast messages are sent</p>
+              <Separator className="bg-slate-200" />
+              
+              <ToggleRow
+                title="Message Throttling"
+                description="Control how fast messages are sent to avoid rate limits"
+                checked={formData.throttleRate > 0}
+                onCheckedChange={(checked) => updateFormData({ throttleRate: checked ? 100 : 0 })}
+              />
+
+              {formData.throttleRate > 0 && (
+                <div className="space-y-2 pl-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-foreground">Messages per hour</span>
+                    <span className="font-bold text-foreground">{formData.throttleRate}</span>
                   </div>
-                  <Switch
-                    checked={formData.throttleRate > 0}
-                    onCheckedChange={(checked) => updateFormData({ throttleRate: checked ? 100 : 0 })}
+                  <Input
+                    type="range"
+                    min="10"
+                    max="1000"
+                    step="10"
+                    value={formData.throttleRate}
+                    onChange={(e) => updateFormData({ throttleRate: parseInt(e.target.value) })}
+                    className="w-full"
                   />
-                </div>
-                {formData.throttleRate > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Messages per hour</span>
-                      <span className="font-medium">{formData.throttleRate}</span>
-                    </div>
-                    <Input
-                      type="range"
-                      min="10"
-                      max="1000"
-                      step="10"
-                      value={formData.throttleRate}
-                      onChange={(e) => updateFormData({ throttleRate: parseInt(e.target.value) })}
-                      className="w-full"
-                    />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Slow (10/hr)</span>
+                    <span>Fast (1000/hr)</span>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         )
@@ -924,81 +1020,80 @@ export default function NewCampaignPage() {
       case 5:
         return (
           <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold mb-1">Review & Launch</h2>
-              <p className="text-muted-foreground">Review your campaign details before launching</p>
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-foreground">Review & Launch</h2>
+              <p className="text-muted-foreground text-sm mt-1">Review your campaign details before launching</p>
             </div>
 
-           
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Advanced Settings</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fromNumber">Send from account <span className="text-destructive">*</span></Label>
-                  <Select value={formData.fromNumber} onValueChange={(value) => updateFormData({ fromNumber: value })}>
-                    <SelectTrigger id="fromNumber" className={cn(errors.fromNumber && "border-destructive")}>
-                      <SelectValue placeholder="Select WhatsApp account" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {whatsAppAccounts.length > 0 ? whatsAppAccounts.map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{account.accountName || account.businessAccountName || 'WhatsApp Account'}</span>
-                            {account.phoneNumbers && account.phoneNumbers.length > 0 && (
-                              <span className="text-xs text-muted-foreground">
-                                {account.phoneNumbers.map(p => p.phoneNumber).join(', ')}
-                              </span>
-                            )}
-                          </div>
+            <StyledCard
+              title="Advanced Settings"
+              titleIcon={Settings}
+            >
+              <div className="space-y-2">
+                <Label htmlFor="fromNumber" className="text-sm font-medium text-foreground">Send from account <span className="text-red-500">*</span></Label>
+                <Select value={formData.fromNumber} onValueChange={(value) => updateFormData({ fromNumber: value })}>
+                  <SelectTrigger id="fromNumber" className={cn("rounded-lg border-slate-300 text-sm", errors.fromNumber && "border-destructive")}>
+                    <SelectValue placeholder="Select WhatsApp account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {whatsAppAccounts.length > 0 ? whatsAppAccounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium text-foreground">{account.accountName || account.businessAccountName || 'WhatsApp Account'}</span>
+                          {account.phoneNumbers && account.phoneNumbers.length > 0 && (
+                            <span className="text-xs text-muted-foreground font-mono">
+                              {account.phoneNumbers.map(p => p.phoneNumber).join(', ')}
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    )) : phoneNumbers.length > 0 ? (
+                      phoneNumbers.map((number) => (
+                        <SelectItem key={number.id} value={number.id}>
+                          <span className="font-medium text-foreground">{number.displayName}</span>
+                          <span className="text-muted-foreground ml-2 font-mono text-xs">{number.phoneNumber}</span>
                         </SelectItem>
-                      )) : phoneNumbers.length > 0 ? (
-                        // Fallback to phone numbers if no accounts
-                        phoneNumbers.map((number) => (
-                          <SelectItem key={number.id} value={number.id}>
-                            <span>{number.displayName}</span>
-                            <span className="text-muted-foreground ml-2">{number.phoneNumber}</span>
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <div className="p-2 text-sm text-muted-foreground">No WhatsApp accounts available</div>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  {errors.fromNumber && <p className="text-sm text-destructive">{errors.fromNumber}</p>}
-                </div>
-                <Separator />
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-sm">Send to opted-in contacts only</Label>
-                      <p className="text-xs text-muted-foreground">Only send to contacts who have opted in</p>
-                    </div>
-                    <Switch checked={formData.useOptedInOnly} onCheckedChange={(checked) => updateFormData({ useOptedInOnly: checked })} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-sm">Track link clicks</Label>
-                      <p className="text-xs text-muted-foreground">Track when recipients click links</p>
-                    </div>
-                    <Switch checked={formData.trackClicks} onCheckedChange={(checked) => updateFormData({ trackClicks: checked })} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                      ))
+                    ) : (
+                      <div className="p-4 text-sm text-muted-foreground text-center w-full">No WhatsApp accounts available</div>
+                    )}
+                  </SelectContent>
+                </Select>
+                {errors.fromNumber && <p className="text-sm text-destructive">{errors.fromNumber}</p>}
+              </div>
 
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-green-600 mt-0.5" />
+              <Separator className="bg-slate-200 my-4" />
+
+              <ToggleRow
+                title="Send to opted-in contacts only"
+                description="Only send to contacts who have explicitly opted in"
+                checked={formData.useOptedInOnly}
+                onCheckedChange={(checked) => updateFormData({ useOptedInOnly: checked })}
+              />
+
+              <ToggleRow
+                title="Track link clicks"
+                description="Track when recipients click links in your message"
+                checked={formData.trackClicks}
+                onCheckedChange={(checked) => updateFormData({ trackClicks: checked })}
+              />
+            </StyledCard>
+
+            <StyledCard accent>
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+                  <Send className="h-6 w-6 text-green-600" />
+                </div>
                 <div>
-                  <h4 className="font-medium text-green-900">Ready to Launch</h4>
-                  <p className="text-sm text-green-700">
-                    {formData.sendNow ? "Your campaign will be sent immediately after confirmation." : "Your campaign will be sent at the scheduled time."}
+                  <h4 className="font-semibold text-green-800 text-lg">Ready to Launch</h4>
+                  <p className="text-sm text-green-700 mt-1">
+                    {formData.sendNow 
+                      ? "Your campaign will be sent immediately after confirmation." 
+                      : `Your campaign will be sent at ${formData.scheduledTime} on ${formData.scheduledDate} (${formData.timezone}).`}
                   </p>
                 </div>
               </div>
-            </div>
+            </StyledCard>
           </div>
         )
 
@@ -1008,24 +1103,16 @@ export default function NewCampaignPage() {
   }
 
   return (
-    <div className="bg-transparent px-2.5 border h-full lg:px-0">
-      <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 px-4 space-y-6">
-      {/* Three column layout for Step 3, Two column for others */}
-      <div className="flex flex-col lg:flex-row gap-6">
+    <StandardLayout>
+      <div className="space-y-6">
+        <div className="flex flex-col lg:flex-row gap-6">
         
         {/* Left Sidebar - Stepper */}
         <div className={cn(
           "shrink-0",
-          currentStep === 3 ? "lg:w-52" : "w-full lg:w-64"
+          currentStep === 3 ? "lg:w-56" : "w-full lg:w-64"
         )}>
-          <div className="bg-card rounded-lg border p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/campaigns')}>
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <span className="font-semibold">Steps</span>
-            </div>
-            
+          <div className="p-5 rounded-xl bg-white border-2 border-green-950 sticky top-6">    
             <div className="space-y-2">
               {steps.map((step, index) => {
                 const StepIcon = step.icon
@@ -1034,9 +1121,7 @@ export default function NewCampaignPage() {
 
                 return (
                   <div key={step.id} className="flex items-center">
-                    {index > 0 && (
-                      <div className={cn("w-6 h-0.5 mx-1", isCompleted ? "bg-primary" : "bg-muted")} />
-                    )}
+                   
                     <button
                       onClick={() => {
                         if (isCompleted || step.id === currentStep) {
@@ -1045,10 +1130,10 @@ export default function NewCampaignPage() {
                       }}
                       disabled={!isCompleted && step.id !== currentStep}
                       className={cn(
-                        "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors w-full",
-                        isActive && "bg-primary text-primary-foreground",
-                        isCompleted && "bg-primary/10 text-primary",
-                        !isActive && !isCompleted && "bg-muted text-muted-foreground hover:bg-muted/80",
+                        "flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all w-full",
+                        isActive && "bg-green-950 text-white shadow-sm",
+                        isCompleted && "bg-green-50 text-green-800 border-2 border-green-200 hover:bg-green-100",
+                        !isActive && !isCompleted && "bg-slate-50 text-muted-foreground hover:bg-slate-100 border-2 border-transparent",
                       )}
                     >
                       {isCompleted ? <Check className="h-4 w-4" /> : <StepIcon className="h-4 w-4" />}
@@ -1067,32 +1152,35 @@ export default function NewCampaignPage() {
           currentStep === 3 ? "lg:flex-1" : "flex-1"
         )}>
           {errors.submit && (
-            <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg flex items-center gap-2 mb-4">
-              <AlertCircle className="h-4 w-4" />
-              {errors.submit}
-            </div>
+            <StyledCard danger className="mb-6">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="text-sm font-semibold text-red-800">Submission Error</h4>
+                  <p className="text-xs text-red-700 mt-1">{errors.submit}</p>
+                </div>
+              </div>
+            </StyledCard>
           )}
 
-          <Card className="min-h-[600px]">
-            <CardContent className="pt-6">
-              {renderStepContent()}
-            </CardContent>
-          </Card>
+          <div className="p-5 rounded-xl bg-white border-2 border-green-950 min-h-[600px] space-y-0">
+            {renderStepContent()}
+          </div>
 
           {/* Navigation Buttons */}
           <div className="flex items-center justify-between mt-6">
-            <Button variant="outline" onClick={handleBack} disabled={currentStep === 1 || isSubmitting}>
+            <Button variant="outline" onClick={handleBack} disabled={currentStep === 1 || isSubmitting} className="rounded-lg border-slate-300 text-sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>
 
             {currentStep < steps.length ? (
-              <Button onClick={handleNext}>
+              <Button onClick={handleNext} className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm">
                 Continue
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             ) : (
-              <Button onClick={handleSubmit} disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">
+              <Button onClick={handleSubmit} disabled={isSubmitting} className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm">
                 {isSubmitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Launching...</> : <><Send className="h-4 w-4 mr-2" />Launch Campaign</>}
               </Button>
             )}
@@ -1102,13 +1190,13 @@ export default function NewCampaignPage() {
         {/* Right Side - Preview Panel (Only for Step 3) */}
         {currentStep === 3 && (
           <div className="w-full lg:w-[360px] shrink-0">
-            <div className="sticky top-4">
+            <div className="sticky top-6">
               <TemplatePreview preview={previewData} />
             </div>
           </div>
         )}
+        </div>
       </div>
-      </div>
-    </div>
+    </StandardLayout>
   )
 }
