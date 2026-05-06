@@ -30,6 +30,7 @@ import {
   TemplateCategory,
   CreateTemplateInput,
   TemplateTranslation,
+  HeaderContent,
 } from "@/types/template";
 import { toast } from "sonner";
 import { premadeTemplates } from "@/lib/premade-templates";
@@ -113,6 +114,9 @@ interface PremadeTemplate {
 }
 
 const premadeTemplatesData: PremadeTemplate[] = premadeTemplates;
+
+const toHeaderContent = (header?: string): HeaderContent | undefined =>
+  header ? { type: "text", text: header } : undefined;
 
 const categoryColors: Record<TemplateCategory, string> = {
   marketing: "bg-green-100 text-green-800 border-green-200",
@@ -447,7 +451,7 @@ Category: ${template.category}
                   <TemplatePreview
                     preview={{
                       body: selectedTemplate.preview.body,
-                      header: selectedTemplate.preview.header,
+                      header: toHeaderContent(selectedTemplate.preview.header),
                       footer: selectedTemplate.preview.footer,
                       buttons: [],
                       variables: [],
