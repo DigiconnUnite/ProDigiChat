@@ -147,7 +147,7 @@ export function PublicFooter() {
             <h3 className="font-semibold mb-4 text-white">
               Why People Like Us
             </h3>
-            <p className="text-sm text-green-200 leading-relaxed">
+            <p className="text-sm text-green-50 leading-relaxed">
               Powerful WhatsApp marketing automation platform for businesses of
               all sizes.
             </p>
@@ -160,7 +160,7 @@ export function PublicFooter() {
               <li>
                 <Link
                   href="/features"
-                  className="text-sm text-green-200 hover:text-white transition-colors"
+                  className="text-sm text-green-50 hover:text-white transition-colors"
                 >
                   Features
                 </Link>
@@ -168,7 +168,7 @@ export function PublicFooter() {
               <li>
                 <Link
                   href="/pricing"
-                  className="text-sm text-green-200 hover:text-white transition-colors"
+                  className="text-sm text-green-50 hover:text-white transition-colors"
                 >
                   Pricing
                 </Link>
@@ -176,7 +176,7 @@ export function PublicFooter() {
               <li>
                 <Link
                   href="/login"
-                  className="text-sm text-green-200 hover:text-white transition-colors"
+                  className="text-sm text-green-50 hover:text-white transition-colors"
                 >
                   Login
                 </Link>
@@ -184,7 +184,7 @@ export function PublicFooter() {
               <li>
                 <Link
                   href="/signup"
-                  className="text-sm text-green-200 hover:text-white transition-colors"
+                  className="text-sm text-green-50 hover:text-white transition-colors"
                 >
                   Sign Up
                 </Link>
@@ -199,7 +199,7 @@ export function PublicFooter() {
               <li>
                 <Link
                   href="/features"
-                  className="text-sm text-green-200 hover:text-white transition-colors"
+                  className="text-sm text-green-50 hover:text-white transition-colors"
                 >
                   About Us
                 </Link>
@@ -207,7 +207,7 @@ export function PublicFooter() {
               <li>
                 <Link
                   href="/features"
-                  className="text-sm text-green-200 hover:text-white transition-colors"
+                  className="text-sm text-green-50 hover:text-white transition-colors"
                 >
                   Contact
                 </Link>
@@ -215,7 +215,7 @@ export function PublicFooter() {
               <li>
                 <Link
                   href="/features"
-                  className="text-sm text-green-200 hover:text-white transition-colors"
+                  className="text-sm text-green-50 hover:text-white transition-colors"
                 >
                   Careers
                 </Link>
@@ -223,7 +223,7 @@ export function PublicFooter() {
               <li>
                 <Link
                   href="/features"
-                  className="text-sm text-green-200 hover:text-white transition-colors"
+                  className="text-sm text-green-50 hover:text-white transition-colors"
                 >
                   Blog
                 </Link>
@@ -238,7 +238,7 @@ export function PublicFooter() {
               <li>
                 <Link
                   href="/privacy"
-                  className="text-sm text-green-200 hover:text-white transition-colors"
+                  className="text-sm text-green-50 hover:text-white transition-colors"
                 >
                   Privacy Policy
                 </Link>
@@ -246,7 +246,7 @@ export function PublicFooter() {
               <li>
                 <Link
                   href="/terms"
-                  className="text-sm text-green-200 hover:text-white transition-colors"
+                  className="text-sm text-green-50 hover:text-white transition-colors"
                 >
                   Terms of Service
                 </Link>
@@ -254,7 +254,7 @@ export function PublicFooter() {
               <li>
                 <Link
                   href="/privacy"
-                  className="text-sm text-green-200 hover:text-white transition-colors"
+                  className="text-sm text-green-50 hover:text-white transition-colors"
                 >
                   Cookie Policy
                 </Link>
@@ -262,7 +262,7 @@ export function PublicFooter() {
               <li>
                 <Link
                   href="/privacy"
-                  className="text-sm text-green-200 hover:text-white transition-colors"
+                  className="text-sm text-green-50 hover:text-white transition-colors"
                 >
                   GDPR
                 </Link>
@@ -274,11 +274,11 @@ export function PublicFooter() {
         {/* Bottom Bar */}
         <div className="pt-4 sm:pt-8">
           <div className="flex flex-col px-5 sm:flex-row justify-between items-center gap-2 sm:gap-4">
-            <p className="text-sm text-green-200">
+            <p className="text-sm text-green-50">
               © {currentYear} <span className="text-orange-400 font-bold">Prodigichat</span>. All rights reserved.
             </p>
 
-            <p className="text-sm text-green-300 order-first sm:order-0 mb-2 sm:mb-0">
+            <p className="text-sm text-green-50 order-first sm:order-0 mb-2 sm:mb-0">
               Developed by{" "}
               <Link
                 href="https://digiconnunite.com"
@@ -293,19 +293,19 @@ export function PublicFooter() {
             <div className="flex items-center gap-4">
               <Link
                 href="#"
-                className="text-sm text-green-200 hover:text-white transition-colors"
+                className="text-sm text-green-50 hover:text-white transition-colors"
               >
                 Twitter
               </Link>
               <Link
                 href="#"
-                className="text-sm text-green-200 hover:text-white transition-colors"
+                className="text-sm text-green-50 hover:text-white transition-colors"
               >
                 LinkedIn
               </Link>
               <Link
                 href="#"
-                className="text-sm text-green-200 hover:text-white transition-colors"
+                className="text-sm text-green-50 hover:text-white transition-colors"
               >
                 GitHub
               </Link>
