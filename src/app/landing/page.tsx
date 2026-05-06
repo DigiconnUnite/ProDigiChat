@@ -118,7 +118,7 @@ export default function LandingPage() {
         <section className="relative overflow-hidden bg-transparent px-2.5 lg:px-0 pt-18">
           <div className="container mx-auto relative bg-linear-30 from-lime-50 to-green-100 border-l border-r border-slate-300 px-5">
 
-            <div className="grid gap-12 py-12 lg:grid-cols-[1fr_auto] lg:py-20 lg:pl-12">
+            <div className="grid gap-12 py-12 lg:grid-cols-[1fr_1fr] lg:py-20 lg:pl-12">
               <div className="flex flex-col items-start justify-center  gap-5 lg:gap-8">
                 <h1 className="text-foreground text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
                   The Complete WhatsApp Marketing Platform
@@ -140,12 +140,12 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <div className="bg-muted inline-block w-full rounded-md p-3 sm:p-4 lg:w-[522px]">
-                <div className="relative aspect-[522/572] w-full overflow-hidden rounded-md">
+              <div className="flex items-center justify-center">
+                <div className="relative w-full max-w-[522px] aspect-[522/572] overflow-hidden rounded-md ">
                   <img
-                    src="/images/homepage/aspect-hero-image.webp"
+                    src="/hero-image.png"
                     alt="ProDigiChat dashboard showing messaging interface"
-                    className="absolute inset-0 h-full w-full object-cover object-left-top"
+                    className="absolute inset-0 h-full w-full object-contain object-center"
                     loading="lazy"
                     width={522}
                     height={572}
