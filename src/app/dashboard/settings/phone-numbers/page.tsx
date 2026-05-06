@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Plus, RefreshCw, Loader2, Phone } from 'lucide-react';
 import Link from 'next/link';
+import { StandardLayout, StandardPageHeader } from '@/components/ui/standard-layout';
 
 function PhoneNumbersContent() {
   const router = useRouter();
@@ -102,7 +103,7 @@ function PhoneNumbersContent() {
   const pendingCount = phoneNumbers.filter(p => p.verificationStatus === 'PENDING').length;
 
   return (
-    <div className="container mx-auto py-8 max-w-4xl">
+    <StandardLayout maxWidth="4xl">
       {/* Back Link */}
       <Link 
         href="/dashboard/settings?tab=whatsapp"
@@ -113,17 +114,10 @@ function PhoneNumbersContent() {
       </Link>
 
       {/* Page Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            📱 Phone Numbers
-          </h1>
-          <p className="text-gray-600 mt-1">
-            Manage your WhatsApp Business phone numbers
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-2">
+      <StandardPageHeader
+        title="📱 Phone Numbers"
+        description="Manage your WhatsApp Business phone numbers"
+        actions={
           <Button
             variant="outline"
             onClick={handleRefresh}
@@ -136,8 +130,8 @@ function PhoneNumbersContent() {
             )}
             Refresh
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-3 gap-4 mb-8">
@@ -204,17 +198,17 @@ function PhoneNumbersContent() {
           ))}
         </div>
       )}
-    </div>
+    </StandardLayout>
   );
 }
 
 function PhoneNumbersLoading() {
   return (
-    <div className="container mx-auto py-8 max-w-4xl">
+    <StandardLayout maxWidth="4xl">
       <div className="flex items-center justify-center py-12">
         <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
       </div>
-    </div>
+    </StandardLayout>
   );
 }
 

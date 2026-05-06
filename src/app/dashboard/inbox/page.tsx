@@ -6,33 +6,41 @@ import { useSession } from "next-auth/react"
 import { io } from 'socket.io-client'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
-import { ScrollArea } from "@/components/ui/scroll-area"                             
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { 
-  Search, 
-  Send, 
-  MoreHorizontal, 
-  Phone, 
-  User, 
-  CheckCheck, 
-  Users, 
-  MessageSquare, 
-  FileText, 
+import { Separator } from "@/components/ui/separator"
+import {
+  Search,
+  Send,
+  MoreHorizontal,
+  Phone,
+  User,
+  CheckCheck,
+  Users,
+  MessageSquare,
+  FileText,
   Image as ImageIcon,
   Loader2,
   RefreshCw,
   Archive,
   Star,
-  MoreVertical,
   Circle,
   AlertCircle,
   ExternalLink,
-  Plug
+  Plug,
+  X,
+  Video,
+  File,
+  List,
+  Link as LinkIcon,
+  MapPin,
+  Reply,
 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
-// Types
+// ─── Types ────────────────────────────────────────────────
+
 interface Contact {
   id: string
   name: string
@@ -45,17 +53,32 @@ interface Contact {
   tags: string[]
 }
 
+interface ParsedContent {
+  type: string
+  text?: string
+  caption?: string
+  mediaUrl?: string
+  mediaType?: string
+  fileName?: string
+  fileSize?: string
+  interactive?: {
+    type: string
+    header?: { type: string; text?: string }
+    body?: { text?: string; buttons?: Array<{ type: string; title: string; payload?: string; url?: string }> }
+  }
+  list?: Array<{ title: string; rows?: Array<Array<string>> }>
+  location?: { name?: string; address?: string; latitude?: string; longitude?: string }
+}
+
 interface Message {
   id: string
   type: "sent" | "received"
-  text: string
+  parsed: ParsedContent | null
+  rawText: string
   time: string
   status?: string
-  mediaUrl?: string
-  messageType?: string
 }
 
-// Helper function to format time
 function formatTime(date: Date): string {
   return date.toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -64,10 +87,341 @@ function formatTime(date: Date): string {
   })
 }
 
+// ─── Robust Content Parser ──────────────────────────────
+
+function parseContent(raw: string): ParsedContent {
+  // Try the imported utility first
+  try {
+    const parsed = parseMessageContent(raw)
+    if (parsed && (parsed.type || parsed.text)) {
+      // Convert MessageContent to ParsedContent format
+      return {
+        type: parsed.type || 'text',
+        text: parsed.text || parsed.caption || '',
+        caption: parsed.caption,
+        mediaUrl: parsed.mediaUrl,
+        mediaType: parsed.mediaType,
+        fileName: parsed.fileName,
+        fileSize: parsed.fileSize,
+        interactive: parsed.interactive,
+        list: parsed.list,
+        location: parsed.location,
+      }
+    }
+  } catch {}
+
+  // Fallback: try JSON parse
+  try {
+    const obj = JSON.parse(raw)
+    if (obj.type === 'text' || obj.text) {
+      return { type: 'text', text: obj.text || raw }
+    }
+    if (obj.type === 'image' || obj.image) {
+      return {
+        type: 'image',
+        caption: obj.image?.caption || obj.caption || obj.body,
+        mediaUrl: obj.image?.url || obj.media?.url || obj.mediaUrl,
+        mediaType: obj.image?.mime_type || obj.image?.type,
+      }
+    }
+    if (obj.type === 'video' || obj.video) {
+      return {
+        type: 'video',
+        caption: obj.video?.caption || obj.caption || obj.body,
+        mediaUrl: obj.video?.url || obj.media?.url || obj.mediaUrl,
+        mediaType: obj.video?.mime_type || obj.video?.type,
+      }
+    }
+    if (obj.type === 'document' || obj.document) {
+      return {
+        type: 'document',
+        caption: obj.document?.caption || obj.caption || obj.body,
+        fileName: obj.document?.filename || obj.document?.name || 'Document',
+        fileSize: obj.document?.file_size,
+        mediaUrl: obj.document?.url || obj.media?.url || obj.mediaUrl,
+        mediaType: obj.document?.mime_type || obj.document?.type,
+      }
+    }
+    if (obj.type === 'interactive' || obj.interactive) {
+      return {
+        type: 'interactive',
+        text: obj.interactive?.body?.text || obj.body?.text || '',
+        interactive: obj.interactive || obj.body,
+      }
+    }
+    if (obj.type === 'template' || obj.template) {
+      return {
+        type: 'template',
+        text: obj.template?.body?.text || obj.body?.text || '',
+        interactive: obj.template?.body,
+      }
+    }
+    if (obj.type === 'location' || obj.location) {
+      return {
+        type: 'location',
+        location: obj.location,
+      }
+    }
+    if (obj.type === 'list' || obj.list) {
+      return {
+        type: 'list',
+        list: obj.list,
+      }
+    }
+    if (obj.type === 'sticker' || obj.sticker) {
+      return {
+        type: 'sticker',
+        mediaUrl: obj.sticker?.url || obj.media?.url || obj.mediaUrl,
+      }
+    }
+    // Fallback to raw text
+    return { type: 'text', text: raw }
+  } catch {}
+
+  // Ultimate fallback
+  return { type: 'text', text: raw }
+}
+
+// ─── Message Bubble Renderer ──────────────────────────
+
+function MessageBubble({ message }: { message: Message }) {
+  const parsed = message.parsed
+  const isSent = message.type === "sent"
+
+  if (!parsed) {
+    return (
+      <div className={cn(
+        "max-w-[70%] rounded-xl p-3 shadow-sm min-w-0 break-words",
+        isSent ? "bg-[#005c4b] text-white rounded-tr-sm" : "bg-white text-foreground rounded-tl-sm"
+      )}>
+        <p className="text-sm whitespace-pre-wrap leading-relaxed opacity-60 break-all overflow-wrap-anywhere word-break-break-all">{message.rawText}</p>
+        <MessageMeta time={message.time} status={message.status} isSent={isSent} />
+      </div>
+    )
+  }
+
+  switch (parsed.type) {
+    case 'image':
+      return (
+        <div className={cn("max-w-[70%] rounded-xl overflow-hidden shadow-sm min-w-0", isSent ? "rounded-tr-sm" : "rounded-tl-sm")}>
+          {parsed.mediaUrl ? (
+            <img
+              src={parsed.mediaUrl}
+              alt={parsed.caption || 'Image'}
+              className="w-full max-h-[300px] object-cover rounded-t-xl"
+              style={isSent ? { borderRadius: '12px 12px 0 0' } : { borderRadius: '12px 12px 0 0' }}
+            />
+          ) : (
+            <div className={cn("p-6 flex items-center justify-center rounded-t-xl", isSent ? "bg-[#005c4b]/90" : "bg-slate-100")}>
+              <ImageIcon className={cn("w-12 h-12", isSent ? "text-white/50" : "text-slate-400")} />
+            </div>
+          )}
+          {(parsed.caption || parsed.text) && (
+            <div className={cn("px-3 py-2 min-w-0", isSent ? "bg-[#005c4b] text-white" : "bg-white")}>
+              <p className="text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere">{parsed.caption || parsed.text}</p>
+              <MessageMeta time={message.time} status={message.status} isSent={isSent} />
+            </div>
+          )}
+        </div>
+      )
+
+    case 'video':
+      return (
+        <div className={cn("max-w-[70%] rounded-xl overflow-hidden shadow-sm min-w-0", isSent ? "rounded-tr-sm" : "rounded-tl-sm")}>
+          {parsed.mediaUrl ? (
+            <video
+              src={parsed.mediaUrl}
+              controls
+              className="w-full max-h-[300px] rounded-t-xl bg-black"
+              style={isSent ? { borderRadius: '12px 12px 0 0' } : { borderRadius: '12px 12px 0 0' }}
+            />
+          ) : (
+            <div className={cn("p-6 flex flex-col items-center justify-center gap-2 rounded-t-xl", isSent ? "bg-[#005c4b]/90" : "bg-slate-100")}>
+              <Video className={cn("w-12 h-12", isSent ? "text-white/50" : "text-slate-400")} />
+              <p className="text-xs opacity-60">Video</p>
+            </div>
+          )}
+          {(parsed.caption || parsed.text) && (
+            <div className={cn("px-3 py-2 min-w-0", isSent ? "bg-[#005c4b] text-white" : "bg-white")}>
+              <p className="text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere">{parsed.caption || parsed.text}</p>
+              <MessageMeta time={message.time} status={message.status} isSent={isSent} />
+            </div>
+          )}
+        </div>
+      )
+
+    case 'document':
+      return (
+        <div className={cn("max-w-[70%] rounded-xl overflow-hidden shadow-sm min-w-0", isSent ? "rounded-tr-sm" : "rounded-tl-sm")}>
+          <div className={cn("px-4 py-3 flex items-center gap-3 min-w-0", isSent ? "bg-[#005c4b] text-white" : "bg-slate-100")}>
+            <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center shrink-0", isSent ? "bg-white/20" : "bg-white")}>
+              <File className={cn("w-5 h-5", isSent ? "text-white/70" : "text-slate-500")} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium truncate">{parsed.fileName || 'Document'}</p>
+              {parsed.fileSize && <p className="text-xs opacity-60">{parsed.fileSize}</p>}
+            </div>
+          </div>
+          {(parsed.caption || parsed.text) && (
+            <div className={cn("px-3 pb-3 min-w-0", isSent ? "bg-[#005c4b] text-white" : "bg-white")}>
+              <p className="text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere">{parsed.caption || parsed.text}</p>
+              <MessageMeta time={message.time} status={message.status} isSent={isSent} />
+            </div>
+          )}
+        </div>
+      )
+
+    case 'sticker':
+      return (
+        <div className={cn("max-w-[200px] rounded-xl p-2 shadow-sm inline-block", isSent ? "rounded-tr-sm" : "rounded-tl-sm")}>
+          {parsed.mediaUrl ? (
+            <img
+              src={parsed.mediaUrl}
+              alt="Sticker"
+              className="w-40 h-40 object-contain"
+            />
+          ) : (
+            <div className={cn("p-6 flex items-center justify-center rounded-xl", isSent ? "bg-[#005c4b]/90" : "bg-slate-100")}>
+              <MessageSquare className={cn("w-12 h-12", isSent ? "text-white/50" : "text-slate-400")} />
+            </div>
+          )}
+        </div>
+      )
+
+    case 'location':
+      return (
+        <div className={cn("max-w-[70%] rounded-xl overflow-hidden shadow-sm", isSent ? "rounded-tr-sm" : "rounded-tl-sm")}>
+          <div className={cn("p-3 rounded-t-xl", isSent ? "bg-[#005c4b]/90" : "bg-slate-100")}>
+            <div className="flex items-center gap-3 mb-2">
+              <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", isSent ? "bg-white/20" : "bg-white")}>
+                <MapPin className={cn("w-5 h-5", isSent ? "text-white/70" : "text-slate-500")} />
+              </div>
+              <div>
+                <p className="text-xs font-medium opacity-70">Location</p>
+                <p className="text-xs opacity-50">Shared a location</p>
+              </div>
+            </div>
+          </div>
+          {parsed.location?.name && (
+            <div className={cn("px-3 pb-3", isSent ? "bg-[#005c4b] text-white" : "bg-white")}>
+              <p className="text-sm font-medium">{parsed.location.name}</p>
+              {parsed.location.address && <p className="text-xs opacity-60 mt-0.5">{parsed.location.address}</p>}
+              <MessageMeta time={message.time} status={message.status} isSent={isSent} />
+            </div>
+          )}
+        </div>
+      )
+
+    case 'interactive':
+    case 'template': {
+      const header = parsed.interactive?.header
+      const body = parsed.interactive?.body
+      const buttons = body?.buttons || []
+
+      return (
+        <div className={cn("max-w-[70%] rounded-xl overflow-hidden shadow-sm", isSent ? "rounded-tr-sm" : "rounded-tl-sm")}>
+          {header && (
+            <div className={cn("px-4 py-2.5 text-center rounded-t-xl", isSent ? "bg-[#005c4b] text-white" : "bg-slate-200")}>
+              {header.type === 'text' && (
+                <p className="text-sm font-semibold">{header.text}</p>
+              )}
+            </div>
+          )}
+          <div className={cn("px-3 pb-2", isSent ? "bg-[#005c4b] text-white" : "bg-white")}>
+            {body?.text && <p className="text-sm whitespace-pre-wrap mb-3">{body.text}</p>}
+            {buttons.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                {buttons.map((btn, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      if (btn.type === 'web_url' && btn.url) window.open(btn.url, '_blank')
+                    }}
+                    className={cn(
+                      "w-full py-2.5 px-4 rounded-lg text-sm text-center transition-colors border font-medium",
+                      isSent
+                        ? "border-white/30 hover:bg-white/20 text-white"
+                        : "border-slate-200 bg-[#005c4b] hover:bg-[#004d40] text-foreground"
+                    )}
+                  >
+                    {btn.title}
+                  </button>
+                ))}
+              </div>
+            )}
+            <MessageMeta time={message.time} status={message.status} isSent={isSent} />
+          </div>
+        </div>
+      )
+    }
+
+    case 'list':
+      return (
+        <div className={cn("max-w-[70%] rounded-xl overflow-hidden shadow-sm", isSent ? "rounded-tr-sm" : "rounded-tl-sm")}>
+          {parsed.list && parsed.list.length > 0 ? (
+            <>
+              {parsed.list.map((section, i) => (
+                <div key={i} className={cn("px-3 py-2", i > 0 && "border-t border-slate-100")}>
+                  {section.title && (
+                    <p className={cn("text-sm font-semibold mb-2", isSent ? "text-white/80" : "text-foreground")}>{section.title}</p>
+                  )}
+                  {section.rows && section.rows.map((row, j) => (
+                    <p key={j} className={cn("text-sm", isSent ? "text-white/80" : "text-foreground")}>
+                      {row.map((item, k) => (
+                        <span key={k}>{k > 0 ? " • " : ""}{item}</span>
+                      ))}
+                    </p>
+                  ))}
+                </div>
+              ))}
+              <MessageMeta time={message.time} status={message.status} isSent={isSent} />
+            </>
+          ) : (
+            <div className={cn("px-3 py-3", isSent ? "bg-[#005c4b] text-white" : "bg-white")}>
+              <p className="text-sm opacity-60">List message</p>
+              <MessageMeta time={message.time} status={message.status} isSent={isSent} />
+            </div>
+          )}
+        </div>
+      )
+
+    default: // text or unknown
+      return (
+        <div className={cn(
+          "max-w-[70%] rounded-xl p-3 shadow-sm min-w-0 break-words",
+          isSent ? "bg-[#005c4b] text-white rounded-tr-sm" : "bg-white text-foreground rounded-tl-sm"
+        )}>
+          <p className="text-sm whitespace-pre-wrap leading-relaxed break-all overflow-wrap-anywhere word-break-break-all">{parsed?.text || message.rawText}</p>
+          <MessageMeta time={message.time} status={message.status} isSent={isSent} />
+        </div>
+      )
+  }
+}
+
+function MessageMeta({ time, status, isSent }: { time: string; status?: string; isSent: boolean }) {
+  return (
+    <div className={cn("flex items-center gap-1 mt-1 text-xs", isSent ? "text-white/60" : "text-muted-foreground")}>
+      <span>{time}</span>
+      {isSent && (
+        status === "read" ? (
+          <CheckCheck className="h-3.5 w-3.5 text-cyan-300" />
+        ) : status === "delivered" ? (
+          <CheckCheck className="h-3.5 w-3.5" />
+        ) : (
+          <CheckCheck className="h-3.5 w-3.5 opacity-40" />
+        )
+      )}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════════════════════
+
 export default function InboxPage() {
   const { data: session } = useSession()
-  
-  // State
+
   const [conversations, setConversations] = useState<Contact[]>([])
   const [selectedConversation, setSelectedConversation] = useState<Contact | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -77,873 +431,624 @@ export default function InboxPage() {
   const [isSending, setIsSending] = useState(false)
   const [isLoadingMessages, setIsLoadingMessages] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
-  // WhatsApp connection state
+
   const [isWhatsAppConnected, setIsWhatsAppConnected] = useState<boolean | null>(null)
   const [isCheckingConnection, setIsCheckingConnection] = useState(true)
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const socketRef = useRef<any>(null)
 
-  // Fetch WhatsApp connection status
+  // ─── Fetch connection status ──────────────────────────────
   const checkWhatsAppConnection = useCallback(async () => {
     try {
       setIsCheckingConnection(true)
       const response = await fetch("/api/settings/whatsapp")
-      
       if (response.ok) {
         const data = await response.json()
         setIsWhatsAppConnected(data.isConnected || false)
       } else {
         setIsWhatsAppConnected(false)
       }
-    } catch (err) {
-      console.error("Error checking WhatsApp connection:", err)
+    } catch {
       setIsWhatsAppConnected(false)
     } finally {
       setIsCheckingConnection(false)
     }
   }, [])
 
-  // Fetch conversations
+  // ─── Fetch conversations ──────────────────────────────
   const fetchConversations = useCallback(async () => {
-    // Don't fetch if WhatsApp is not connected
     if (isWhatsAppConnected === false) {
       setIsLoading(false)
       return
     }
-    
     try {
       setIsLoading(true)
       setError(null)
-      
       const response = await fetch("/api/inbox")
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch conversations")
-      }
-      
+      if (!response.ok) throw new Error("Failed to fetch conversations")
       const data = await response.json()
-      
-      // Only show real data if WhatsApp is connected
       if (data.conversations && data.conversations.length > 0 && isWhatsAppConnected) {
         setConversations(data.conversations)
       } else if (isWhatsAppConnected) {
-        // Connected but no conversations yet
         setConversations([])
       }
-      // If not connected, don't show any conversations (error message will be shown)
     } catch (err) {
-      console.error("Error fetching conversations:", err)
-      // Only show error if WhatsApp is connected
-      if (isWhatsAppConnected) {
-        setError("Failed to load conversations")
-      }
+      if (isWhatsAppConnected) setError("Failed to load conversations")
     } finally {
       setIsLoading(false)
     }
   }, [isWhatsAppConnected])
 
-  // Fetch messages for selected conversation
+  // ─── Fetch messages ──────────────────────────────
   const fetchMessages = useCallback(async (contactId: string) => {
-    // Don't fetch if WhatsApp is not connected
     if (isWhatsAppConnected === false) {
       setIsLoadingMessages(false)
       return
     }
-    
     try {
       setIsLoadingMessages(true)
-      
       const response = await fetch(`/api/inbox?contactId=${contactId}`)
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch messages")
-      }
-      
+      if (!response.ok) throw new Error("Failed to fetch messages")
       const data = await response.json()
-      
+
       if (data.messages && data.messages.length > 0 && isWhatsAppConnected) {
-        // Transform messages to UI format
         const transformedMessages: Message[] = data.messages.map((msg: any) => {
           try {
-            // Use the proper parseMessageContent utility
-            const content = parseMessageContent(msg.content)
-            
-            // Extract display text based on content type
-            let displayText = ""
-            
-            if (content.type === 'image') {
-              displayText = content.caption || "📷 Image"
-            } else if (content.type === 'video') {
-              displayText = content.caption || "🎥 Video"
-            } else if (content.type === 'document') {
-              displayText = content.caption || "📄 Document"
-            } else if (content.type === 'template') {
-              // For template messages, the text should already be extracted by parseMessageContent
-              displayText = content.text || "📋 Template"
-            } else {
-              // For text messages or other types, use the text field
-              displayText = content.text || content.caption || "Message"
-            }
-            
+            const rawContent = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
+            const parsed = parseContent(rawContent)
+
             return {
               id: msg.id,
               type: msg.direction === "outgoing" ? "sent" : "received",
-              text: displayText,
+              parsed,
+              rawText: rawContent,
               time: formatTime(new Date(msg.createdAt)),
               status: msg.status,
-              mediaUrl: content.mediaUrl,
-              messageType: content.type || "text"
             }
-          } catch (e) {
-            console.error("Error parsing message:", e, "Message content:", msg.content)
-            // Fallback for any parsing errors
+          } catch {
             return {
               id: msg.id,
               type: msg.direction === "outgoing" ? "sent" : "received",
-              text: "Unable to display message",
+              parsed: null,
+              rawText: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
               time: formatTime(new Date(msg.createdAt)),
               status: msg.status,
-              messageType: "text"
             }
           }
         })
         setMessages(transformedMessages)
       } else if (isWhatsAppConnected) {
-        // Connected but no messages yet
         setMessages([])
       }
-      // If not connected, don't show any messages
 
-      // Mark messages as read
       await fetch("/api/inbox", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ contactId })
       })
-      
-      // Update conversation unread count
-      setConversations(prev => 
-        prev.map(conv => 
+
+      setConversations(prev =>
+        prev.map(conv =>
           conv.id === contactId ? { ...conv, unread: 0 } : conv
         )
       )
-    } catch (err) {
-      console.error("Error fetching messages:", err)
-      // Only show error if WhatsApp is connected
-      if (isWhatsAppConnected) {
-        setError("Failed to load messages")
-      }
+    } catch {
+      if (isWhatsAppConnected) setError("Failed to load messages")
     } finally {
       setIsLoadingMessages(false)
     }
   }, [isWhatsAppConnected])
 
-  // Initial fetch - check WhatsApp connection first
-  useEffect(() => {
-    checkWhatsAppConnection()
-  }, [checkWhatsAppConnection])
+  // ─── Effects ──────────────────────────────
+  useEffect(() => { checkWhatsAppConnection() }, [checkWhatsAppConnection])
+  useEffect(() => { if (isWhatsAppConnected !== null) fetchConversations() }, [isWhatsAppConnected, fetchConversations])
+  useEffect(() => { if (conversations.length > 0 && !selectedConversation) setSelectedConversation(conversations[0]) }, [conversations, selectedConversation])
+  useEffect(() => { if (selectedConversation) fetchMessages(selectedConversation.id) }, [selectedConversation, fetchMessages])
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages])
 
-  // Fetch conversations when connection status is known
-  useEffect(() => {
-    if (isWhatsAppConnected !== null) {
-      fetchConversations()
-    }
-  }, [isWhatsAppConnected, fetchConversations])
-
-  // Set initial selected conversation
-  useEffect(() => {
-    if (conversations.length > 0 && !selectedConversation) {
-      setSelectedConversation(conversations[0])
-    }
-  }, [conversations, selectedConversation])
-
-  // Fetch messages when conversation changes
-  useEffect(() => {
-    if (selectedConversation) {
-      fetchMessages(selectedConversation.id)
-    }
-  }, [selectedConversation, fetchMessages])
-
-  // Initialize WebSocket for real-time updates
+  // ─── WebSocket ──────────────────────────────
   useEffect(() => {
     const orgId = (session as any)?.orgId || (session as any)?.organizationId
     if (!orgId || !isWhatsAppConnected) return
 
-    // Initialize WebSocket connection
-    const socketUrl = process.env.NODE_ENV === 'production' 
-      ? window.location.origin 
-      : 'http://localhost:3000'
-    
+    const socketUrl = process.env.NODE_ENV === 'production' ? window.location.origin : 'http://localhost:3000'
+
     try {
-      // @ts-ignore - Socket.IO might not be in types
-      socketRef.current = io(socketUrl, {
-        transports: ['websocket', 'polling']
-      })
-
+      socketRef.current = io(socketUrl, { transports: ['websocket', 'polling'] })
       const socket = socketRef.current
-
-      // Join inbox room
       socket.emit('join-inbox', orgId)
 
-      // Listen for new messages
       socket.on('new-message', (data: any) => {
-        console.log('New message received:', data)
-        
-        // If message is for current conversation, add it
         if (selectedConversation && data.contactId === selectedConversation.id) {
-          const newMessage: Message = {
+          const rawContent = typeof data.content === 'string' ? data.content : JSON.stringify(data.content)
+          const parsed = parseContent(rawContent)
+          setMessages(prev => [...prev, {
             id: data.messageId,
-            type: data.direction === "incoming" ? "received" : 
-                   data.sender?.id === session?.user?.id ? "sent" : "received",
-            text: data.content?.text || data.content?.caption || "New message",
+            type: data.direction === "incoming" ? "received" : data.sender?.id === session?.user?.id ? "sent" : "received",
+            parsed,
+            rawText: rawContent,
             time: formatTime(new Date(data.createdAt)),
             status: data.status,
-            messageType: data.content?.type || "text"
-          }
-          setMessages(prev => [...prev, newMessage])
+          }])
         }
-
-        // Refresh conversations list
         fetchConversations()
       })
 
-      // Listen for message status updates
       socket.on('message-status', (data: any) => {
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.id === data.messageId 
-              ? { ...msg, status: data.status }
-              : msg
-          )
-        )
+        setMessages(prev => prev.map(msg => msg.id === data.messageId ? { ...msg, status: data.status } : msg))
       })
-
-      socket.on('connect', () => {
-        console.log('WebSocket connected')
-      })
-
-      socket.on('disconnect', () => {
-        console.log('WebSocket disconnected')
-      })
-
-    } catch (error) {
-      console.error('WebSocket initialization error:', error)
+    } catch {
+      // WebSocket init failed
     }
 
-    // Cleanup
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect()
-        socketRef.current = null
-      }
-    }
+    return () => { if (socketRef.current) { socketRef.current.disconnect(); socketRef.current = null } }
   }, [session, isWhatsAppConnected, selectedConversation?.id, fetchConversations])
 
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
-
-  // Filter conversations
-  const filteredConversations = conversations.filter((conv) =>
-    conv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    conv.phone.includes(searchQuery)
-  )
-
-  // Send message
+  // ─── Send message ──────────────────────────────
   const handleSendMessage = async () => {
     if (!messageInput.trim() || !selectedConversation || isSending) return
 
     try {
       setIsSending(true)
-      
       const response = await fetch("/api/inbox", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contactId: selectedConversation.id,
-          content: messageInput.trim(),
-          type: "text"
-        })
+        body: JSON.stringify({ contactId: selectedConversation.id, content: messageInput.trim(), type: "text" })
       })
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || "Failed to send message")
-      }
+      if (!response.ok) throw new Error("Failed to send message")
 
       const data = await response.json()
-      
-      if (data.success && data.message) {
-        // Add the new message to the list
-        setMessages(prev => [...prev, data.message])
-        
-        // Update conversation's last message
-        setConversations(prev =>
-          prev.map(conv =>
-            conv.id === selectedConversation.id
-              ? {
-                  ...conv,
-                  lastMessage: messageInput.trim(),
-                  lastMessageTime: "Just now"
-                }
-              : conv
-          )
-        )
-        
-        // Clear input
-        setMessageInput("")
-        
-        // Scroll to bottom
-        setTimeout(() => {
-          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-        }, 100)
-      } else {
-        // Handle case where API returns success but no message
-        const newMessage: Message = {
-          id: Date.now().toString(),
-          type: "sent",
-          text: messageInput.trim(),
-          time: formatTime(new Date()),
-          status: "sent"
-        }
-        setMessages(prev => [...prev, newMessage])
-        
-        // Update conversation's last message
-        setConversations(prev =>
-          prev.map(conv =>
-            conv.id === selectedConversation.id
-              ? {
-                  ...conv,
-                  lastMessage: messageInput.trim(),
-                  lastMessageTime: "Just now"
-                }
-              : conv
-          )
-        )
-        
-        setMessageInput("")
-      }
-    } catch (err) {
-      console.error("Error sending message:", err)
-      
-      // Show error toast if available
-      if (typeof window !== 'undefined' && (window as any).toast) {
-        ;(window as any).toast.error(err instanceof Error ? err.message : "Failed to send message")
-      }
-      
-      // Still add message locally for better UX
-      const newMessage: Message = {
+      const rawContent = data.message?.content ? (typeof data.message.content === 'string' ? data.message.content : JSON.stringify(data.message.content)) : messageInput.trim()
+      const parsed = parseContent(rawContent)
+
+      setMessages(prev => [...prev, {
+        id: data.messageId || Date.now().toString(),
+        type: "sent",
+        parsed,
+        rawText: rawContent,
+        time: formatTime(new Date()),
+        status: "sent",
+      }])
+
+      setConversations(prev => prev.map(conv => conv.id === selectedConversation.id ? { ...conv, lastMessage: messageInput.trim(), lastMessageTime: "Just now" } : conv))
+      setMessageInput("")
+      setTimeout(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }) }, 100)
+    } catch {
+      setMessages(prev => [...prev, {
         id: Date.now().toString(),
         type: "sent",
-        text: messageInput.trim(),
+        parsed: null,
+        rawText: messageInput.trim(),
         time: formatTime(new Date()),
-        status: "failed"
-      }
-      setMessages(prev => [...prev, newMessage])
+        status: "failed",
+      }])
       setMessageInput("")
     } finally {
       setIsSending(false)
     }
   }
 
-  // Handle key press
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      handleSendMessage()
-    }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendMessage() }
   }
 
-  // Refresh conversations
   const handleRefresh = () => {
     fetchConversations()
-    if (selectedConversation) {
-      fetchMessages(selectedConversation.id)
-    }
+    if (selectedConversation) fetchMessages(selectedConversation.id)
   }
 
-  // Show loading while checking connection
+  const filteredConversations = conversations.filter((conv) =>
+    conv.name.toLowerCase().includes(searchQuery.toLowerCase()) || conv.phone.includes(searchQuery)
+  )
+
+  const getAvatarColor = (name: string) => {
+    const colors = ['bg-green-100 text-green-700', 'bg-blue-100 text-blue-700', 'bg-purple-100 text-purple-700', 'bg-amber-100 text-amber-700', 'bg-rose-100 text-rose-700', 'bg-cyan-100 text-cyan-700']
+    let hash = 0
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
+    return colors[Math.abs(hash) % colors.length]
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // LOADING STATE
+  // ═══════════════════════════════════════════════════════════════
+
   if (isCheckingConnection) {
     return (
-      <div className="bg-transparent px-2.5 border h-full lg:px-0">
-        <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">Inbox</h1>
-            <p className="text-gray-500">Manage your WhatsApp conversations and messages</p>
+      <div className="bg-transparent px-2.5 lg:px-0">
+        <div className="container mx-auto relative border-t border-l border-r border-slate-300 px-5 py-10">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+            <div>
+              <h1 className="text-foreground text-3xl font-bold mb-2">Inbox</h1>
+              <p className="text-muted-foreground text-lg">Manage your WhatsApp conversations</p>
+            </div>
           </div>
-          <Button className="gap-2" disabled>
-            <RefreshCw className="w-4 h-4" />
-            Refresh
-          </Button>
-        </div>
-
-        <div className="border rounded-lg bg-white">
-          <div className="p-8 text-center">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-green-500" />
-            <p className="text-gray-500">Loading inbox...</p>
+          <div className="p-5 rounded-xl border-2 border-green-950 bg-white">
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
           </div>
-        </div>
         </div>
       </div>
     )
   }
 
-  // Show error message when WhatsApp is not connected
+  // ═══════════════════════════════════════════════════════════════
+  // NOT CONNECTED STATE
+  // ═══════════════════════════════════════════════════════════════
+
   if (!isWhatsAppConnected) {
     return (
-      <div className="bg-transparent px-2.5 border h-full lg:px-0">
-        <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">Inbox</h1>
-            <p className="text-gray-500">Manage your WhatsApp conversations and messages</p>
-          </div>
-          <Button className="gap-2" onClick={() => window.location.href = '/dashboard/settings/whatsapp'}>
-            <Plug className="w-4 h-4" />
-            Connect WhatsApp
-          </Button>
-        </div>
-
-        <div className="border rounded-lg bg-white p-12 text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Plug className="h-8 w-8 text-red-600" />
-          </div>
-          <h3 className="text-lg font-medium mb-2">WhatsApp Not Connected</h3>
-          <p className="text-gray-500 mb-6">
-            To receive and view conversations in your inbox, you need to connect your WhatsApp account and configure webhooks.
-          </p>
-          
-          <div className="bg-gray-50 rounded-lg p-4 text-left mb-6 max-w-2xl mx-auto">
-            <h4 className="font-medium mb-3 flex items-center gap-2">
-              <ExternalLink className="h-4 w-4" />
-              How to Connect WhatsApp:
-            </h4>
-            <ol className="list-decimal list-inside text-sm space-y-2 text-gray-600">
-              <li>Go to <strong>Settings → WhatsApp</strong></li>
-              <li>Click "Connect WhatsApp Account" button</li>
-              <li>Authenticate with your Meta Business Account</li>
-              <li>After connecting, configure webhooks to receive messages</li>
-            </ol>
-          </div>
-
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-left mb-6 max-w-2xl mx-auto">
-            <h4 className="font-medium mb-2 flex items-center gap-2 text-yellow-800">
-              <AlertCircle className="h-4 w-4" />
-              Webhook Configuration Required:
-            </h4>
-            <p className="text-sm text-yellow-700 mb-3">
-              To receive incoming messages, you need to configure a webhook URL in your Meta Developer Portal:
-            </p>
-            <div className="bg-white rounded p-3 font-mono text-xs break-all border border-yellow-200">
-              {typeof window !== 'undefined' ? window.location.origin : ''}/api/whatsapp/webhooks
+      <div className="bg-transparent px-2.5 lg:px-0">
+        <div className="container mx-auto relative border-t border-l border-r border-slate-300 px-5 py-10 pb-20">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+            <div>
+              <h1 className="text-foreground text-3xl font-bold mb-2">Inbox</h1>
+              <p className="text-muted-foreground text-lg">Manage your WhatsApp conversations</p>
             </div>
-            <p className="text-xs text-yellow-600 mt-2">
-              Add this URL in Meta Developer Portal → Webhooks → Subscribe to messages field
-            </p>
+            <Button className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm" onClick={() => window.location.href = '/dashboard/settings/whatsapp'}>
+              <Plug className="w-4 h-4 mr-2" />
+              Connect WhatsApp
+            </Button>
           </div>
-          
-          <Button 
-            onClick={() => window.location.href = '/dashboard/settings/whatsapp'}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            <Plug className="h-4 w-4 mr-2" />
-            Go to WhatsApp Settings
-          </Button>
-        </div>
+
+          <div className="p-5 rounded-xl border-2 border-red-400 bg-red-50 text-center py-20">
+            <div className="h-14 w-14 rounded-xl bg-red-100 flex items-center justify-center mx-auto mb-4">
+              <Plug className="h-7 w-7 text-red-500" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground mb-2">WhatsApp Not Connected</h3>
+            <p className="text-muted-foreground text-sm mb-8 max-w-lg mx-auto">
+              To receive and view conversations, connect your WhatsApp account and configure webhooks.
+            </p>
+
+            <div className="p-5 rounded-xl border-2 border-slate-200 bg-white max-w-2xl mx-auto text-left mb-6">
+              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
+                <ExternalLink className="w-4 h-4" />
+                How to Connect
+              </h4>
+              <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-2">
+                <li>Go to <span className="font-medium text-foreground">Settings → WhatsApp</span></li>
+                <li>Click <span className="font-medium text-foreground">Connect WhatsApp Account</span></li>
+                <li>Authenticate with your Meta Business Account</li>
+                <li>Configure webhooks to receive messages</li>
+              </ol>
+            </div>
+
+            <div className="p-4 rounded-xl bg-amber-50 border-2 border-amber-200 max-w-2xl mx-auto text-left mb-8">
+              <h4 className="text-sm font-semibold text-amber-800 flex items-center gap-2 mb-2">
+                <AlertCircle className="w-4 h-4" />
+                Webhook Required
+              </h4>
+              <p className="text-xs text-amber-700 mb-2">Configure this webhook URL in Meta Developer Portal:</p>
+              <code className="text-xs font-mono bg-white px-3 py-1.5 rounded-lg border border-amber-200 block break-all">
+                {typeof window !== 'undefined' ? window.location.origin : ''}/api/whatsapp/webhooks
+              </code>
+            </div>
+
+            <Button className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm" onClick={() => window.location.href = '/dashboard/settings/whatsapp'}>
+              <Plug className="w-4 h-4 mr-2" />
+              Go to WhatsApp Settings
+            </Button>
+          </div>
         </div>
       </div>
     )
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // MAIN RENDER
+  // ═════════════════════════════════════════════════════════════
+
   return (
-    <div className="bg-transparent px-2.5 border h-full lg:px-0">
-      <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 ">
-      {/* Header Actions - Only show when WhatsApp is not connected */}
-      {!isWhatsAppConnected && (
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">Inbox</h1>
-            <p className="text-gray-500">
-              Manage your WhatsApp conversations and messages
-            </p>
-          </div>
-          <Button className="gap-2" onClick={handleRefresh}>
-            <RefreshCw className="w-4 h-4" />
-            Refresh
-          </Button>
-        </div>
-      )}
+    <div className="bg-transparent px-2.5 lg:px-0">
+      <div className="container mx-auto relative border-t border-l border-r border-slate-300 h-[87vh]">
 
-      {/* Chat Interface */}
-      <div className="border rounded-lg bg-white overflow-hidden h-[calc(100vh-120px)]" >
-        <div className="p-0 gap-2 bg-gray-200 flex h-full">
-          {/* Conversations List */}
-          <div className="w-80 border border-border flex flex-col bg-white">
-            <div className="p-4 border-b border-border shrink-0 flex items-center justify-between">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search conversations..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="ml-2 shrink-0"
-                onClick={handleRefresh}
-                title="Refresh"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-            </div>
-            <ScrollArea className="flex-1 py-0 min-h-0">
-              <div className="p-2 relative space-y-1">
-                {error && (
-                  <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded-md text-red-600 text-xs flex items-center gap-2">
-                    <AlertCircle className="h-3 w-3 shrink-0" />
-                    <span>{error}</span>
-                    <button 
-                      onClick={() => setError(null)}
-                      className="ml-auto text-red-400 hover:text-red-600"
-                    >
-                      ×
-                    </button>
-                  </div>
-                )}
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : filteredConversations.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No conversations yet</p>
-                  </div>
-                ) : (
-                  filteredConversations.map((conversation) => (
-                    <button
-                      key={conversation.id}
-                      onClick={() => setSelectedConversation(conversation)}
-                      className={`w-full p-3 rounded-lg text-left transition-colors ${
-                        selectedConversation?.id === conversation.id
-                          ? "bg-primary/10 border-2 border-primary"
-                          : "hover:bg-muted/50 border-2 border-transparent"
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="relative">
-                          <Avatar className="h-10 w-10 shrink-0">
-                            <AvatarFallback
-                              className={
-                                conversation.unread > 0
-                                  ? "bg-primary text-primary-foreground"
-                                  : ""
-                              }
-                            >
-                              {conversation.avatar}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span
-                            className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background ${
-                              conversation.status === "active"
-                                ? "bg-green-500"
-                                : conversation.status === "waiting"
-                                  ? "bg-yellow-500"
-                                  : "bg-gray-400"
-                            }`}
-                          />
-                        </div>
-                        <div className="flex-1 w-full min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <span
-                              className={`font-medium text-sm truncate ${conversation.unread > 0 ? "font-semibold" : ""}`}
-                            >
-                              {conversation.name}
-                            </span>
-                            <span className="text-xs text-muted-foreground shrink-0 ml-2">
-                              {conversation.lastMessageTime}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm text-muted-foreground w-full truncate flex">
-                              {conversation.lastMessage}
-                            </p>
-                            {conversation.unread > 0 && (
-                              <Badge className="h-5 min-w-5 rounded-full px-1.5 bg-primary text-primary-foreground">
-                                {conversation.unread}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </ScrollArea>
-          </div>
+        {/* ═══ Chat Interface ═══ */}
+        <div className="w-full h-full flex">
 
-          {/* Chat Window */}
-          <div
-            className="flex-1 shadow-sm flex flex-col min-w-0 overflow-y-auto"
-            style={{
-              backgroundColor: "#ECE5DD",
-              backgroundImage: "url('/whatsapp-doodle-bg.png')",
-            }}
-          >
-            {selectedConversation ? (
-              <>
-                {/* Chat Header */}
-                <div className="px-4 py-3 border-b rounded-b-2xl bg-green-950 border-border">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-primary text-primary-foreground">
-                          {selectedConversation.avatar}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h3 className="text-white font-semibold">
-                          {selectedConversation.name}
-                        </h3>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground ">
-                          <Phone className="h-3 w-3" />
-                          {selectedConversation.phone}
-                          <span className="flex items-center gap-1 ml-2">
-                            <Circle className="h-2 w-2 fill-green-500 text-green-500" />
-                            <span className="text-xs">Online</span>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        title="View Profile"
-                      >
-                        <User className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="icon" title="Archive">
-                        <Archive className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        title="More Options"
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </div>
+            {/* ─── Conversations List ─── */}
+            <div className="w-80 border-r-2 border-slate-100 flex flex-col bg-white shrink-0">
+              <div className="p-4 border-b border-slate-100 shrink-0">
+                <div className="relative flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      type="search"
+                      placeholder="Search conversations..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 text-sm rounded-lg border-slate-300 h-10"
+                    />
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground rounded-lg shrink-0"
+                    onClick={handleRefresh}
+                    title="Refresh"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </Button>
                 </div>
+              </div>
 
-                {/* Messages */}
-                <ScrollArea className="flex-1 min-h-0 p-4">
-                  <div className="space-y-3 pb-2">
-                    {isLoadingMessages ? (
-                      <div className="flex items-center justify-center py-8">
-                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <ScrollArea className="flex-1 min-h-0">
+                <div className="p-2 space-y-1">
+                  {error && (
+                    <div className="mb-2 p-3 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-red-700">{error}</p>
                       </div>
-                    ) : messages.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No messages yet</p>
-                        <p className="text-xs">
-                          Send a message to start the conversation
-                        </p>
+                      <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 shrink-0">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-16">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : filteredConversations.length === 0 ? (
+                    <div className="flex flex-col items-center gap-3 py-16">
+                      <div className="h-14 w-14 rounded-xl border-2 border-slate-200 bg-slate-50 flex items-center justify-center">
+                        <MessageSquare className="h-7 w-7 text-slate-400" />
                       </div>
-                    ) : (
-                      messages.map((message) => (
-                        <div
-                          key={message.id}
-                          className={`flex ${message.type === "sent" ? "justify-end" : "justify-start"}`}
-                        >
-                          <div
-                            className={`max-w-[70%] rounded-lg p-3 shadow-md ${
-                              message.type === "sent"
-                                ? "bg-primary text-primary-foreground rounded-tr-none"
-                                : "bg-white text-foreground rounded-tl-none"
-                            }`}
-                          >
-                            <p className="text-sm whitespace-pre-wrap">
-                              {message.text}
-                            </p>
-                            <div
-                              className={`flex items-center gap-1 mt-1 text-xs ${
-                                message.type === "sent"
-                                  ? "text-primary-foreground/70"
-                                  : "text-muted-foreground"
-                              }`}
-                            >
-                              {message.time}
-                              {message.type === "sent" &&
-                                (message.status === "read" ? (
-                                  <CheckCheck className="h-3 w-3 text-blue-400" />
-                                ) : message.status === "delivered" ? (
-                                  <CheckCheck className="h-3 w-3" />  
-                                ) : (
-                                  <CheckCheck className="h-3 w-3 opacity-50" />
-                                ))}
+                      <p className="text-sm font-medium text-foreground">No conversations yet</p>
+                      <p className="text-xs text-muted-foreground">Incoming messages will appear here</p>
+                    </div>
+                  ) : (
+                    filteredConversations.map((conversation) => (
+                      <button
+                        key={conversation.id}
+                        onClick={() => setSelectedConversation(conversation)}
+                        className={cn(
+                          "w-full p-3 rounded-xl text-left transition-all",
+                          selectedConversation?.id === conversation.id
+                            ? "bg-green-50 border-2 border-green-950"
+                            : "hover:bg-slate-50 border-2 border-transparent"
+                        )}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="relative shrink-0">
+                            <div className={cn(
+                              "h-11 w-11 rounded-xl flex items-center justify-center font-semibold text-xs",
+                              getAvatarColor(conversation.name)
+                            )}>
+                              {conversation.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                            </div>
+                            <span className={cn(
+                              "absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white",
+                              conversation.status === "active" ? "bg-green-500" : "bg-slate-400"
+                            )} />
+                          </div>
+                          <div className="flex-1 min-w-0 overflow-hidden">
+                            <div className="flex items-center justify-between mb-0.5">
+                              <span className={cn(
+                                "text-sm truncate block max-w-full",
+                                conversation.unread > 0 ? "font-bold text-foreground" : "font-medium text-foreground"
+                              )}>
+                                {conversation.name}
+                              </span>
+                              <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                                {conversation.lastMessageTime}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs text-muted-foreground flex-1 min-w-0 overflow-hidden break-all" style={{
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 1,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden'
+                                }}>
+                                {conversation.lastMessage}
+                              </p>
+                              {conversation.unread > 0 && (
+                                <Badge className="h-5 min-w-5 rounded-full px-1.5 bg-green-600 text-white border-0 text-xs flex items-center justify-center shrink-0">
+                                  {conversation.unread}
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         </div>
-                      ))
-                    )}
-                    <div ref={messagesEndRef} />
-                  </div>
-                </ScrollArea>
-
-                {/* Input Area */}
-                <div className="p-4 border-t rounded-t-2xl bg-neutral-900 border-border">
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" title="Attach File">
-                      <FileText className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" size="icon" title="Attach Image">
-                      <ImageIcon className="h-4 w-4" />
-                    </Button>
-                    <Input
-                      placeholder="Type a message..."
-                      value={messageInput}
-                      onChange={(e) => setMessageInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      className="flex-1 bg-white"
-                      disabled={isSending}
-                    />
-                    <Button
-                      className="bg-primary hover:bg-primary/90"
-                      onClick={handleSendMessage}
-                      disabled={!messageInput.trim() || isSending}
-                    >
-                      {isSending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Send className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
+                      </button>
+                    ))
+                  )}
                 </div>
-              </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                <div className="text-center">
-                  <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium">
-                    No conversation selected
-                  </p>
-                  <p className="text-sm">
-                    Select a conversation from the list to start chatting
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+              </ScrollArea>
+            </div>
 
-          {/* Contact Info Sidebar */}
-          <div className="w-72 bg-white rounded-r-md border border-l border-border p-4 overflow-hidden flex flex-col">
-            <h3 className="font-semibold mb-4 shrink-0">Contact Details</h3>
-            <ScrollArea className="flex-1 min-h-0">
-              <div className="pr-4">
-              {selectedConversation && (
-              <div className="space-y-6">
-                {/* Avatar and Name */}
-                <div className="text-center">
-                  <Avatar className="h-20 w-20 mx-auto mb-3">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-                      {selectedConversation.avatar}
-                    </AvatarFallback>
-                  </Avatar>
-                  <h4 className="font-semibold text-lg">
-                    {selectedConversation.name}
-                  </h4>
-                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mt-1">
-                    <Circle className="h-2 w-2 fill-green-500 text-green-500" />
-                    Active
-                  </div>
-                </div>
-
-                {/* Contact Info */}
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Phone</p>
-                    <p className="font-mono text-sm">
-                      {selectedConversation.phone}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Status</p>
-                    <Badge
-                      variant={
-                        selectedConversation.status === "active"
-                          ? "default"
-                          : "secondary"
-                      }
-                    >
-                      {selectedConversation.status}
-                    </Badge>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-2">Tags</p>
-                    <div className="flex flex-wrap gap-1">
-                      {selectedConversation.tags && Array.isArray(selectedConversation.tags) && selectedConversation.tags.map((tag) => (
-                        <Badge key={tag} variant="outline" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                      {(!selectedConversation.tags || !Array.isArray(selectedConversation.tags) || selectedConversation.tags.length === 0) && (
-                        <span className="text-xs text-muted-foreground">
-                          No tags
-                        </span>
-                      )}
+            {/* ─── Chat Window ─── */}
+            <div
+              className="flex-1 flex flex-col min-w-0 overflow-hidden"
+              style={{
+                backgroundColor: "#ECE5DD",
+                backgroundImage: "url('/whatsapp-doodle-bg.png')",
+              }}
+            >
+              {selectedConversation ? (
+                <>
+                  {/* Chat Header */}
+                  <div className="px-4 py-3 bg-green-950 border-b border-gray-50 shrink-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "h-10 w-10 rounded-xl flex items-center justify-center font-semibold text-xs",
+                          getAvatarColor(selectedConversation.name)
+                        )}>
+                          {selectedConversation.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold text-sm">{selectedConversation.name}</h3>
+                          <div className="flex items-center gap-2 text-xs text-green-200/70">
+                            <Phone className="h-3 w-3" />
+                            {selectedConversation.phone}
+                            <span className="flex items-center gap-1 ml-1">
+                              <Circle className="h-1.5 w-1.5 fill-green-400 text-green-400" />
+                              Online
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-green-300 hover:text-white hover:bg-green-800 rounded-lg">
+                          <User className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-green-300 hover:text-white hover:bg-green-800 rounded-lg">
+                          <Archive className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-green-300 hover:text-white hover:bg-green-800 rounded-lg">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Quick Actions */}
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">Quick Actions</p>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    size="sm"
-                  >
-                    <Users className="h-4 w-4 mr-2" />
-                    View Full Profile
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    size="sm"
-                  >
-                    <Archive className="h-4 w-4 mr-2" />
-                    Archive Conversation
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    size="sm"
-                  >
-                    <Star className="h-4 w-4 mr-2" />
-                    Mark as VIP
-                  </Button>
+                  {/* Messages */}
+                  <ScrollArea className="flex-1 min-h-0 p-4">
+                    <div className="space-y-2 pb-2">
+                      {isLoadingMessages ? (
+                        <div className="flex items-center justify-center py-16">
+                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : messages.length === 0 ? (
+                        <div className="flex flex-col items-center gap-3 py-16">
+                          <div className="h-14 w-14 rounded-xl border-2 border-slate-200 bg-white/80 flex items-center justify-center">
+                            <MessageSquare className="h-7 w-7 text-slate-400" />
+                          </div>
+                          <p className="text-sm font-medium text-foreground/80">No messages yet</p>
+                          <p className="text-xs text-foreground/50">Send a message to start the conversation</p>
+                        </div>
+                      ) : (
+                        messages.map((message) => (
+                          <div key={message.id} className={cn("flex", message.type === "sent" ? "justify-end" : "justify-start")}>
+                            <MessageBubble message={message} />
+                          </div>
+                        ))
+                      )}
+                      <div ref={messagesEndRef} />
+                    </div>
+                  </ScrollArea>
+
+                  {/* Input Area */}
+                  <div className="px-3 py-3 bg-[#f0f2f5] shrink-0">
+                    <div className="flex items-center gap-2 bg-white rounded-xl px-2 py-1.5 border border-slate-200">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground rounded-lg shrink-0">
+                        <FileText className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground rounded-lg shrink-0">
+                        <ImageIcon className="w-4 h-4" />
+                      </Button>
+                      <Input
+                        placeholder="Type a message..."
+                        value={messageInput}
+                        onChange={(e) => setMessageInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        className="flex-1 border-0 focus-visible:ring-0 text-sm h-8 bg-transparent"
+                        disabled={isSending}
+                      />
+                      <Button
+                        className="h-8 w-8 p-0 rounded-lg bg-green-600 hover:bg-green-700 text-white shrink-0"
+                        onClick={handleSendMessage}
+                        disabled={!messageInput.trim() || isSending}
+                      >
+                        {isSending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: "#ECE5DD" }}>
+                  <div className="text-center">
+                    <div className="h-16 w-16 rounded-xl border-2 border-slate-200 bg-white/80 flex items-center justify-center mx-auto mb-4">
+                      <MessageSquare className="h-8 w-8 text-slate-400" />
+                    </div>
+                    <p className="text-lg font-semibold text-foreground/80">No conversation selected</p>
+                    <p className="text-sm text-foreground/50">Select a conversation from the list to start chatting</p>
+                  </div>
                 </div>
+              )}
+            </div>
+
+            {/* ─── Contact Details Sidebar ─── */}
+            <div className="w-72 border-l-2 border-slate-100 bg-white flex flex-col shrink-0 overflow-hidden">
+              <div className="p-5 border-b border-slate-100 shrink-0">
+                <h3 className="text-sm font-semibold text-foreground">Contact Details</h3>
               </div>
-            )}
-              </div>
-            </ScrollArea>
+
+              {selectedConversation ? (
+                <ScrollArea className="flex-1 min-h-0">
+                  <div className="p-5 space-y-6">
+                    <div className="text-center">
+                      <div className={cn(
+                        "h-20 w-20 rounded-2xl flex items-center justify-center mx-auto mb-3 text-2xl font-bold",
+                        getAvatarColor(selectedConversation.name)
+                      )}>
+                        {selectedConversation.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                      </div>
+                      <h4 className="font-semibold text-foreground">{selectedConversation.name}</h4>
+                      <div className="flex items-center justify-center gap-1.5 mt-1">
+                        <span className="w-2 h-2 rounded-full bg-green-500" />
+                        <span className="text-xs text-muted-foreground">Active</span>
+                      </div>
+                    </div>
+
+                    <Separator className="bg-slate-100" />
+
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Phone Number</p>
+                        <p className="font-mono text-sm text-foreground">{selectedConversation.phone}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1.5">Tags</p>
+                        {selectedConversation.tags && Array.isArray(selectedConversation.tags) && selectedConversation.tags.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {selectedConversation.tags.map((tag) => (
+                              <Badge key={tag} className="bg-slate-100 text-slate-700 border-slate-200 text-xs font-mono">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">No tags</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <Separator className="bg-slate-100" />
+
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground mb-2">Quick Actions</p>
+                      <Button variant="outline" className="w-full justify-start text-sm rounded-lg border-slate-200 h-9">
+                        <Users className="w-4 h-4 mr-2" />
+                        View Full Profile
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start text-sm rounded-lg border-slate-200 h-9">
+                        <Archive className="w-4 h-4 mr-2" />
+                        Archive Conversation
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start text-sm rounded-lg border-slate-200 h-9">
+                        <Star className="w-4 h-4 mr-2" />
+                        Mark as VIP
+                      </Button>
+                    </div>
+                  </div>
+                </ScrollArea>
+              ) : (
+                <div className="flex-1 flex items-center justify-center p-5">
+                  <p className="text-xs text-muted-foreground text-center">Select a conversation</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
-      </div>
-    </div>
   )
 }

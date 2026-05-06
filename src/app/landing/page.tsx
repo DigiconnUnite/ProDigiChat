@@ -30,40 +30,40 @@ import {
 /* For a cleaner setup, add these to tailwind.config.ts theme.extend.colors */
 const features = [
   {
-    icon: Send,
-    title: "Bulk Messaging",
-    description:
-      "Send personalized WhatsApp messages to thousands of contacts instantly.",
-  },
-  {
     icon: Users,
     title: "Contact Management",
     description:
-      "Organize and segment your contacts with advanced filtering options.",
+      "Import, organize, and segment contacts with custom tags and attributes.",
+  },
+  {
+    icon: Send,
+    title: "Campaign Management",
+    description:
+      "Create and manage broadcast campaigns with customizable templates.",
   },
   {
     icon: BarChart3,
-    title: "Analytics Dashboard",
+    title: "Advanced Analytics",
     description:
-      "Track delivery rates, open rates, and campaign performance in real-time.",
-  },
-  {
-    icon: Zap,
-    title: "Auto-Reply System",
-    description:
-      "Set up intelligent automated responses for customer inquiries.",
+      "Track delivery rates, read rates, and campaign performance with real-time insights.",
   },
   {
     icon: MessageSquare,
-    title: "Multi-Agent Support",
+    title: "Real-time Inbox",
     description:
-      "Collaborate with your team through shared inbox functionality.",
+      "Handle 1-on-1 WhatsApp conversations with a unified chat interface.",
+  },
+  {
+    icon: Target,
+    title: "Dynamic Segments",
+    description:
+      "Create targeted segments for precision marketing campaigns.",
   },
   {
     icon: Shield,
-    title: "WhatsApp Business API",
+    title: "Multi-Organization Support",
     description:
-      "Official API integration for reliable and compliant messaging.",
+      "Manage multiple organizations with role-based access control.",
   },
 ]
 
@@ -121,12 +121,10 @@ export default function LandingPage() {
             <div className="grid gap-12 py-12 lg:grid-cols-[1fr_auto] lg:py-20 lg:pl-12">
               <div className="flex flex-col items-start justify-center  gap-5 lg:gap-8">
                 <h1 className="text-foreground text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
-                  All Your WhatsApp Conversations in One Unified Dashboard
+                  The Complete WhatsApp Marketing Platform
                 </h1>
                 <p className="text-muted-foreground text-base md:text-lg lg:text-xl leading-relaxed">
-                  Manage bulk messaging, automate responses, and track campaign
-                  performance. Reach customers instantly through the world&apos;s most
-                  popular messaging platform.
+                  Manage contacts, create targeted campaigns, and automate your WhatsApp marketing at scale. Connect multiple Business accounts and track performance with powerful analytics.
                 </p>
                 <div className="flex flex-wrap gap-4">
                   <Button asChild size="lg" className="rounded-full">
@@ -184,11 +182,11 @@ export default function LandingPage() {
             {/* Section header */}
             <div className="text-center mb-16 pt-20 pb-4">
               <h2 className="text-foreground text-4xl font-bold mb-4">
-                Everything You Need to Succeed
+                Everything You Need for WhatsApp Marketing Success
               </h2>
               <p className="text-muted-foreground text-xl max-w-3xl mx-auto">
-                Powerful features designed to help you connect with customers and
-                grow your business through WhatsApp.
+                Powerful features built to help you scale your WhatsApp marketing, 
+                manage customer relationships, and drive business growth.
               </p>
             </div>
 
@@ -255,25 +253,25 @@ export default function LandingPage() {
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check text-green-600 w-4 h-4">
                           <path d="M20 6 9 17l-5-5"></path>
                         </svg>
-                        <span className="text-gray-900 text-sm">Unlimited members</span>
+                        <span className="text-gray-900 text-sm">Up to 1,000 contacts</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check text-green-600 w-4 h-4">
                           <path d="M20 6 9 17l-5-5"></path>
                         </svg>
-                        <span className="text-gray-900 text-sm">2 teams</span>
+                        <span className="text-gray-900 text-sm">Basic analytics</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check text-green-600 w-4 h-4">
                           <path d="M20 6 9 17l-5-5"></path>
                         </svg>
-                        <span className="text-gray-900 text-sm">500 issues</span>
+                        <span className="text-gray-900 text-sm">1 WhatsApp Business account</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check text-green-600 w-4 h-4">
                           <path d="M20 6 9 17l-5-5"></path>
                         </svg>
-                        <span className="text-gray-900 text-sm">Slack and Github integrations</span>
+                        <span className="text-gray-900 text-sm">Email support</span>
                       </div>
                     </div>
                   </div>
@@ -295,37 +293,37 @@ export default function LandingPage() {
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check text-green-600 w-4 h-4">
                           <path d="M20 6 9 17l-5-5"></path>
                         </svg>
-                        <span className="text-gray-900 text-sm">All free plan features and...</span>
+                        <span className="text-gray-900 text-sm">All Free plan features</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check text-green-600 w-4 h-4">
                           <path d="M20 6 9 17l-5-5"></path>
                         </svg>
-                        <span className="text-gray-900 text-sm">ProDigiChat AI</span>
+                        <span className="text-gray-900 text-sm">Up to 10,000 contacts</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check text-green-600 w-4 h-4">
                           <path d="M20 6 9 17l-5-5"></path>
                         </svg>
-                        <span className="text-gray-900 text-sm">Unlimited teams</span>
+                        <span className="text-gray-900 text-sm">Advanced analytics & reporting</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check text-green-600 w-4 h-4">
                           <path d="M20 6 9 17l-5-5"></path>
                         </svg>
-                        <span className="text-gray-900 text-sm">Unlimited issues and file uploads</span>
+                        <span className="text-gray-900 text-sm">3 WhatsApp Business accounts</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check text-green-600 w-4 h-4">
                           <path d="M20 6 9 17l-5-5"></path>
                         </svg>
-                        <span className="text-gray-900 text-sm">ProDigiChat Insights</span>
+                        <span className="text-gray-900 text-sm">Priority support</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check text-green-600 w-4 h-4">
                           <path d="M20 6 9 17l-5-5"></path>
                         </svg>
-                        <span className="text-gray-900 text-sm">Admin roles</span>
+                        <span className="text-gray-900 text-sm">Custom templates</span>
                       </div>
                     </div>
                   </div>
@@ -336,48 +334,48 @@ export default function LandingPage() {
                 <div className="text-gray-900 shadow-sm border-gray-300 h-full rounded-lg border bg-white">
                   <div className="flex flex-col space-y-1.5 p-6">
                     <h3 className="text-gray-900 text-2xl font-semibold">Enterprise</h3>
-                    <p className="text-gray-900 mt-2 text-lg font-medium">$120 per user/annum</p>
+                    <p className="text-gray-900 mt-2 text-lg font-medium">Custom pricing</p>
                   </div>
                   <div className="p-6 pt-0 flex flex-col space-y-6">
                     <button className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:pointer-events-none disabled:opacity-50 border border-gray-300 bg-white shadow-sm hover:bg-gray-50 h-10 rounded-lg px-8">
-                      Get started
+                      Contact sales
                     </button>
                     <div className="space-y-4">
                       <div className="flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check text-green-600 w-4 h-4">
                           <path d="M20 6 9 17l-5-5"></path>
                         </svg>
-                        <span className="text-gray-900 text-sm">All free plan features and...</span>
+                        <span className="text-gray-900 text-sm">All Startup plan features</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check text-green-600 w-4 h-4">
                           <path d="M20 6 9 17l-5-5"></path>
                         </svg>
-                        <span className="text-gray-900 text-sm">ProDigiChat AI</span>
+                        <span className="text-gray-900 text-sm">Unlimited contacts</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check text-green-600 w-4 h-4">
                           <path d="M20 6 9 17l-5-5"></path>
                         </svg>
-                        <span className="text-gray-900 text-sm">Unlimited teams</span>
+                        <span className="text-gray-900 text-sm">Unlimited WhatsApp accounts</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check text-green-600 w-4 h-4">
                           <path d="M20 6 9 17l-5-5"></path>
                         </svg>
-                        <span className="text-gray-900 text-sm">Unlimited issues and file uploads</span>
+                        <span className="text-gray-900 text-sm">Custom integrations</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check text-green-600 w-4 h-4">
                           <path d="M20 6 9 17l-5-5"></path>
                         </svg>
-                        <span className="text-gray-900 text-sm">ProDigiChat Insights</span>
+                        <span className="text-gray-900 text-sm">Dedicated account manager</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check text-green-600 w-4 h-4">
                           <path d="M20 6 9 17l-5-5"></path>
                         </svg>
-                        <span className="text-gray-900 text-sm">Admin roles</span>
+                        <span className="text-gray-900 text-sm">SLA guarantee</span>
                       </div>
                     </div>
                   </div>
@@ -528,11 +526,11 @@ export default function LandingPage() {
           <div className="container mx-auto relative bg-linear-30 from-lime-50 to-green-100 border-t border-l border-r border-slate-300 px-5">
             <div className="text-center py-20">
               <h2 className="text-foreground text-4xl font-bold mb-4">
-                Ready to Transform Your WhatsApp Marketing?
+                Ready to Scale Your WhatsApp Marketing?
               </h2>
               <p className="text-muted-foreground text-xl max-w-3xl mx-auto mb-10">
-                Join thousands of businesses using ProDigiChat to reach customers
-                effectively.
+                Join thousands of businesses using ProDigiChat to manage contacts, 
+                launch campaigns, and drive results through WhatsApp.
               </p>
               <div className="flex flex-wrap gap-4 justify-center">
                 <Button asChild size="lg" className="rounded-full">
@@ -541,8 +539,8 @@ export default function LandingPage() {
                   </Link>
                 </Button>
                 <Button asChild variant="outline" size="lg" className="rounded-full">
-                  <Link href="/demo">
-                    Schedule Demo
+                  <Link href="/pricing">
+                    View Pricing
                   </Link>
                 </Button>
               </div>

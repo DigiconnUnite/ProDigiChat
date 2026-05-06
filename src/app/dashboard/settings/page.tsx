@@ -26,6 +26,8 @@ import {
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Progress } from "@/components/ui/progress"
+import { StandardLayout } from "@/components/ui/standard-layout"
+import { SettingsCard } from "@/components/ui/settings-card"
 
 // Constants
 import {
@@ -34,7 +36,7 @@ import {
 } from "@/lib/constants/settings"
 
 // Types
-import { WhatsAppSettingsTab } from "@/components/settings/WhatsAppSettingsTab"
+import WhatsAppSettingsTab from "@/components/settings/WhatsAppSettingsTab"
 import { TeamSettingsTab } from "@/components/settings/TeamSettingsTab"
 import { ApiKeysTab } from "@/components/settings/ApiKeysTab"
 import { WebhooksTab } from "@/components/settings/WebhooksTab"
@@ -90,13 +92,13 @@ function SettingsPageContent() {
   // Redirect or show error if no organization ID
   if (!organizationId) {
     return (
-      <div className="container mx-auto py-6">
+      <StandardLayout>
         <Card>
           <CardContent className="pt-6">
             <p className="text-destructive">No organization found. Please log in again.</p>
           </CardContent>
         </Card>
-      </div>
+      </StandardLayout>
     )
   }
 
@@ -226,8 +228,7 @@ function SettingsPageContent() {
   }
 
   return (
-    <div className="bg-transparent px-2.5 border h-full lg:px-0">
-      <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 space-y-6">
+    <StandardLayout>
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
@@ -270,64 +271,63 @@ function SettingsPageContent() {
 
         {/* ==================== Notifications Tab ==================== */}
         <TabsContent value={SETTINGS_TABS.NOTIFICATIONS} className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Mail className="h-5 w-5" />
-                    Email Notifications
-                  </CardTitle>
-                  <CardDescription>Configure email alerts for important events</CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => {
-                      setNotificationSettings({
-                        email: {
-                          enabled: true,
-                          frequency: "instant",
-                          events: ["campaign.completed", "campaign.failed", "message.failed"],
-                        },
-                        push: {
-                          enabled: true,
-                          soundEnabled: true,
-                          events: ["new.message", "campaign.status"],
-                        },
-                        slack: {
-                          enabled: false,
-                          webhookUrl: null,
-                          channel: null,
-                          events: ["campaign.completed", "campaign.failed"],
-                        },
-                      })
-                    }}
-                  >
-                    Discard
-                  </Button>
-                  <Button
-                    onClick={saveNotificationSettings}
-                    disabled={isSaving}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="mr-2 h-4 w-4" />
-                        Save
-                      </>
-                    )}
-                  </Button>
-                </div>
+          <SettingsCard
+            title={
+              <div className="flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Email Notifications
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            }
+            description="Configure email alerts for important events"
+            headerClassName="flex-row items-center justify-between space-y-0"
+          >
+            <div className="flex items-center gap-2 ml-auto">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  setNotificationSettings({
+                    email: {
+                      enabled: true,
+                      frequency: "instant",
+                      events: ["campaign.completed", "campaign.failed", "message.failed"],
+                    },
+                    push: {
+                      enabled: true,
+                      soundEnabled: true,
+                      events: ["new.message", "campaign.status"],
+                    },
+                    slack: {
+                      enabled: false,
+                      webhookUrl: null,
+                      channel: null,
+                      events: ["campaign.completed", "campaign.failed"],
+                    },
+                  })
+                }}
+              >
+                Discard
+              </Button>
+              <Button
+                onClick={saveNotificationSettings}
+                disabled={isSaving}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save
+                  </>
+                )}
+              </Button>
+            </div>
+          </SettingsCard>
+          <SettingsCard className="space-y-4">
               <div className="flex items-center justify-between py-2">
                 <div>
                   <p className="font-medium">Enable Email Notifications</p>
@@ -381,18 +381,17 @@ function SettingsPageContent() {
                   </div>
                 </>
               )}
-            </CardContent>
-          </Card>
+          </SettingsCard>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <SettingsCard
+            title={
+              <div className="flex items-center gap-2">
                 <Bell className="h-5 w-5" />
                 Push Notifications
-              </CardTitle>
-              <CardDescription>Configure browser push notifications</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+              </div>
+            }
+            description="Configure browser push notifications"
+          >
               <div className="flex items-center justify-between py-2">
                 <div>
                   <p className="font-medium">Enable Push Notifications</p>
@@ -435,18 +434,17 @@ function SettingsPageContent() {
                   </div>
                 </>
               )}
-            </CardContent>
-          </Card>
+          </SettingsCard>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <SettingsCard
+            title={
+              <div className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5" />
                 Slack Integration
-              </CardTitle>
-              <CardDescription>Send notifications to Slack</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+              </div>
+            }
+            description="Send notifications to Slack"
+          >
               <div className="flex items-center justify-between py-2">
                 <div>
                   <p className="font-medium">Enable Slack Notifications</p>
@@ -487,22 +485,21 @@ function SettingsPageContent() {
                   </div>
                 </>
               )}
-            </CardContent>
-          </Card>
+          </SettingsCard>
         </TabsContent>
 
         {/* ==================== Billing Tab ==================== */}
         <TabsContent value={SETTINGS_TABS.BILLING} className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <SettingsCard
+            title={
+              <div className="flex items-center gap-2">
                 <CreditCard className="h-5 w-5" />
                 Current Plan
-              </CardTitle>
-              <CardDescription>Your subscription details</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {billingInfo ? (
+              </div>
+            }
+            description="Your subscription details"
+          >
+                          {billingInfo ? (
                 <div className="flex items-center justify-between p-6 rounded-lg bg-primary/5 border-2 border-primary">
                   <div>
                     <p className="text-2xl font-bold capitalize">{billingInfo.subscriptionTier}</p>
@@ -518,16 +515,13 @@ function SettingsPageContent() {
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               )}
-            </CardContent>
-          </Card>
+          </SettingsCard>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Usage This Month</CardTitle>
-              <CardDescription>Your current usage statistics</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {billingInfo ? (
+          <SettingsCard
+            title="Usage This Month"
+            description="Your current usage statistics"
+          >
+                          {billingInfo ? (
                 <div className="space-y-6">
                   {[
                     { key: 'messagesThisMonth', label: 'Messages Sent' },
@@ -552,15 +546,12 @@ function SettingsPageContent() {
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               )}
-            </CardContent>
-          </Card>
+          </SettingsCard>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Available Plans</CardTitle>
-              <CardDescription>Compare plans and upgrade</CardDescription>
-            </CardHeader>
-            <CardContent>
+          <SettingsCard
+            title="Available Plans"
+            description="Compare plans and upgrade"
+          >
               {billingInfo ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                   {billingInfo.plans.map((plan) => (
@@ -586,15 +577,12 @@ function SettingsPageContent() {
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               )}
-            </CardContent>
-          </Card>
+          </SettingsCard>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment Method</CardTitle>
-              <CardDescription>Manage your payment details</CardDescription>
-            </CardHeader>
-            <CardContent>
+          <SettingsCard
+            title="Payment Method"
+            description="Manage your payment details"
+          >
               <div className="flex items-center justify-between p-4 rounded-lg border bg-secondary/50">
                 <div className="flex items-center gap-4">
                   <div className="h-10 w-16 rounded bg-gradient-to-r from-blue-600 to-blue-800 flex items-center justify-center">
@@ -607,16 +595,13 @@ function SettingsPageContent() {
                 </div>
                 <Button variant="outline" size="sm">Update</Button>
               </div>
-            </CardContent>
-          </Card>
+          </SettingsCard>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Invoices</CardTitle>
-              <CardDescription>View and download your invoices</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+          <SettingsCard
+            title="Invoices"
+            description="View and download your invoices"
+          >
+                          <div className="space-y-4">
                 {[
                   { id: "INV-2024-001", date: "March 2024", amount: 79, status: "paid" },
                   { id: "INV-2024-002", date: "February 2024", amount: 79, status: "paid" },
@@ -637,20 +622,18 @@ function SettingsPageContent() {
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            </SettingsCard>
 
-          <Card className="border-red-400 bg-white">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-destructive">
+          <SettingsCard
+            title={
+              <div className="flex items-center gap-2 text-destructive">
                 <AlertTriangleIcon className="h-5 w-5" />
                 Danger Zone
-              </CardTitle>
-              <CardDescription>
-                Irreversible and destructive actions
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+              </div>
+            }
+            description="Irreversible and destructive actions"
+            className="border-red-400 bg-white"
+          >
               <div className="flex items-center justify-between p-4 rounded-lg border border-orange-300 bg-orange-50">
                 <div>
                   <p className="font-medium">Cancel Subscription</p>
@@ -673,12 +656,10 @@ function SettingsPageContent() {
                   Delete Organization
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+            </SettingsCard>
         </TabsContent>
       </Tabs>
-      </div>
-    </div>
+    </StandardLayout>
   )
 }
 
@@ -686,13 +667,11 @@ function SettingsPageContent() {
 export default function SettingsPage() {
   return (
     <Suspense fallback={
-      <div className="bg-transparent px-2.5 border h-full lg:px-0">
-      <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 space-y-6">
+      <StandardLayout>
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      </div>
-      </div>
+      </StandardLayout>
     }>
       <SettingsPageContent />
     </Suspense>

@@ -2,28 +2,30 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { 
-  Loader2, 
-  Plus, 
-  Mail, 
-  MoreVertical, 
-  Edit, 
-  Trash2, 
+import { Separator } from '@/components/ui/separator';
+import {
+  Loader2,
+  Plus,
+  Mail,
+  Edit,
+  Trash2,
   RefreshCw,
   CheckCircle,
-  Clock,
+  X,
   Users,
   Shield,
+  Crown,
+  Eye,
+  ChevronRight,
+  Send,
+  UserCog,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { TEAM_ROLES } from '@/lib/constants/settings';
 
 interface TeamMember {
   id: string;
@@ -54,6 +56,91 @@ interface TeamSettingsTabProps {
   organizationId: string;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// REUSABLE STYLED COMPONENTS
+// ═══════════════════════════════════════════════════════════════
+
+function StyledCard({
+  children,
+  className = "",
+  title,
+  description,
+  titleIcon: TitleIcon,
+  headerRight,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  title?: React.ReactNode;
+  description?: string;
+  titleIcon?: any;
+  headerRight?: React.ReactNode;
+}) {
+  return (
+    <div className={`p-5 rounded-xl border-2 border-green-950 bg-white transition-all ${className}`}>
+      {(title || headerRight) && (
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex-1 min-w-0">
+            {title && (
+              <h3 className="text-lg font-semibold flex items-center gap-2 text-foreground">
+                {TitleIcon && <TitleIcon className="h-5 w-5" />}
+                {title}
+              </h3>
+            )}
+            {description && (
+              <p className="text-muted-foreground text-sm mt-1">{description}</p>
+            )}
+          </div>
+          {headerRight && <div className="flex items-center gap-2 ml-4 flex-shrink-0">{headerRight}</div>}
+        </div>
+      )}
+      <div className="space-y-0">{children}</div>
+    </div>
+  );
+}
+
+function SectionHeader({ title, description }: { title: string; description?: string }) {
+  return (
+    <div className="mb-6">
+      <h3 className="text-xl font-semibold text-foreground">{title}</h3>
+      {description && <p className="text-muted-foreground text-sm mt-1">{description}</p>}
+    </div>
+  );
+}
+
+function PermissionCheck({ enabled }: { enabled: boolean }) {
+  return enabled ? (
+    <div className="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center">
+      <CheckCircle className="h-4 w-4 text-green-600" />
+    </div>
+  ) : (
+    <div className="h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center">
+      <X className="h-3.5 w-3.5 text-slate-400" />
+    </div>
+  );
+}
+
+const ROLE_CONFIG: Record<string, { label: string; badgeClass: string; icon: any }> = {
+  owner: { label: 'Owner', badgeClass: 'bg-green-100 text-green-800 border-green-200', icon: Crown },
+  admin: { label: 'Admin', badgeClass: 'bg-blue-100 text-blue-800 border-blue-200', icon: Shield },
+  manager: { label: 'Manager', badgeClass: 'bg-amber-100 text-amber-800 border-amber-200', icon: UserCog },
+  member: { label: 'Member', badgeClass: 'bg-slate-100 text-slate-700 border-slate-200', icon: Users },
+  viewer: { label: 'Viewer', badgeClass: 'bg-slate-50 text-slate-600 border-slate-200', icon: Eye },
+};
+
+const PERMISSION_LABELS: Record<string, { label: string; description: string }> = {
+  manageBilling: { label: 'Manage billing', description: 'Access invoices, update payment methods' },
+  manageTeam: { label: 'Manage team', description: 'Invite, remove, and change roles' },
+  createCampaigns: { label: 'Create campaigns', description: 'Draft new WhatsApp campaigns' },
+  launchCampaigns: { label: 'Launch campaigns', description: 'Send and schedule campaigns' },
+  manageContacts: { label: 'Manage contacts', description: 'Add, import, and segment contacts' },
+  viewAnalytics: { label: 'View analytics', description: 'Access reports and dashboards' },
+  manageSettings: { label: 'Manage settings', description: 'Configure API keys, webhooks, etc.' },
+};
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════════════════════
+
 export function TeamSettingsTab({ organizationId }: TeamSettingsTabProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -64,8 +151,8 @@ export function TeamSettingsTab({ organizationId }: TeamSettingsTabProps) {
   const [inviteRole, setInviteRole] = useState('member');
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
   const [editRole, setEditRole] = useState('');
+  const [removingMember, setRemovingMember] = useState<string | null>(null);
 
-  // Fetch team members and permissions
   useEffect(() => {
     fetchTeamMembers();
     fetchPermissions();
@@ -118,7 +205,6 @@ export function TeamSettingsTab({ organizationId }: TeamSettingsTabProps) {
       });
 
       if (response.ok) {
-        const data = await response.json();
         toast.success('Invitation sent successfully');
         setInviteEmail('');
         setInviteRole('member');
@@ -168,10 +254,9 @@ export function TeamSettingsTab({ organizationId }: TeamSettingsTabProps) {
   };
 
   const handleRemoveMember = async (memberId: string) => {
-    if (!confirm('Are you sure you want to remove this team member?')) {
-      return;
-    }
+    if (!confirm('Are you sure you want to remove this team member?')) return;
 
+    setRemovingMember(memberId);
     try {
       const response = await fetch(`/api/settings/team?id=${memberId}&organizationId=${organizationId}`, {
         method: 'DELETE',
@@ -187,6 +272,8 @@ export function TeamSettingsTab({ organizationId }: TeamSettingsTabProps) {
     } catch (error) {
       console.error('Error removing member:', error);
       toast.error('Failed to remove member');
+    } finally {
+      setRemovingMember(null);
     }
   };
 
@@ -205,25 +292,6 @@ export function TeamSettingsTab({ organizationId }: TeamSettingsTabProps) {
     } catch (error) {
       console.error('Error resending invitation:', error);
       toast.error('Failed to resend invitation');
-    }
-  };
-
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'owner': return 'bg-green-100 text-green-800 border-green-200';
-      case 'admin': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'manager': return 'bg-amber-100 text-amber-800 border-amber-200';
-      case 'member': return 'bg-gray-100 text-gray-800 border-gray-200';
-      case 'viewer': return 'bg-slate-100 text-slate-800 border-slate-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800 border-green-200';
-      case 'invited': return 'bg-amber-100 text-amber-800 border-amber-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -248,280 +316,373 @@ export function TeamSettingsTab({ organizationId }: TeamSettingsTabProps) {
     return date.toLocaleDateString();
   };
 
+  const getAvatarColor = (name: string) => {
+    const colors = [
+      'bg-green-100 text-green-700',
+      'bg-blue-100 text-blue-700',
+      'bg-amber-100 text-amber-700',
+      'bg-purple-100 text-purple-700',
+      'bg-rose-100 text-rose-700',
+      'bg-cyan-100 text-cyan-700',
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  };
+
+  const activeCount = members.filter(m => m.status === 'active').length;
+  const invitedCount = members.filter(m => m.status === 'invited').length;
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="mb-6">
-        <h2 className="text-2xl font-semibold text-gray-900">Team Management</h2>
-        <p className="text-sm text-gray-500 mt-1">Invite members and manage their access roles</p>
+      <div>
+        <h1 className="text-foreground text-3xl font-bold mb-2">Team Management</h1>
+        <p className="text-muted-foreground text-lg">Invite members and manage their access roles</p>
       </div>
 
-      {/* Team Members Card */}
-      <Card className="border border-gray-200 rounded-lg p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-base font-semibold text-gray-900">Team Members</h3>
-            <p className="text-sm text-gray-500 mt-0.5">{members.length} of 10 seats used on Professional plan</p>
+  
+      {/* Team Members */}
+      <StyledCard>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-semibold flex items-center gap-2 text-foreground">
+              Team Members
+            </h3>
+            <p className="text-muted-foreground text-sm mt-1">{members.length} of 10 seats used on Professional plan</p>
           </div>
-          <Button onClick={() => setShowInviteForm(!showInviteForm)} className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2">
-            <Plus className="w-4 h-4 mr-2" />
-            Invite Member
+          <Button
+            onClick={() => setShowInviteForm(!showInviteForm)}
+            className={`rounded-lg text-sm transition-all ${showInviteForm
+                ? 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                : 'bg-green-600 hover:bg-green-700 text-white'
+              }`}
+          >
+            {showInviteForm ? (
+              'Cancel'
+            ) : (
+              <>
+                <Plus className="w-4 h-4 mr-2" />
+                Invite Member
+              </>
+            )}
           </Button>
         </div>
 
         {/* Invite Form */}
         {showInviteForm && (
-          <div className="bg-gray-50 rounded-md p-4 mb-4 space-y-4">
+          <div className="p-5 rounded-xl border-2 border-green-950 bg-green-50/30 mb-6 space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Send className="w-4 h-4 text-green-600" />
+              <h4 className="text-sm font-semibold text-foreground">Send Invitation</h4>
+            </div>
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1">
-                <Label className="text-sm font-medium text-gray-700">Email Address</Label>
-                <Input
-                  type="email"
-                  placeholder="team@company.com"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  className="text-sm"
-                />
+              <div className="space-y-2">
+                <Label htmlFor="invite-email" className="text-sm font-medium text-foreground">
+                  Email Address <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="invite-email"
+                    type="email"
+                    placeholder="team@company.com"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    className="pl-10 text-sm rounded-lg border-slate-300"
+                    onKeyDown={(e) => e.key === 'Enter' && handleInvite()}
+                  />
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label className="text-sm font-medium text-gray-700">Role</Label>
+              <div className="space-y-2">
+                <Label htmlFor="invite-role" className="text-sm font-medium text-foreground">
+                  Role
+                </Label>
                 <Select value={inviteRole} onValueChange={setInviteRole}>
-                  <SelectTrigger className="text-sm">
+                  <SelectTrigger id="invite-role" className="text-sm rounded-lg border-slate-300">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="owner">Owner</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="member">Member</SelectItem>
-                    <SelectItem value="viewer">Viewer</SelectItem>
+                    {Object.entries(ROLE_CONFIG).map(([key, config]) => (
+                      <SelectItem key={key} value={key}>
+                        <div className="flex items-center gap-2">
+                          <config.icon className="w-3.5 h-3.5" />
+                          {config.label}
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button onClick={handleInvite} disabled={isSaving} size="sm" className="text-xs px-3 py-1.5">
+            <div className="flex items-center gap-2 pt-1">
+              <Button
+                onClick={handleInvite}
+                disabled={isSaving || !inviteEmail}
+                className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm"
+              >
                 {isSaving ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Sending...
                   </>
                 ) : (
-                  'Send Invite'
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Send Invite
+                  </>
                 )}
-              </Button>
-              <Button onClick={() => setShowInviteForm(false)} variant="outline" size="sm" className="text-xs px-3 py-1.5">
-                Cancel
               </Button>
             </div>
           </div>
         )}
 
-        {/* Members Table */}
+        {/* Members List */}
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
+          <div className="flex items-center justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
+        ) : members.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="h-14 w-14 rounded-xl border-2 border-slate-200 bg-slate-50 flex items-center justify-center mb-4">
+              <Users className="h-7 w-7 text-slate-400" />
+            </div>
+            <p className="text-sm font-medium text-foreground">No team members yet</p>
+            <p className="text-xs text-muted-foreground mt-1">Invite your first team member to get started</p>
+          </div>
         ) : (
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Member</th>
-                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Role</th>
-                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Status</th>
-                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Last Active</th>
-                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {members.map((member) => (
-                <tr key={member.id} className="border-b border-gray-200 hover:bg-gray-50">
-                  <td className="py-3 px-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-800 font-medium text-xs">
-                        {member.avatar ? (
-                          <img src={member.avatar} alt={member.name} className="w-8 h-8 rounded-full object-cover" />
-                        ) : (
-                          getInitials(member.name)
-                        )}
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-900">{member.name}</div>
-                        <div className="text-xs text-gray-500">{member.email}</div>
-                      </div>
+          <div className="space-y-2">
+            {members.map((member) => {
+              const roleConfig = ROLE_CONFIG[member.role] || ROLE_CONFIG.member;
+              const RoleIcon = roleConfig.icon;
+              const isActive = member.status === 'active';
+
+              return (
+                <div
+                  key={member.id}
+                  className="flex items-center gap-4 p-4 rounded-xl border-2 border-slate-200 bg-white hover:border-green-950/40 transition-all group"
+                >
+                  {/* Avatar */}
+                  <div className={`h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 font-semibold text-sm ${member.avatar
+                      ? 'overflow-hidden'
+                      : getAvatarColor(member.name)
+                    }`}>
+                    {member.avatar ? (
+                      <img src={member.avatar} alt={member.name} className="h-full w-full object-cover" />
+                    ) : (
+                      getInitials(member.name)
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-foreground">{member.name}</span>
+                      <Badge className={`${roleConfig.badgeClass} text-xs border flex items-center gap-1`}>
+                        <RoleIcon className="w-3 h-3" />
+                        {roleConfig.label}
+                      </Badge>
                     </div>
-                  </td>
-                  <td className="py-3 px-3">
-                    <Badge className={getRoleBadgeColor(member.role)} variant="outline">
-                      {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
-                    </Badge>
-                  </td>
-                  <td className="py-3 px-3">
-                    <Badge className={getStatusBadgeColor(member.status)} variant="outline">
-                      {member.status.charAt(0).toUpperCase() + member.status.slice(1)}
-                    </Badge>
-                  </td>
-                  <td className="py-3 px-3 text-xs text-gray-600">
-                    {member.lastActive ? formatDate(member.lastActive) : 'Never'}
-                  </td>
-                  <td className="py-3 px-3">
-                    <div className="flex items-center gap-2">
-                      {member.status === 'invited' && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-muted-foreground">{member.email}</span>
+                      <span className="text-slate-300">·</span>
+                      <span className="text-xs text-muted-foreground">
+                        {isActive
+                          ? (member.lastActive ? `Active ${formatDate(member.lastActive)}` : 'Active')
+                          : `Invited ${formatDate(member.invitedAt)}`
+                        }
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Status indicator */}
+                  <div className="hidden sm:flex items-center gap-1.5">
+                    <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-green-500' : 'bg-amber-400'}`} />
+                    <span className="text-xs text-muted-foreground">
+                      {isActive ? 'Active' : 'Pending'}
+                    </span>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                    {member.status === 'invited' && (
+                      <Button
+                        onClick={() => handleResendInvite(member.id)}
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg border-slate-300 text-xs h-8"
+                      >
+                        <RefreshCw className="w-3 h-3 mr-1" />
+                        Resend
+                      </Button>
+                    )}
+
+                    <Dialog>
+                      <DialogTrigger asChild>
                         <Button
-                          onClick={() => handleResendInvite(member.id)}
                           variant="outline"
                           size="sm"
-                          className="text-xs px-3 py-1.5"
+                          className="rounded-lg border-slate-300 text-xs h-8"
+                          onClick={() => {
+                            setEditingMember(member);
+                            setEditRole(member.role);
+                          }}
                         >
-                          Resend
+                          <Edit className="w-3 h-3 mr-1" />
+                          Edit
                         </Button>
-                      )}
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-xs px-3 py-1.5"
-                            onClick={() => {
-                              setEditingMember(member);
-                              setEditRole(member.role);
-                            }}
-                          >
-                            Edit
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Edit Member Role</DialogTitle>
-                            <DialogDescription>
-                              Change the role for {member.name}
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="edit-role">Role</Label>
-                              <Select value={editRole} onValueChange={setEditRole}>
-                                <SelectTrigger id="edit-role">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="owner">Owner</SelectItem>
-                                  <SelectItem value="admin">Admin</SelectItem>
-                                  <SelectItem value="manager">Manager</SelectItem>
-                                  <SelectItem value="member">Member</SelectItem>
-                                  <SelectItem value="viewer">Viewer</SelectItem>
-                                </SelectContent>
-                              </Select>
+                      </DialogTrigger>
+                      <DialogContent className="rounded-xl border-2 border-slate-200">
+                        <DialogHeader>
+                          <DialogTitle className="text-foreground">Edit Member Role</DialogTitle>
+                          <DialogDescription className="text-muted-foreground">
+                            Change the role for {member.name}
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                          <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 mb-4">
+                            <div className={`h-10 w-10 rounded-lg flex items-center justify-center text-sm font-semibold ${member.avatar ? 'overflow-hidden' : getAvatarColor(member.name)
+                              }`}>
+                              {member.avatar ? (
+                                <img src={member.avatar} alt={member.name} className="h-full w-full object-cover" />
+                              ) : (
+                                getInitials(member.name)
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-foreground">{member.name}</p>
+                              <p className="text-xs text-muted-foreground">{member.email}</p>
                             </div>
                           </div>
-                          <DialogFooter>
-                            <Button variant="outline" onClick={() => setEditingMember(null)}>
-                              Cancel
-                            </Button>
-                            <Button onClick={handleUpdateRole} disabled={isSaving}>
-                              {isSaving ? (
-                                <>
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                  Saving...
-                                </>
-                              ) : (
-                                'Save Changes'
-                              )}
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Card>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-role" className="text-sm font-medium text-foreground">
+                              New Role
+                            </Label>
+                            <Select value={editRole} onValueChange={setEditRole}>
+                              <SelectTrigger id="edit-role" className="rounded-lg border-slate-300">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(ROLE_CONFIG).map(([key, config]) => (
+                                  <SelectItem key={key} value={key}>
+                                    <div className="flex items-center gap-2">
+                                      <config.icon className="w-3.5 h-3.5" />
+                                      {config.label}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setEditingMember(null)} className="rounded-lg border-slate-300">
+                            Cancel
+                          </Button>
+                          <Button onClick={handleUpdateRole} disabled={isSaving} className="rounded-lg bg-green-600 hover:bg-green-700 text-white">
+                            {isSaving ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Saving...
+                              </>
+                            ) : (
+                              'Save Changes'
+                            )}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
 
-      {/* Role Permissions Card */}
-      <Card className="border border-gray-200 rounded-lg p-5">
-        <h3 className="text-base font-semibold text-gray-900 mb-1">Role Permissions</h3>
-        <p className="text-sm text-gray-500 mb-4">What each role can do in ProDigiChat</p>
-        
-        {permissions ? (
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Permission</th>
-                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Owner</th>
-                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Admin</th>
-                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Manager</th>
-                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Member</th>
-                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 bg-gray-50">Viewer</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-gray-200">
-                <td className="py-2 px-3 font-medium text-gray-900">Manage billing</td>
-                <td className="py-2 px-3">{permissions.owner.manageBilling ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.admin.manageBilling ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.manager.manageBilling ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.member.manageBilling ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.viewer.manageBilling ? '✓' : '—'}</td>
-              </tr>
-              <tr className="border-b border-gray-200">
-                <td className="py-2 px-3 font-medium text-gray-900">Manage team</td>
-                <td className="py-2 px-3">{permissions.owner.manageTeam ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.admin.manageTeam ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.manager.manageTeam ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.member.manageTeam ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.viewer.manageTeam ? '✓' : '—'}</td>
-              </tr>
-              <tr className="border-b border-gray-200">
-                <td className="py-2 px-3 font-medium text-gray-900">Create campaigns</td>
-                <td className="py-2 px-3">{permissions.owner.createCampaigns ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.admin.createCampaigns ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.manager.createCampaigns ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.member.createCampaigns ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.viewer.createCampaigns ? '✓' : '—'}</td>
-              </tr>
-              <tr className="border-b border-gray-200">
-                <td className="py-2 px-3 font-medium text-gray-900">Launch campaigns</td>
-                <td className="py-2 px-3">{permissions.owner.launchCampaigns ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.admin.launchCampaigns ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.manager.launchCampaigns ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.member.launchCampaigns ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.viewer.launchCampaigns ? '✓' : '—'}</td>
-              </tr>
-              <tr className="border-b border-gray-200">
-                <td className="py-2 px-3 font-medium text-gray-900">Manage contacts</td>
-                <td className="py-2 px-3">{permissions.owner.manageContacts ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.admin.manageContacts ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.manager.manageContacts ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.member.manageContacts ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.viewer.manageContacts ? '✓' : '—'}</td>
-              </tr>
-              <tr className="border-b border-gray-200">
-                <td className="py-2 px-3 font-medium text-gray-900">View analytics</td>
-                <td className="py-2 px-3">{permissions.owner.viewAnalytics ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.admin.viewAnalytics ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.manager.viewAnalytics ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.member.viewAnalytics ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.viewer.viewAnalytics ? '✓' : '—'}</td>
-              </tr>
-              <tr>
-                <td className="py-2 px-3 font-medium text-gray-900">Manage settings</td>
-                <td className="py-2 px-3">{permissions.owner.manageSettings ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.admin.manageSettings ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.manager.manageSettings ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.member.manageSettings ? '✓' : '—'}</td>
-                <td className="py-2 px-3">{permissions.viewer.manageSettings ? '✓' : '—'}</td>
-              </tr>
-            </tbody>
-          </table>
-        ) : (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-lg border-red-200 text-red-600 hover:bg-red-50 text-xs h-8"
+                      onClick={() => handleRemoveMember(member.id)}
+                      disabled={removingMember === member.id}
+                    >
+                      {removingMember === member.id ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3 h-3" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
-      </Card>
+      </StyledCard>
+
+      {/* Role Permissions */}
+      <StyledCard>
+        <SectionHeader
+          title="Role Permissions"
+          description="What each role can do in ProDigiChat"
+        />
+
+        {permissions ? (
+          <div className="rounded-xl border  bg-white border-green-950 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-green-950 border-none ">
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted min-w-[200px]">
+                    Permission
+                  </th>
+                  {Object.entries(ROLE_CONFIG).map(([key, config]) => {
+                    const Icon = config.icon;
+                    return (
+                      <th key={key} className="text-center py-3 px-4 text-xs font-medium text-muted min-w-[90px]">
+                        <div className="flex flex-col items-center gap-1">
+                          <Icon className="w-4 h-4" />
+                          <span>{config.label}</span>
+                        </div>
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {Object.entries(PERMISSION_LABELS).map(([key, { label, description }]) => (
+                  <tr key={key} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="py-3 px-4">
+                      <p className="text-sm font-medium text-foreground">{label}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+                    </td>
+                    {Object.keys(ROLE_CONFIG).map((role) => (
+                      <td key={role} className="py-3 px-4">
+                        <div className="flex justify-center">
+                          <PermissionCheck enabled={permissions[role]?.[key as keyof typeof permissions.owner] || false} />
+                        </div>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin text-muted" />
+          </div>
+        )}
+
+        {/* Permission descriptions */}
+        <div className="mt-6 p-4 rounded-xl bg-green-950 border border-green-800">
+          <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+            <Shield className="w-4 h-4 text-green-400" />
+            Role Hierarchy
+          </h4>
+          <p className="text-xs text-gray-300 mt-2">
+            Roles follow a hierarchy — higher roles inherit all permissions from lower roles.
+            <span className="block mt-1 text-green-400 font-medium">
+              Owner → Admin → Manager → Member → Viewer
+            </span>
+          </p>
+        </div>
+      </StyledCard>
     </div>
   );
 }
