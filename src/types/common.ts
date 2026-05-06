@@ -5,6 +5,7 @@ export interface MessageContent {
   caption?: string;
   mediaUrl?: string;
   type?: 'text' | 'image' | 'video' | 'document' | 'template';
+  template?: any;
   [key: string]: any;
 }
 
@@ -17,17 +18,82 @@ export function parseMessageContent(content: string | MessageContent): MessageCo
     return content;
   }
   
-  try {
-    const parsed = JSON.parse(content);
-    if (typeof parsed === 'object') {
-      return parsed as MessageContent;
-    }
-  } catch (e) {
-    // If not valid JSON, treat as plain text
-    return { text: content };
+  // Handle empty or null content
+  if (!content || content.trim() === '') {
+    return { text: '', type: 'text' };
   }
   
-  return { text: content };
+  // If it's obviously not JSON, treat as plain text
+  if (!content.trim().startsWith('{') && !content.trim().startsWith('[')) {
+    return { text: content, type: 'text' };
+  }
+  
+  try {
+    const parsed = JSON.parse(content);
+    if (typeof parsed === 'object' && parsed !== null) {
+      // Handle template messages specially
+      if (parsed.type === 'template') {
+        let extractedText = '';
+        
+        // Extract text from template components
+        if (parsed.template && Array.isArray(parsed.template.components)) {
+          for (const component of parsed.template.components) {
+            if (component.type === 'body' && Array.isArray(component.parameters)) {
+              // Extract all text parameters and concatenate them
+              const textParams = component.parameters
+                .filter((param: any) => param.type === 'text' && param.text)
+                .map((param: any) => param.text);
+              extractedText += textParams.join(' ');
+            } else if (component.type === 'header' && component.text) {
+              extractedText += component.text + ' ';
+            } else if (component.type === 'footer' && component.text) {
+              extractedText += component.text + ' ';
+            }
+          }
+        }
+        
+        // Also check for direct template text field
+        if (parsed.template && parsed.template.text) {
+          extractedText += parsed.template.text;
+        }
+        
+        // If no text extracted, use template name or provide a default
+        if (!extractedText.trim()) {
+          if (parsed.templateName) {
+            // Convert template name to readable format
+            extractedText = parsed.templateName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          } else if (parsed.templateId) {
+            extractedText = `Template (${parsed.templateId.substring(0, 8)}...)`;
+          } else {
+            extractedText = 'Template Message';
+          }
+        }
+        
+        return {
+          text: extractedText.trim(),
+          caption: '',
+          mediaUrl: '',
+          type: 'template',
+          template: parsed.template
+        };
+      }
+      
+      // Ensure the parsed object has required fields
+      return {
+        text: parsed.text || '',
+        caption: parsed.caption || '',
+        mediaUrl: parsed.mediaUrl || '',
+        type: parsed.type || 'text',
+        template: parsed.template || undefined,
+        ...parsed
+      };
+    }
+  } catch (e) {
+    // If JSON parsing fails, treat as plain text
+    return { text: content, type: 'text' };
+  }
+  
+  return { text: content, type: 'text' };
 }
 
 export function stringifyMessageContent(content: MessageContent): string {

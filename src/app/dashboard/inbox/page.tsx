@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { parseMessageContent } from "@/types/common"
+import { parseMessageContent, parseTags } from "@/types/common"
 import { useSession } from "next-auth/react"
+import { io } from 'socket.io-client'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -52,6 +53,15 @@ interface Message {
   status?: string
   mediaUrl?: string
   messageType?: string
+}
+
+// Helper function to format time
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  })
 }
 
 export default function InboxPage() {
@@ -156,69 +166,47 @@ export default function InboxPage() {
       if (data.messages && data.messages.length > 0 && isWhatsAppConnected) {
         // Transform messages to UI format
         const transformedMessages: Message[] = data.messages.map((msg: any) => {
-          let content: any = { text: "", caption: "", mediaUrl: "", type: "text" }
-          let displayText = ""
-          
           try {
             // Use the proper parseMessageContent utility
-            content = parseMessageContent(msg.content)
+            const content = parseMessageContent(msg.content)
             
-            // Handle different message types
-            displayText = content.text || content.caption || ""
+            // Extract display text based on content type
+            let displayText = ""
             
-            // Handle template messages specially
-            if (content.type === 'template' && content.template) {
-              displayText = content.template.text || content.template.body || ""
-            }
-            
-            // If still no text found, try to extract from nested structures
-            if (!displayText && typeof content === 'object') {
-              // Look for common text fields in nested objects
-              displayText = content.body || content.message || content.content || ""
-            }
-            
-            // If still no text and content is a string that looks like JSON, try to extract text from it
-            if (!displayText && typeof msg.content === 'string') {
-              try {
-                const parsed = JSON.parse(msg.content)
-                displayText = parsed.text || parsed.body || parsed.message || parsed.content || ""
-              } catch (e) {
-                // If parsing fails, use the raw content if it's not obviously JSON
-                if (!msg.content.trim().startsWith('{') && !msg.content.trim().startsWith('[')) {
-                  displayText = msg.content
-                }
-              }
-            }
-            
-            // Final fallback: if we still have no display text, use a default
-            if (!displayText) {
-              displayText = content.type === 'image' ? "📷 Image" : 
-                           content.type === 'video' ? "🎥 Video" : 
-                           content.type === 'document' ? "📄 Document" : 
-                           content.type === 'template' ? "📋 Template" : 
-                           "Message"
-            }
-            
-          } catch (e) {
-            // If parsing fails completely, treat as plain text if it doesn't look like JSON
-            if (typeof msg.content === 'string' && 
-                !msg.content.trim().startsWith('{') && 
-                !msg.content.trim().startsWith('[')) {
-              displayText = msg.content
+            if (content.type === 'image') {
+              displayText = content.caption || "📷 Image"
+            } else if (content.type === 'video') {
+              displayText = content.caption || "🎥 Video"
+            } else if (content.type === 'document') {
+              displayText = content.caption || "📄 Document"
+            } else if (content.type === 'template') {
+              // For template messages, the text should already be extracted by parseMessageContent
+              displayText = content.text || "📋 Template"
             } else {
-              displayText = "Unable to display message"
+              // For text messages or other types, use the text field
+              displayText = content.text || content.caption || "Message"
             }
-            content = { text: displayText, caption: "", mediaUrl: "", type: "text" }
-          }
-          
-          return {
-            id: msg.id,
-            type: msg.direction === "outgoing" ? "sent" : "received",
-            text: displayText,
-            time: formatTime(new Date(msg.createdAt)),
-            status: msg.status,
-            mediaUrl: content.mediaUrl,
-            messageType: content.type || "text"
+            
+            return {
+              id: msg.id,
+              type: msg.direction === "outgoing" ? "sent" : "received",
+              text: displayText,
+              time: formatTime(new Date(msg.createdAt)),
+              status: msg.status,
+              mediaUrl: content.mediaUrl,
+              messageType: content.type || "text"
+            }
+          } catch (e) {
+            console.error("Error parsing message:", e, "Message content:", msg.content)
+            // Fallback for any parsing errors
+            return {
+              id: msg.id,
+              type: msg.direction === "outgoing" ? "sent" : "received",
+              text: "Unable to display message",
+              time: formatTime(new Date(msg.createdAt)),
+              status: msg.status,
+              messageType: "text"
+            }
           }
         })
         setMessages(transformedMessages)
@@ -573,7 +561,7 @@ export default function InboxPage() {
 
   return (
     <div className="bg-transparent px-2.5 border h-full lg:px-0">
-      <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 py-6 space-y-6">
+      <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 ">
       {/* Header Actions - Only show when WhatsApp is not connected */}
       {!isWhatsAppConnected && (
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -591,7 +579,7 @@ export default function InboxPage() {
       )}
 
       {/* Chat Interface */}
-      <div className="border rounded-lg bg-white overflow-hidden" style={{ height: isWhatsAppConnected ? 'calc(87vh - 48px)' : 'calc(87vh - 200px)' }}>
+      <div className="border rounded-lg bg-white overflow-hidden h-[calc(100vh-120px)]" >
         <div className="p-0 gap-2 bg-gray-200 flex h-full">
           {/* Conversations List */}
           <div className="w-80 border border-border flex flex-col bg-white">
@@ -958,13 +946,4 @@ export default function InboxPage() {
       </div>
     </div>
   )
-}
-
-// Helper function to format time
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  })
 }

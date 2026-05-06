@@ -17,7 +17,7 @@ app.prepare().then(() => {
   });
 
   // Initialize WebSocket using our library
-  const { initializeWebSocket } = require('./src/lib/websocket');
+  const { initializeWebSocket } = require('./src/lib/websocket.cjs');
   const io = initializeWebSocket(httpServer);
 
   httpServer.listen(port, (err) => {
