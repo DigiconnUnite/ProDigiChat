@@ -54,7 +54,7 @@ export function PublicFooter() {
                 height={40}
                 className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg"
               />
-              <span className="text-xl sm:text-2xl font-bold text-white">Prodigichat</span>
+              <span className="text-xl sm:text-2xl font-bold text-white">Prodigi<span className="text-green-300">chat</span></span>
             </Link>
 
             {/* Newsletter Subscribe */}

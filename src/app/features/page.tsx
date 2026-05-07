@@ -4,6 +4,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { PublicFooter } from "@/components/public-footer"
+import CTASection from "@/components/cta-section"
 import {
   MessageSquare,
   Users,
@@ -192,7 +193,7 @@ export default function FeaturesPage() {
             HERO SECTION – Features introduction
         ══════════════════════════════════════════ */}
         <section className="relative overflow-hidden bg-transparent px-2.5 lg:px-0">
-          <div className="container mx-auto relative bg-linear-30 from-lime-50 to-green-100 border-l border-r border-slate-300 px-5">
+          <div className="max-w-[1440px] mx-auto relative bg-linear-30 from-lime-50 to-green-100 border-l border-r border-slate-300 px-5">
             <div className="text-center py-20">
               <div className="bg-primary/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Star className="h-10 w-10 text-primary" />
@@ -223,7 +224,7 @@ export default function FeaturesPage() {
             CATEGORIES SECTION – Feature categories
         ══════════════════════════════════════════ */}
         <section className="bg-transparent border-slate-300 px-2.5 lg:px-0">
-          <div className="container mx-auto relative border-t border-l border-r border-slate-300 px-5">
+          <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5">
             <div className="text-center mb-16 pt-20 pb-4">
               <h2 className="text-foreground text-4xl font-bold mb-4">
                 Organized by Category
@@ -260,7 +261,7 @@ export default function FeaturesPage() {
             FEATURES GRID – Main features with detailed cards
         ══════════════════════════════════════════ */}
         <section className="bg-transparent px-2.5 lg:px-0">
-          <div className="container mx-auto relative border-t border-l border-r border-slate-300 px-5">
+          <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5">
             <div className="text-center mb-16 pt-20 pb-4">
               <h2 className="text-foreground text-4xl font-bold mb-4">
                 All Features at a Glance
@@ -303,7 +304,7 @@ export default function FeaturesPage() {
             COMPARISON SECTION – Feature comparison
         ══════════════════════════════════════════ */}
         <section className="bg-transparent border-slate-300 px-2.5 lg:px-0">
-          <div className="container mx-auto relative border-t border-l border-r border-slate-300 px-5">
+          <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5">
             <div className="text-center mb-16 pt-20 pb-4">
               <h2 className="text-foreground text-4xl font-bold mb-4">
                 Compare Plans & Features
@@ -356,41 +357,20 @@ export default function FeaturesPage() {
         </section>
 
         {/* ══════════════════════════════════════════
-            CTA SECTION – Final call to action
+            CTA SECTION – Reusable component
         ══════════════════════════════════════════ */}
-        <section className="relative overflow-hidden bg-transparent px-2.5 lg:px-0">
-          <div className="container mx-auto relative bg-linear-30 from-lime-50 to-green-100 border-l border-r border-t border-slate-300 px-5">
-            <div className="text-center py-20">
-              <h2 className="text-foreground text-4xl font-bold mb-4">
-                Ready to Experience These Features?
-              </h2>
-              <p className="text-muted-foreground text-xl max-w-3xl mx-auto mb-10">
-                Join thousands of businesses using ProDigiChat to transform their WhatsApp marketing.
-              </p>
-              <div className="flex flex-wrap gap-4 justify-center">
-                <Button
-                  asChild
-                  size="lg"
-                  className="rounded-full border border-slate-300"
-                >
-                  <Link href="/signup">
-                    Start Free Trial
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  size="lg"
-                  className="rounded-full"
-                >
-                  <Link href="/pricing">
-                    View Pricing
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </section>
+        <CTASection
+          title="Ready to Experience These Features?"
+          description="Join thousands of businesses using ProDigiChat to transform their WhatsApp marketing."
+          primaryButton={{
+            text: "Start Free Trial",
+            href: "/signup"
+          }}
+          secondaryButton={{
+            text: "View Pricing",
+            href: "/pricing"
+          }}
+        />
       </main>
 
       <PublicFooter />

@@ -168,7 +168,7 @@ export function TemplatePreview({ preview, className }: TemplatePreviewComponent
 
           {/* Chat Background */}
           <div
-            className="flex-1 relative px-2 py-3 overflow-y-auto"
+            className="flex-1 relative px-2 z-10 py-3 overflow-y-auto"
             style={{
               backgroundColor: "#ECE5DD",
               backgroundImage: `url("/whatsapp-doodle-bg.png")`,

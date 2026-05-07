@@ -44,7 +44,7 @@ export default function BlogDetailPage({ params }: BlogDetailPageProps) {
       <main className="bg-background pt-32">
         {/* Back Navigation */}
         <section className="pb-8">
-          <div className="container mx-auto px-4">
+          <div className="max-w-1440px mx-auto px-4">
             <div className="max-w-4xl mx-auto">
               <Link href="/blog" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
                 <ArrowLeft className="h-4 w-4" />
@@ -56,7 +56,7 @@ export default function BlogDetailPage({ params }: BlogDetailPageProps) {
 
         {/* Article Header */}
         <section className="pb-12">
-          <div className="container mx-auto px-4">
+          <div className="max-w-1440px mx-auto px-4">
             <div className="max-w-4xl mx-auto">
               <div className="mb-6">
                 <Badge className="mb-4">{post.category}</Badge>
@@ -107,7 +107,7 @@ export default function BlogDetailPage({ params }: BlogDetailPageProps) {
 
         {/* Article Content */}
         <section className="pb-16">
-          <div className="container mx-auto px-4">
+          <div className="max-w-1440px mx-auto px-4">
             <div className="max-w-4xl mx-auto">
               <div className="prose prose-lg max-w-none prose-headings:text-foreground prose-headings:font-bold prose-p:text-foreground prose-p:leading-relaxed prose-p:mb-6 prose-strong:text-foreground prose-strong:font-semibold">
                 <div className="text-foreground leading-relaxed space-y-4">
@@ -148,7 +148,7 @@ export default function BlogDetailPage({ params }: BlogDetailPageProps) {
 
         {/* Related Articles */}
         <section className="pb-16">
-          <div className="container mx-auto px-4">
+          <div className="max-w-1440px mx-auto px-4">
             <div className="max-w-6xl mx-auto">
               <h2 className="text-2xl font-bold mb-8">Recent Articles</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

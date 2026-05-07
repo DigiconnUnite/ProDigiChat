@@ -4,6 +4,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { PublicFooter } from "@/components/public-footer"
+import CTASection from "@/components/cta-section"
 import {
   CheckCircle2,
   XCircle,
@@ -153,7 +154,7 @@ export default function PricingPage() {
             HERO SECTION – Pricing introduction
         ══════════════════════════════════════════ */}
         <section className="relative overflow-hidden bg-transparent px-2.5 lg:px-0">
-          <div className="container mx-auto relative bg-linear-30 from-lime-50 to-green-100 border-l border-r border-slate-300 px-5">
+          <div className="max-w-[1440px] mx-auto relative bg-linear-30 from-lime-50 to-green-100 border-l border-r border-slate-300 px-5">
             <div className="text-center py-20">
               <h1 className="text-foreground text-4xl font-bold mb-4">
                 Simple, Transparent Pricing
@@ -192,7 +193,7 @@ export default function PricingPage() {
             PRICING CARDS – Main pricing plans
         ══════════════════════════════════════════ */}
         <section className="bg-transparent border-slate-300 px-2.5 lg:px-0">
-          <div className="container mx-auto relative border-t border-l border-r border-slate-300 px-5">
+          <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5">
             <div className="grid lg:grid-cols-3 gap-6 py-20">
               {plans.map((plan, index) => (
                 <div
@@ -267,7 +268,7 @@ export default function PricingPage() {
             FEATURES SECTION – Included features highlight
         ══════════════════════════════════════════ */}
         <section className="bg-transparent px-2.5 lg:px-0">
-          <div className="container mx-auto relative border-t border-l border-r border-slate-300 px-5">
+          <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5">
             <div className="text-center mb-16 pt-20 pb-4">
               <h2 className="text-foreground text-4xl font-bold mb-4">
                 Everything You Need to Succeed
@@ -302,7 +303,7 @@ export default function PricingPage() {
             FAQ SECTION – Frequently asked questions
         ══════════════════════════════════════════ */}
         <section className="bg-transparent border-slate-300 px-2.5 lg:px-0">
-          <div className="container mx-auto relative border-t border-l border-r border-slate-300 px-5">
+          <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5">
             <div className="text-center mb-16 pt-20 pb-4">
               <h2 className="text-foreground text-4xl font-bold mb-4">
                 Frequently Asked Questions
@@ -333,41 +334,20 @@ export default function PricingPage() {
         </section>
 
         {/* ══════════════════════════════════════════
-            CTA SECTION – Final call to action
+            CTA SECTION – Reusable component
         ══════════════════════════════════════════ */}
-        <section className="bg-transparent border-slate-300 px-2.5 lg:px-0">
-          <div className="container mx-auto relative border-t border-l border-r border-slate-300 px-5">
-            <div className="text-center py-20">
-              <h2 className="text-foreground text-4xl font-bold mb-4">
-                Ready to Get Started?
-              </h2>
-              <p className="text-muted-foreground text-xl max-w-3xl mx-auto mb-10">
-                Join thousands of businesses using ProDigiChat to reach customers effectively.
-              </p>
-              <div className="flex flex-wrap gap-4 justify-center">
-                <Button
-                  asChild
-                  size="lg"
-                  className="rounded-full border border-slate-300"
-                >
-                  <Link href="/signup">
-                    Start Free Trial
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  size="lg"
-                  className="rounded-full"
-                >
-                  <Link href="/demo">
-                    Schedule Demo
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </section>
+        <CTASection
+          title="Ready to Get Started?"
+          description="Join thousands of businesses using ProDigiChat to reach customers effectively."
+          primaryButton={{
+            text: "Start Free Trial",
+            href: "/signup"
+          }}
+          secondaryButton={{
+            text: "Schedule Demo",
+            href: "/demo"
+          }}
+        />
       </main>
 
       <PublicFooter />

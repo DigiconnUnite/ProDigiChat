@@ -93,7 +93,7 @@ export default function SignupPage() {
         <Header variant="public" />
         <main className="bg-background">
           <section className="relative overflow-hidden bg-transparent border-slate-300 px-2.5 lg:px-0">
-            <div className="container mx-auto relative bg-linear-30 from-lime-50 to-green-100 border-t border-l border-r border-slate-300 px-5">
+            <div className="max-w-1440px mx-auto relative bg-linear-30 from-lime-50 to-green-100 border-t border-l border-r border-slate-300 px-5">
               <div className="flex flex-col items-center justify-center py-20 min-h-[calc(100vh-80px)]">
                 <div className="w-full max-w-md p-8 rounded-xl border-2 border-green-950 bg-white transition-all hover:shadow-card">
                   <div className="text-center space-y-4">

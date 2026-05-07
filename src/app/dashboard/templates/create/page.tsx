@@ -45,7 +45,7 @@ export default function CreateTemplatePage() {
 
   return (
     <div className="bg-background">
-      <div className="container mx-auto relative border-l border-r border-slate-300 pb-0 h-[calc(100vh-80px)] ">
+      <div className="max-w-[1440px] mx-auto relative border-l border-r border-slate-300 pb-0 h-[calc(100vh-80px)] ">
         <TemplateWizard
           onSave={handleSave}
           onCancel={handleCancel}

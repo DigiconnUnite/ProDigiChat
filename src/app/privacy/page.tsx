@@ -15,7 +15,7 @@ export default function PrivacyPage() {
       {/* Main Content - Light background requires dark text */}
       <div className="min-h-screen bg-background pt-20  border">
         {/* Content Container */}
-        <main className="container mx-auto px-4 py-12 max-w-6xl">
+        <main className="max-w-[1440px] mx-auto px-4 py-12">
           <div className="rounded-4xl p-8 md:p-12 ">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
               Privacy Policy

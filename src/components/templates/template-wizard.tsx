@@ -28,6 +28,7 @@ import {
   ButtonType as ButtonCategory
 } from '@/types/template';
 import { cn } from '@/lib/utils';
+import StripesBackground from '../ui/StripesBackground';
 
 interface TemplateWizardProps {
   initialData?: Partial<CreateTemplateInput>;
@@ -172,7 +173,7 @@ export function TemplateWizard({ initialData, onSave, onCancel, isLoading = fals
   };
 
   return (
-    <div className="w-full h-full   mx-auto">
+    <div className="w-full h-full max-w-[1440px] mx-auto">
       {/* Main Content */}
       <div className={`grid gap-0 transition-all duration-300 ${isSidebarOpen ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1'}`}>
         {/* Left Panel - Form Sections */}
@@ -504,7 +505,8 @@ export function TemplateWizard({ initialData, onSave, onCancel, isLoading = fals
 
         {/* Right Panel - Preview */}
         {isSidebarOpen && (
-          <div className="lg:col-span-1 border sticky top-6 h-[calc(100vh-80px)] overflow-hidden bg-gradient-to-br from-lime-50 to-green-50">
+          <div className="lg:col-span-1 z-20 border sticky top-6 h-[calc(100vh-80px)] overflow-hidden bg-gradient-to-br from-lime-50 to-green-50">
+            <StripesBackground position="full" opacity="opacity-10" />
             <div className="h-full flex items-center justify-center p-6">
               <TemplatePreview
                 preview={{

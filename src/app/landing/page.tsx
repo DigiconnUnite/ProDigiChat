@@ -4,6 +4,8 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/header"
 import { PublicFooter } from "@/components/public-footer"
+import StripesBackground from "@/components/ui/StripesBackground"
+import CTASection from "@/components/cta-section"
 import {
   MessageSquare,
   Send,
@@ -116,9 +118,10 @@ export default function LandingPage() {
         ══════════════════════════════════════════ */}
      
         <section className="relative overflow-hidden bg-transparent px-2.5 lg:px-0 pt-18">
-          <div className="container mx-auto relative bg-linear-30 from-lime-50 to-green-100 border-l border-r border-slate-300 px-5">
+          <div className="max-w-[1440px] mx-auto relative bg-linear-30 from-lime-50 to-green-100 border-l border-r border-slate-300 px-5">
+            <StripesBackground position="full" opacity="opacity-10" />
 
-            <div className="grid gap-12 py-12 lg:grid-cols-[1fr_1fr] lg:py-20 lg:pl-12">
+            <div className="grid gap-12 pt-12 lg:grid-cols-[1fr_1fr] lg:pt-20 lg:pl-12 pb-0 lg:pb-0 min-h-[400px] lg:min-h-[500px] relative z-30">
               <div className="flex flex-col items-start justify-center  gap-5 lg:gap-8">
                 <h1 className="text-foreground text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
                   The Complete WhatsApp Marketing Platform
@@ -140,17 +143,15 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-center">
-                <div className="relative w-full max-w-130.5 aspect-522/572 overflow-hidden rounded-md ">
-                  <img
-                    src="/hero-image.png"
-                    alt="ProDigiChat dashboard showing messaging interface"
-                    className="absolute inset-0 h-full w-full object-contain object-center"
-                    loading="lazy"
-                    width={522}
-                    height={572}
-                  />
-                </div>
+              <div className="relative z-30">
+                <img
+                  src="/hero-image.png"
+                  alt="ProDigiChat dashboard showing messaging interface"
+                  className="absolute bottom-0 right-0 w-full max-w-150 h-auto object-contain"
+                  loading="lazy"
+                  width={600}
+                  height={657}
+                />
               </div>
             </div>
           </div>
@@ -160,7 +161,7 @@ export default function LandingPage() {
             STATS BAR – dark, bordered container
         ══════════════════════════════════════════ */}
         <section className="bg-transparent  px-2.5 lg:px-0">
-          <div className="container mx-auto relative border-t border-l border-r border-slate-300 px-5">
+          <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-12 text-center">
               {stats.map((stat, i) => (
                 <div key={i}>
@@ -178,7 +179,7 @@ export default function LandingPage() {
             FEATURES GRID – light section, subtle cards
         ══════════════════════════════════════════ */}
         <section className="bg-transparent  border-slate-300 px-2.5 lg:px-0">
-          <div className="container mx-auto relative border-t border-l border-r border-slate-300 px-5 ">
+          <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5 ">
             {/* Section header */}
             <div className="text-center mb-16 pt-20 pb-4">
               <h2 className="text-foreground text-4xl font-bold mb-4">
@@ -216,7 +217,7 @@ export default function LandingPage() {
             PRICING SECTION – three columns
         ══════════════════════════════════════════ */}
         <section className="bg-transparent px-2.5 lg:px-0">
-          <div className="container mx-auto relative border-l border-t border-r border-gray-300 px-0">
+          <div className="max-w-[1440px] mx-auto relative border-l border-t border-r border-gray-300 px-0">
             <div className="px-6 py-8 lg:px-8 lg:py-16">
               <div className="flex flex-col items-center gap-4 lg:gap-6">
                 <h1 className="text-gray-900 text-4xl font-semibold tracking-tight">Pricing</h1>
@@ -389,7 +390,7 @@ export default function LandingPage() {
             DASHBOARD SECTION – product showcase
         ══════════════════════════════════════════ */}
         <section id="prodigichat-dashboard" className="relative overflow-hidden bg-transparent px-2.5 lg:px-0">
-          <div className="container mx-auto relative border-t border-l border-r border-gray-300 px-0">
+          <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-gray-300 px-0">
             <div className="grid grid-cols-1 gap-4 border-b border-gray-300 px-6 pb-6 pt-20 lg:grid-cols-2 lg:gap-12 lg:px-8 lg:pb-12 lg:pt-32">
               <h1 className="text-foreground text-3xl font-semibold tracking-tight">See Every Message, Understand Every Campaign, and Act with Unmatched Speed</h1>
               <p className="text-gray-600 text-base">Our unified dashboard brings all your contacts, campaigns, and analytics into a single panoramic view—updated in real time.</p>
@@ -467,7 +468,7 @@ export default function LandingPage() {
             CAPABILITIES – dark section, dark cards
         ══════════════════════════════════════════ */}
         <section className="bg-transparent px-2.5 lg:px-0">
-          <div className="container mx-auto relative border-l border-r border-slate-300 px-5">
+          <div className="max-w-[1440px] mx-auto relative border-l border-r border-slate-300 px-5">
             <div className="grid lg:grid-cols-2 gap-16 items-center py-20">
               {/* Left – copy + checklist */}
               <div>
@@ -520,33 +521,20 @@ export default function LandingPage() {
 
 
         {/* ══════════════════════════════════════════
-            FINAL CTA – dark, mirrors hero button style
+            FINAL CTA – Reusable component
         ══════════════════════════════════════════ */}
-        <section className="relative overflow-hidden bg-transparent  border-slate-300 px-2.5 lg:px-0">
-          <div className="container mx-auto relative bg-linear-30 from-lime-50 to-green-100 border-t border-l border-r border-slate-300 px-5">
-            <div className="text-center py-20">
-              <h2 className="text-foreground text-4xl font-bold mb-4">
-                Ready to Scale Your WhatsApp Marketing?
-              </h2>
-              <p className="text-muted-foreground text-xl max-w-3xl mx-auto mb-10">
-                Join thousands of businesses using ProDigiChat to manage contacts, 
-                launch campaigns, and drive results through WhatsApp.
-              </p>
-              <div className="flex flex-wrap gap-4 justify-center">
-                <Button asChild size="lg" className="rounded-full">
-                  <Link href="/signup">
-                    Get Started Free
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" size="lg" className="rounded-full">
-                  <Link href="/pricing">
-                    View Pricing
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </section>
+        <CTASection
+          title="Ready to Scale Your WhatsApp Marketing?"
+          description="Join thousands of businesses using ProDigiChat to manage contacts, launch campaigns, and drive results through WhatsApp."
+          primaryButton={{
+            text: "Get Started Free",
+            href: "/signup"
+          }}
+          secondaryButton={{
+            text: "View Pricing",
+            href: "/pricing"
+          }}
+        />
       </main>
 
       <PublicFooter />
