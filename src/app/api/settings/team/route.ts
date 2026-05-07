@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { getToken } from "next-auth/jwt"
 import { getSettings, updateSettings } from "@/lib/settings-storage"
 import { requireRole } from '@/lib/rbac'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import crypto from 'crypto'
-
-const prisma = new PrismaClient()
 
 // GET: Fetch team members
 export async function GET(request: NextRequest) {

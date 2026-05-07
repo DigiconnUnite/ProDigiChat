@@ -147,7 +147,8 @@ export async function POST(request: Request) {
     }
 
     // ✅ CRITICAL: Acknowledge immediately before any processing
-    // Meta requires 200 OK within 5 seconds or it will retry the webhook
+    // Meta requires 200 OK within 5 seconds or it will retry
+    // webhook. The request is silently dropped without further work.
     const ackResponse = NextResponse.json({ success: true });
     
     // Process webhook asynchronously - don't await to avoid blocking response
@@ -741,7 +742,9 @@ async function updateCampaignStats(campaignId: string, status: string): Promise<
 
     await prisma.campaign.update({
       where: { id: campaignId },
-      data: { stats: JSON.stringify(stats) }
+      data: { 
+        stats: JSON.stringify(stats)
+      }
     });
 
     console.log(`[WhatsApp Webhook] Campaign ${campaignId} stats updated for status: ${status}`);

@@ -455,7 +455,7 @@ export default function CampaignsPage() {
   if (error) {
     return (
       <div className="bg-transparent px-2.5 lg:px-0">
-        <div className="container mx-auto relative border-t border-l border-r border-slate-300 px-5 py-10">
+        <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5 py-10">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div>
               <h1 className="text-foreground text-3xl font-bold mb-2">Campaigns</h1>
@@ -493,7 +493,7 @@ export default function CampaignsPage() {
   if (isLoading) {
     return (
       <div className="bg-transparent px-2.5 lg:px-0">
-        <div className="container mx-auto relative border-t border-l border-r border-slate-300 px-5 py-10">
+        <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5 py-10">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div>
               <h1 className="text-foreground text-3xl font-bold mb-2">Campaigns</h1>
@@ -521,7 +521,7 @@ export default function CampaignsPage() {
 
   return (
     <div className="bg-transparent px-2.5 lg:px-0 h-[87vh]">
-      <div className="container mx-auto relative border-t border-l border-r border-slate-300 px-5 py-10 pb-20 h-[87vh]">
+      <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5 py-10 pb-20 h-[87vh]">
 
         {/* ═══ Page Header ═══ */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">

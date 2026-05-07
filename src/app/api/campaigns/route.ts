@@ -140,7 +140,6 @@ export async function POST(request: NextRequest) {
       status: 'draft',
       messageContent,
       whatsappNumberId: fromNumber || null,
-      whatsappAccountId: fromNumber || null,  // Store the account ID for multi-account support
       stats: JSON.stringify({
         totalSent: 0,
         delivered: 0,

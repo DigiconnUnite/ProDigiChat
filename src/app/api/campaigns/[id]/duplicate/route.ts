@@ -25,13 +25,23 @@ export async function POST(
 
   try {
     const { id } = await params
+    const token = await getToken({ req: request })
+    const orgId = token?.organizationId
+    const userId = token?.sub
+
+    if (!orgId || !userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
 
     // Get the campaign to duplicate
     const campaign = await prisma.campaign.findUnique({
       where: { id }
     })
 
-    if (!campaign) {
+    if (!campaign || campaign.organizationId !== orgId) {
       return NextResponse.json(
         { success: false, error: 'Campaign not found' },
         { status: 404 }
@@ -54,7 +64,7 @@ export async function POST(
           clicked: 0
         }),
         audienceSegmentId: campaign.audienceSegmentId,
-        createdBy: campaign.createdBy,
+        createdBy: userId,
         organizationId: campaign.organizationId
       }
     })

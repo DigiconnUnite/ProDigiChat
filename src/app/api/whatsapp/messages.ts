@@ -43,14 +43,19 @@ export async function sendTextMessage(to: string, message: string, orgId: string
   }
 }
 
-export async function sendMediaMessage(to: string, mediaUrl: string, caption: string, orgId: string, accountId?: string) {
+export async function sendMediaMessage(to: string, mediaUrl: string, caption: string, orgId: string, accountId?: string, mediaType: string = 'image') {
   const formattedTo = formatPhoneNumber(to);
-  console.log('[WhatsAppMessages] sendMediaMessage', { to: maskPhone(formattedTo), hasCaption: !!caption, accountId });
+  console.log('[WhatsAppMessages] sendMediaMessage', { to: maskPhone(formattedTo), hasCaption: !!caption, mediaType, accountId });
   try {
+    const mediaPayload: any = { link: mediaUrl };
+    if (caption) {
+      mediaPayload.caption = caption;
+    }
+    
     const response = await whatsappClient.sendMessage({
       to: formattedTo,
-      type: "image",
-      image: { link: mediaUrl, caption },
+      type: mediaType,
+      [mediaType]: mediaPayload,
     }, orgId, accountId);
     return response.data;
   } catch (error) {

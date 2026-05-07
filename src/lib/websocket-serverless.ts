@@ -126,7 +126,7 @@ class ServerlessWebSocket extends EventEmitter {
   }
 
   // Get all recent messages for an organization
-  getRecentMessages(organizationId: string, since?: number) {
+  getRecentMessages(organizationId: string, since?: number): Array<{ room: string; event: string; data: any; timestamp: number }> {
     const cutoff = since || (Date.now() - 60000); // Default to last minute
     const messages: Array<{ room: string; event: string; data: any; timestamp: number }> = [];
     
@@ -134,7 +134,7 @@ class ServerlessWebSocket extends EventEmitter {
     if (this.lastOrgMessages) {
       for (const [key, message] of this.lastOrgMessages) {
         if (key.startsWith(`${organizationId}:`) && message.timestamp > cutoff) {
-          messages.push({ room: 'org', event: key.replace(`${organizationId}:`, ''), ...message });
+          messages.push({ room: 'org', event: key.replace(`${organizationId}:`, ''), data: message.data, timestamp: message.timestamp });
         }
       }
     }
@@ -143,7 +143,7 @@ class ServerlessWebSocket extends EventEmitter {
     if (this.lastInboxMessages) {
       for (const [key, message] of this.lastInboxMessages) {
         if (key.startsWith(`${organizationId}:`) && message.timestamp > cutoff) {
-          messages.push({ room: 'inbox', event: key.replace(`${organizationId}:`, ''), ...message });
+          messages.push({ room: 'inbox', event: key.replace(`${organizationId}:`, ''), data: message.data, timestamp: message.timestamp });
         }
       }
     }

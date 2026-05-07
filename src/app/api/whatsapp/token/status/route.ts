@@ -11,14 +11,28 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getToken } from 'next-auth/jwt';
 
 /**
  * GET handler for token status
  */
 export async function GET(request: NextRequest) {
+  // Authentication check
+  const token = await getToken({ req: request });
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  
+  const userOrgId = token?.organizationId;
+  
   try {
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
+    
+    // If orgId is provided, only allow access to user's own organization
+    if (orgId && orgId !== userOrgId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     
     if (orgId) {
       // Get status for specific organization
@@ -59,9 +73,12 @@ export async function GET(request: NextRequest) {
       });
     }
     
-    // Get status for all organizations
+    // Get status for user's organization only
     const credentials = await prisma.whatsAppCredential.findMany({
-      where: { isActive: true },
+      where: { 
+        isActive: true,
+        organizationId: userOrgId 
+      },
       select: {
         organizationId: true,
         businessAccountName: true,

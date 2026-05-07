@@ -28,6 +28,7 @@ export const QueueStatus = {
   SENT: 'sent',
   FAILED: 'failed',
   DELIVERED: 'delivered',
+  PAUSED: 'paused',
 } as const;
 
 // Message type constants
@@ -311,6 +312,7 @@ export async function getReadyMessages(
   }
   
   // Get messages that are queued or pending AND (no scheduled time OR scheduled time passed) AND (no retry time OR retry time passed)
+  // Note: paused items are excluded since they're not in the status array
   const messages = await prisma.whatsAppMessageQueue.findMany({
     where: {
       organizationId: organizationId || undefined,
@@ -410,6 +412,7 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
       mediaUrl?: string;
       caption?: string;
       language?: string;
+      mediaType?: string;
     };
 
     try {
@@ -469,7 +472,8 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
           parsedContent.mediaUrl || '',
           parsedContent.caption || '',
           organizationId,
-          accountId
+          accountId,
+          parsedContent.mediaType || 'image'
         );
         break;
         
@@ -532,7 +536,7 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
               organizationId: contact.organizationId || organizationId,
               direction: 'outgoing',
               status: 'sent',
-              content: JSON.stringify({ text: queueItem.messageContent }),
+              content: queueItem.messageContent,
               whatsappMessageId,
               stats: JSON.stringify({ totalSent: 1, delivered: 0, read: 0, failed: 0, clicked: 0 }),
             },
@@ -748,7 +752,7 @@ async function updateCampaignStatsFromQueue(
       // Get current campaign stats
       const campaign = await prisma.campaign.findUnique({
         where: { id: campaignId },
-        select: { stats: true }
+        select: { stats: true, status: true }
       });
 
       if (!campaign) continue;
@@ -775,66 +779,30 @@ async function updateCampaignStatsFromQueue(
       });
 
       console.log(`[Queue] Updated campaign ${campaignId} stats: +${stats.succeeded} sent, +${stats.failed} failed`);
+
+      // Check if campaign should be marked as completed
+      if (campaign.status === 'running') {
+        const remaining = await prisma.whatsAppMessageQueue.count({
+          where: { 
+            campaignId, 
+            status: { in: ['queued', 'pending', 'sending'] } 
+          }
+        });
+
+        if (remaining === 0) {
+          await prisma.campaign.update({
+            where: { id: campaignId }, 
+            data: { status: 'completed' }
+          });
+          console.log(`[Queue] Campaign ${campaignId} marked as completed`);
+        }
+      }
     } catch (error) {
       console.error(`[Queue] Error updating campaign ${campaignId} stats:`, error);
     }
   }
-}
 
-/**
- * Retry a failed message
- */
-export async function retryMessage(queueItemId: string): Promise<WhatsAppMessageQueue | null> {
-  const queueItem = await prisma.whatsAppMessageQueue.findUnique({
-    where: { id: queueItemId },
-  });
-
-  if (!queueItem) {
-    console.error(`[Queue] Queue item not found: ${queueItemId}`);
-    return null;
-  }
-
-  if (queueItem.status !== QueueStatus.FAILED) {
-    console.error(`[Queue] Cannot retry message ${queueItemId} - status is ${queueItem.status}`);
-    return null;
-  }
-
-  // Reset for retry
-  const updated = await prisma.whatsAppMessageQueue.update({
-    where: { id: queueItemId },
-    data: {
-      status: QueueStatus.QUEUED,
-      attempts: 0,
-      nextRetryAt: null,
-      errorMessage: null,
-      errorCode: null,
-    },
-  });
-
-  console.log(`[Queue] Message ${queueItemId} queued for retry`);
-  return updated;
-}
-
-/**
- * Retry all failed messages for an organization
- */
-export async function retryAllFailed(organizationId: string): Promise<number> {
-  const result = await prisma.whatsAppMessageQueue.updateMany({
-    where: {
-      organizationId,
-      status: QueueStatus.FAILED,
-    },
-    data: {
-      status: QueueStatus.QUEUED,
-      attempts: 0,
-      nextRetryAt: null,
-      errorMessage: null,
-      errorCode: null,
-    },
-  });
-
-  console.log(`[Queue] Reset ${result.count} failed messages for retry`);
-  return result.count;
+  return;
 }
 
 /**
@@ -908,6 +876,104 @@ export async function cleanupOldMessages(organizationId: string, daysOld: number
 
   console.log(`[Queue] Cleaned up ${result.count} old messages`);
   return result.count;
+}
+
+/**
+ * Retry a single failed message
+ */
+export async function retryMessage(queueItemId: string): Promise<WhatsAppMessageQueue | null> {
+  const queueItem = await prisma.whatsAppMessageQueue.findUnique({
+    where: { id: queueItemId },
+  });
+
+  if (!queueItem) {
+    return null;
+  }
+
+  if (queueItem.status !== QueueStatus.FAILED) {
+    console.error(`[Queue] Cannot retry message ${queueItemId} - not failed`);
+    return null;
+  }
+
+  return prisma.whatsAppMessageQueue.update({
+    where: { id: queueItemId },
+    data: {
+      status: QueueStatus.PENDING,
+      attempts: 0,
+      nextRetryAt: new Date(),
+    },
+  });
+}
+
+/**
+ * Retry all failed messages for an organization
+ */
+export async function retryAllFailed(orgId?: string): Promise<{ retried: number; errors: string[] }> {
+  console.log(`[Queue] Retrying all failed messages for org: ${orgId || 'all'}`);
+  
+  const orgFilter = orgId ? { organizationId: orgId } : {};
+  
+  // Get all failed messages, but exclude permanent policy failures
+  const failedMessages = await prisma.whatsAppMessageQueue.findMany({
+    where: {
+      ...orgFilter,
+      status: QueueStatus.FAILED,
+      // Exclude messages that failed due to permanent policy violations
+      // These should never be retried as they will always fail
+      NOT: [
+        {
+          errorMessage: {
+            contains: 'opted_out',
+          },
+        },
+        {
+          errorMessage: {
+            contains: 'policy_violation',
+          },
+        },
+        {
+          errorMessage: {
+            contains: 'blocked',
+          },
+        },
+        {
+          errorMessage: {
+            contains: 'spam',
+          },
+        },
+      ],
+    },
+  });
+
+  console.log(`[Queue] Found ${failedMessages.length} failed messages to retry (excluding permanent failures)`);
+
+  let retried = 0;
+  const errors: string[] = [];
+
+  for (const message of failedMessages) {
+    try {
+      // Reset retry count and next retry time
+      const updatedMessage = await prisma.whatsAppMessageQueue.update({
+        where: { id: message.id },
+        data: {
+          status: QueueStatus.PENDING,
+          attempts: 0,
+          nextRetryAt: new Date(),
+        },
+      });
+
+      if (updatedMessage) {
+        retried++;
+        console.log(`[Queue] Retrying message ${message.id} for ${message.recipientPhone}`);
+      } else {
+        errors.push(`Failed to reset retry for message ${message.id}`);
+      }
+    } catch (error) {
+      errors.push(`Error retrying message ${message.id}: ${error}`);
+    }
+  }
+
+  return { retried, errors };
 }
 
 export type { WhatsAppMessageQueue };

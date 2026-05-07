@@ -20,9 +20,9 @@ export async function GET(request: NextRequest) {
   }
   try {
     const token = await getToken({ req: request })
-    const userId = token?.sub as string
+    const organizationId = token?.organizationId
 
-    if (!userId) {
+    if (!organizationId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -32,9 +32,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status') || ''
 
-    // Build query conditions - always filter by authenticated user
+    // Build query conditions - always filter by organization
     const conditions: any = {
-      createdBy: userId
+      organizationId
     }
     if (status) conditions.status = status
 
@@ -79,8 +79,9 @@ export async function POST(request: NextRequest) {
   try {
     const token = await getToken({ req: request })
     const userId = token?.sub as string
+    const organizationId = (token?.organizationId || token?.orgId) as string
 
-    if (!userId) {
+    if (!userId || !organizationId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -95,14 +96,15 @@ export async function POST(request: NextRequest) {
       status 
     } = body
 
-    // Create new automation workflow with authenticated user as owner
+    // Create new automation workflow with organization
     const workflow = await prisma.automationWorkflow.create({
       data: {
         name,
         trigger: trigger || {},
         nodes: nodes || [],
-        createdBy: userId,
-        status: status || 'draft'
+        organizationId,
+        status: status || 'draft',
+        createdBy: userId
       }
     })
 

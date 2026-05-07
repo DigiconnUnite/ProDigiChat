@@ -18,6 +18,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { decryptWhatsAppCredential, encryptField } from '@/lib/encryption';
 import { META_API_BASE } from '@/lib/meta-config';
+import { getToken } from 'next-auth/jwt';
 
 // Token expiration thresholds
 const REFRESH_THRESHOLD_DAYS = 7; // Refresh tokens expiring within 7 days
@@ -262,6 +263,21 @@ async function processOrganizationTokenRefresh(
  */
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
+  
+  // Authentication check
+  const token = await getToken({ req: request });
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  
+  // Allow cron calls with CRON_SECRET
+  const authHeader = request.headers.get('authorization');
+  const cronSecret = process.env.CRON_SECRET;
+  if (authHeader && authHeader.startsWith('Bearer ') && authHeader.slice(7) === cronSecret) {
+    // Allow cron calls - skip token validation
+  } else if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   
   try {
     const { searchParams } = new URL(request.url);

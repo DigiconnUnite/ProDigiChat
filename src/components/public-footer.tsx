@@ -40,7 +40,8 @@ export function PublicFooter() {
 
   return (
     <footer className=" border-green-900" style={{backgroundColor: '#072507'}}>
-      <div className="container border-x border-green-800 mx-auto px-4 sm:px-0 py-6 sm:py-12">
+      
+      <div className="max-w-[1440px] border-x border-green-800 mx-auto px-4 sm:px-0 py-6 sm:py-12">
         {/* TOP SECTION - Newsletter & Social */}
         <div className="pb-4 px-5 sm:pb-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6">

@@ -1,20 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { randomUUID } from "crypto";
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 import { saveFileMetadata } from '@/lib/files'
+import { uploadFileToS3, validateFileForUpload } from '@/lib/s3-upload'
 
-// Allowed file types
-const ALLOWED_FILE_TYPES = {
-  image: ["image/jpeg", "image/png", "image/gif", "image/webp"],
-  csv: ["text/csv", "application/vnd.ms-excel"],
-  document: ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]
-};
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const UPLOAD_DIR = join(process.cwd(), "uploads");
+// Note: File validation constants moved to s3-upload.ts
 
 async function validateSession(request: NextRequest) {
   const token = await getToken({ req: request })
@@ -34,6 +24,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const token = await getToken({ req: req })
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const type = formData.get("type") as string || "media"; // "media" or "csv"
@@ -42,59 +33,46 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
-    // Validate file size
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json({ error: "File size exceeds the limit of 10MB" }, { status: 400 });
-    }
-
-    // Validate file type based on upload type
-    const allowedTypes = type === "csv" ? ALLOWED_FILE_TYPES.csv : ALLOWED_FILE_TYPES.image.concat(ALLOWED_FILE_TYPES.document);
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json({
-        error: `Invalid file type. Allowed: ${allowedTypes.join(", ")}`
-      }, { status: 400 });
-    }
-
-    // Generate unique filename
-    const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
-    const fileName = `${randomUUID()}.${fileExtension}`;
-    const filePath = join(UPLOAD_DIR, fileName);
-
-    // Ensure upload directory exists
+    // Validate file using S3 upload validation
     try {
-      await mkdir(UPLOAD_DIR, { recursive: true });
-    } catch (error) {
-      console.error("Failed to create upload directory:", error);
+      validateFileForUpload(file, type);
+    } catch (validationError) {
+      const errorMessage = validationError instanceof Error ? validationError.message : 'Validation failed';
+      return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
 
-    // Save file to disk
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
+    // Upload to S3 with organization context
+    const uploadedFile = await uploadFileToS3(file, type, {
+      organizationId: token?.organizationId,
+      userId: token?.sub,
+    });
 
     // Save file metadata to database
     const fileId = await saveFileMetadata({
-      filename: fileName,
-      originalname: file.name,
-      size: file.size,
-      mimetype: file.type,
-      url: `/uploads/${fileName}`,
-      key: fileName, // Using filename as key for local storage
+      filename: uploadedFile.filename,
+      originalname: uploadedFile.originalName,
+      size: uploadedFile.size,
+      mimetype: uploadedFile.mimeType,
+      url: uploadedFile.url,
+      key: uploadedFile.key,
     }, req);
 
     const fileRecord = {
       id: fileId,
-      filename: fileName,
-      originalName: file.name,
-      mimeType: file.type,
-      size: file.size,
-      path: filePath,
-      url: `/uploads/${fileName}`,
+      filename: uploadedFile.filename,
+      originalName: uploadedFile.originalName,
+      mimeType: uploadedFile.mimeType,
+      size: uploadedFile.size,
+      url: uploadedFile.url,
+      key: uploadedFile.key,
     };
 
     // If CSV, process contacts
     if (type === "csv" && file.type === "text/csv") {
       try {
+        // Read file content for CSV processing
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
         const csvContent = buffer.toString('utf-8');
         const contacts = await processCSVContacts(csvContent, fileRecord.id);
 
@@ -120,13 +98,13 @@ export async function POST(req: NextRequest) {
       success: true,
       fileId: fileRecord.id,
       fileUrl: fileRecord.url,
-      message: "File uploaded successfully"
+      message: "File uploaded successfully to S3"
     });
 
   } catch (error) {
     console.error("File upload error:", error);
     return NextResponse.json({
-      error: "Failed to upload file"
+      error: "Failed to upload file to S3"
     }, { status: 500 });
   }
 }

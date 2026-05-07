@@ -1,30 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
-
-async function validateSession(request: NextRequest) {
-  const token = await getToken({ req: request })
-  if (!token) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    )
-  }
-  return null
-}
+import { requireRole } from '@/lib/rbac'
 
 // GET /api/segments - Get all segments for the authenticated user
 export async function GET(request: NextRequest) {
-  const unauthorizedResponse = await validateSession(request)
-  if (unauthorizedResponse) {
-    return unauthorizedResponse
+  // RBAC: Require member role or higher to view segments
+  const roleCheck = await requireRole(request, 'member')
+  if (roleCheck) {
+    return roleCheck
   }
 
   try {
     const token = await getToken({ req: request })
-    const userId = token?.sub as string
+    const organizationId = token?.organizationId
 
-    if (!userId) {
+    if (!organizationId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -34,10 +25,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const includeCount = searchParams.get('includeCount') === 'true'
 
-    // Always filter by authenticated user
+    // Always filter by organization
     const segments = await prisma.segment.findMany({
       where: {
-        createdBy: userId
+        organizationId
       },
       orderBy: { createdAt: 'desc' },
       include: {
@@ -75,9 +66,10 @@ export async function GET(request: NextRequest) {
 
 // POST /api/segments - Create a new segment
 export async function POST(request: NextRequest) {
-  const unauthorizedResponse = await validateSession(request)
-  if (unauthorizedResponse) {
-    return unauthorizedResponse
+  // RBAC: Require member role or higher to create segments
+  const roleCheck = await requireRole(request, 'member')
+  if (roleCheck) {
+    return roleCheck
   }
 
   try {
@@ -103,13 +95,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create segment with authenticated user as owner
+    // Create segment with organization
     const segment = await prisma.segment.create({
       data: {
         name,
         rules: JSON.stringify(rules || []),
-        createdBy: userId,
-        organizationId
+        organizationId,
+        createdBy: userId
       }
     })
 

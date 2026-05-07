@@ -23,7 +23,7 @@ export function StandardLayout({
   )
 
   const innerContainerClasses = cn(
-    "container mx-auto relative px-5 py-6 space-y-6",
+    "max-w-[1440px] mx-auto relative px-5 py-6 space-y-6",
     showBorder && "border-l border-r border-slate-300",
     maxWidth === "4xl" && "max-w-4xl",
     maxWidth === "6xl" && "max-w-6xl", 

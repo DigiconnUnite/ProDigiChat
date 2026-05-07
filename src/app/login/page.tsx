@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { MessageSquare, Mail, Lock, ArrowRight, AlertCircle } from "lucide-react"
 import { Header } from "@/components/header"
 import { PublicFooter } from "@/components/public-footer"
+import StripesBackground from "@/components/ui/StripesBackground"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -50,20 +51,18 @@ export default function LoginPage() {
   return (
     <>
       <Header variant="public" />
-      <div className="bg-background px-2.5 lg:px-0">
-        <div className="container mx-auto relative border-l border-r border-slate-300 px-5 py-6 min-h-[calc(100vh-80px)]">
-          <div className="flex flex-col items-center justify-center flex-1 my-auto">
+      <div className="bg-background px-2.5 lg:px-0 relative">
+        <div className="max-w-[1440px] mx-auto relative bg-linear-30 from-lime-50 to-green-100 border-t border-l border-r border-slate-300 px-5 z-20">
+          <StripesBackground position="full" opacity="opacity-10" />
+          <div className="flex flex-col items-center justify-center py-20 min-h-[calc(100vh-80px)]">
             <div className="w-full max-w-md">
               <div className="mb-8 text-center">
-                <h1 className="text-foreground text-3xl font-bold mb-2">
+                <h1 className="text-foreground text-2xl font-bold mb-2">
                   Sign in to your account
                 </h1>
-                <p className="text-muted-foreground text-base">
-                  Access your WhatsApp marketing automation platform
-                </p>
               </div>
 
-              <div className="p-8 rounded-xl border-2 border-green-950 bg-white transition-all hover:shadow-card">
+              <div className="p-8 rounded-xl border-2 border-green-950 bg-white transition-all hover:shadow-card relative z-30">
                 <form onSubmit={handleLogin} className="space-y-6">
                   {error && (
                     <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">

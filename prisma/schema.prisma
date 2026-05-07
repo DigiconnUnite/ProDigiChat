@@ -51,6 +51,7 @@ model Team {
   campaigns Campaign[]
   messages Message[]
   files File[]
+  automationWorkflows AutomationWorkflow[]
 
   @@map("teams")
 }
@@ -172,11 +173,13 @@ model AutomationWorkflow {
   trigger   String   // JSON object defining trigger
   nodes     String   // JSON array of nodes
   createdBy String   @db.ObjectId
+  organizationId String? @db.ObjectId
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
   creator  User?     @relation(fields: [createdBy], references: [id])
+  organization Team?     @relation(fields: [organizationId], references: [id])
 
   @@map("automationWorkflows")
 }
@@ -364,13 +367,14 @@ model Message {
 
 // Activity Log for audit trail
 model ActivityLog {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId    String?  @db.ObjectId
-  action    String
-  details   String   // JSON object with additional details
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime @default(now())
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String?  @db.ObjectId
+  organizationId String? @db.ObjectId
+  action        String
+  details       String   // JSON object with additional details
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
 
   @@map("activityLogs")
 }

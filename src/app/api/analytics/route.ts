@@ -16,10 +16,10 @@ export async function GET(request: NextRequest) {
 
    // Build organization-level filters for org-wide analytics
    const contactFilter = { organizationId: orgId };
-   const automationFilter = {};
+   const automationFilter = { organizationId: orgId };
    const campaignFilter = { organizationId: orgId };
    const messageFilter = { organizationId: orgId };
-   const activityFilter = {};
+   const activityFilter = { organizationId: orgId };
 
   try {
     const { searchParams } = new URL(request.url)

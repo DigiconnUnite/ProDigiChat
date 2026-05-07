@@ -51,66 +51,72 @@ export const authOptions: AuthOptions = {
           where: { email: profile.email }
         })
         
-        // If user doesn't exist, create them
+        // If user doesn't exist, create them with transaction
         if (!user) {
-          const hashedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12)
-          user = await prisma.user.create({
-            data: {
-              email: profile.email,
-              name: profile.name,
-              password: hashedPassword,
-              role: 'user',
-            }
+          const result = await prisma.$transaction(async (tx) => {
+            const hashedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12)
+            const newUser = await tx.user.create({
+              data: {
+                email: profile.email,
+                name: profile.name,
+                password: hashedPassword,
+                role: 'user',
+              }
+            })
+            
+            // This ensures Google OAuth users get organizationId in their JWT token
+            const slug = profile.email.split('@')[0].toLowerCase() + '-' + Date.now()
+            
+            // 1. Create a organization (Team)
+            const organization = await tx.team.create({
+              data: {
+                name: profile.name + "'s Organization",
+              },
+            })
+            
+            // 2. Create organization membership (links user to org with owner role)
+            await tx.organizationMember.create({
+              data: {
+                userId: newUser.id,
+                organizationId: organization.id,
+                role: 'owner',
+                isActive: true,
+                acceptedAt: new Date(),
+              },
+            })
+            
+            // 3. Create default organization settings
+            await tx.organizationSettings.create({
+              data: {
+                organizationId: organization.id,
+                general: JSON.stringify({
+                  timezone: 'UTC',
+                  language: 'en',
+                  dateFormat: 'YYYY-MM-DD',
+                  currency: 'USD',
+                  companyName: profile.name + "'s Organization",
+                  companyEmail: profile.email,
+                }),
+                notifications: JSON.stringify({
+                  email: { enabled: true, frequency: 'instant', events: ['campaign.completed', 'campaign.failed', 'message.failed'] },
+                  push: { enabled: false, events: [] },
+                  slack: { enabled: false, webhookUrl: null, events: [] },
+                }),
+                security: JSON.stringify({}),
+                messaging: JSON.stringify({}),
+                integrations: JSON.stringify({}),
+                whatsapp: JSON.stringify({}),
+                compliance: JSON.stringify({}),
+                branding: JSON.stringify({}),
+              },
+            })
+            
+            console.log('[GoogleOAuth] Created organization:', organization.id, 'for user:', newUser.id)
+            
+            return { user: newUser, organizationId: organization.id }
           })
           
-          // This ensures Google OAuth users get organizationId in their JWT token
-          const slug = profile.email.split('@')[0].toLowerCase() + '-' + Date.now()
-          
-          // 1. Create the organization (Team)
-          const organization = await prisma.team.create({
-            data: {
-              name: profile.name + "'s Organization",
-            },
-          })
-          
-          // 2. Create organization membership (links user to org with owner role)
-          await prisma.organizationMember.create({
-            data: {
-              userId: user.id,
-              organizationId: organization.id,
-              role: 'owner',
-              isActive: true,
-              acceptedAt: new Date(),
-            },
-          })
-          
-          // 3. Create default organization settings
-          await prisma.organizationSettings.create({
-            data: {
-              organizationId: organization.id,
-              general: JSON.stringify({
-                timezone: 'UTC',
-                language: 'en',
-                dateFormat: 'YYYY-MM-DD',
-                currency: 'USD',
-                companyName: profile.name + "'s Organization",
-                companyEmail: profile.email,
-              }),
-              notifications: JSON.stringify({
-                email: { enabled: true, frequency: 'instant', events: ['campaign.completed', 'campaign.failed', 'message.failed'] },
-                push: { enabled: false, events: [] },
-                slack: { enabled: false, webhookUrl: null, events: [] },
-              }),
-              security: JSON.stringify({}),
-              messaging: JSON.stringify({}),
-              integrations: JSON.stringify({}),
-              whatsapp: JSON.stringify({}),
-              compliance: JSON.stringify({}),
-              branding: JSON.stringify({}),
-            },
-          })
-          
-          console.log('[GoogleOAuth] Created organization:', organization.id, 'for user:', user.id)
+          user = result.user
         }
         
         // Return the database user ID, not the Google ID

@@ -25,13 +25,22 @@ export async function POST(
 
   try {
     const { id } = await params
+    const token = await getToken({ req: request })
+    const orgId = token?.organizationId
+
+    if (!orgId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
 
     // Get the campaign
     const campaign = await prisma.campaign.findUnique({
       where: { id }
     })
 
-    if (!campaign) {
+    if (!campaign || campaign.organizationId !== orgId) {
       return NextResponse.json(
         { success: false, error: 'Campaign not found' },
         { status: 404 }
@@ -46,11 +55,20 @@ export async function POST(
       )
     }
 
-    // Pause the campaign
-    const updatedCampaign = await prisma.campaign.update({
-      where: { id },
-      data: { status: 'paused' }
-    })
+    // Pause the campaign and queue items
+    const [updatedCampaign] = await Promise.all([
+      prisma.campaign.update({
+        where: { id },
+        data: { status: 'paused' }
+      }),
+      prisma.whatsAppMessageQueue.updateMany({
+        where: { 
+          campaignId: id, 
+          status: { in: ['queued', 'pending'] } 
+        },
+        data: { status: 'paused' }
+      })
+    ])
 
     return NextResponse.json({
       success: true,

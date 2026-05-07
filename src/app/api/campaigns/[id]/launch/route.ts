@@ -170,6 +170,12 @@ export async function POST(
       contacts = campaign.audience.members
         .map((m: any) => m.contact)
         .filter((c: any) => c && c.phoneNumber)
+    } else if (campaign.audienceSegmentId && !campaign.audience) {
+      // Segment ID set but segment was deleted - prevent silent mass-send
+      return NextResponse.json({
+        success: false,
+        error: 'Selected segment not found or deleted'
+      }, { status: 400 })
     } else {
       // This ensures multi-user organizations can send campaigns to contacts created by teammates
       contacts = await prisma.contact.findMany({

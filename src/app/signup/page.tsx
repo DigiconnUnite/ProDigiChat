@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { MessageSquare, Mail, Lock, User, ArrowRight, AlertCircle, Eye, EyeOff, CheckCircle } from "lucide-react"
 import { Header } from "@/components/header"
 import { PublicFooter } from "@/components/public-footer"
+import StripesBackground from "@/components/ui/StripesBackground"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -122,19 +123,17 @@ export default function SignupPage() {
             HERO SECTION – Signup form
         ══════════════════════════════════════════ */}
         <section className="relative overflow-hidden bg-transparent border-slate-300 px-2.5 lg:px-0">
-          <div className="container mx-auto relative bg-linear-30 from-lime-50 to-green-100 border-t border-l border-r border-slate-300 px-5">
+          <div className="max-w-[1440px] mx-auto relative bg-linear-30 from-lime-50 to-green-100 border-t border-l border-r border-slate-300 px-5 z-20">
+          <StripesBackground position="full" opacity="opacity-10" />
             <div className="flex flex-col items-center justify-center py-20 min-h-[calc(100vh-80px)]">
               <div className="w-full max-w-md">
                 <div className="mb-8 text-center">
-                  <h1 className="text-foreground text-4xl font-bold mb-4">
+                  <h1 className="text-foreground text-2xl font-bold mb-4">
                     Create your account
                   </h1>
-                  <p className="text-muted-foreground text-xl max-w-3xl mx-auto">
-                    Start automating your WhatsApp marketing campaigns
-                  </p>
                 </div>
 
-                <div className="p-8 rounded-xl border-2 border-green-950 bg-white transition-all hover:shadow-card">
+                <div className="p-8 rounded-xl border-2 border-green-950 bg-white transition-all hover:shadow-card relative z-30">
                 <form onSubmit={handleSignup} className="space-y-6">
                   {error && (
                     <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">

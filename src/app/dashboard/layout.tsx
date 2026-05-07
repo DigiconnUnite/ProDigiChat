@@ -18,7 +18,7 @@ export default function DashboardLayout({
       <ErrorBoundary>
         <Header variant="dashboard" className="fixed top-0 left-0 right-0 z-50" />
       </ErrorBoundary>
-      <main className="flex-1 z-10 pt-18 overflow-y-auto scrollbar-hide bg-background min-h-[calc(100vh-8rem)]">
+      <main className="flex-1 z-10 pt-18 overflow-y-auto scrollbar-hide bg-background min-h-[calc(100vh-8rem)] w-full  mx-auto">
         <ErrorBoundary>
           <DashboardBreadcrumb />
         </ErrorBoundary>
@@ -26,9 +26,9 @@ export default function DashboardLayout({
           {children}
         </ErrorBoundary>
       </main>
-      <footer className="bg-green-950 h-auto  flex items-center justify-center text-white text-center text-sm  px-4" style={{backgroundColor: '#072507'}}>
-        <div className="w-full bg-transparent px-2.5 lg:px-0">
-          <div className="container mx-auto py-3 relative border-l border-r border-green-800 px-5">
+      <footer className="bg-green-950 h-auto  flex items-center justify-center text-white text-center text-sm  " style={{backgroundColor: '#072507'}}>
+        <div className="max-w-[1440px]  w-full bg-transparent px-2.5 lg:px-0">
+          <div className=" mx-auto py-3 relative border-l border-r border-green-800 px-5">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-4">
             <p className="text-sm text-green-200">
               © {currentYear} <span className="text-orange-400 font-bold">Prodigichat</span>. All rights reserved.

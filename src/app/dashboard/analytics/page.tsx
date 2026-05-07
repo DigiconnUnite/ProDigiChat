@@ -209,7 +209,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="bg-transparent px-2.5 border h-full lg:px-0">
-      <div className="container mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 space-y-6">
+      <div className="max-w-[1440px] mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 space-y-6">
       {/* Error Message */}
       {error && (
         <Card className="border-destructive/50 bg-destructive/10">
