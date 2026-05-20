@@ -490,7 +490,7 @@ export default function ContactsPage() {
             </div>
             <ContactFormDialog
               contact={null}
-              onSuccess={() => fetchContacts()}
+              onSuccess={() => { setCurrentPage(1); fetchContacts() }}
             >
               <Button className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm">
                 <Plus className="w-4 h-4 mr-2" />
@@ -580,7 +580,7 @@ export default function ContactsPage() {
             </Button>
             <ContactFormDialog
               contact={null}
-              onSuccess={() => fetchContacts()}
+              onSuccess={() => { setCurrentPage(1); fetchContacts() }}
             >
               <Button className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm">
                 <Plus className="w-4 h-4 mr-2" />
@@ -790,7 +790,7 @@ export default function ContactsPage() {
                             </p>
                             <ContactFormDialog
                               contact={null}
-                              onSuccess={() => fetchContacts()}
+                              onSuccess={() => { setCurrentPage(1); fetchContacts() }}
                             >
                               <Button variant="outline" className="rounded-lg border-slate-300 text-sm">
                                 <Plus className="w-4 h-4 mr-2" />

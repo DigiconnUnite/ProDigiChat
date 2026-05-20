@@ -172,20 +172,49 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Check if contact already exists for this organization (excluding deleted contacts)
+    // Check if a non-deleted contact already exists for this organization.
+    // Use `not: true` (instead of `false`) to match MongoDB records where
+    // isDeleted was never set (null/undefined) as well as explicit false.
     const existingContact = await prisma.contact.findFirst({
       where: {
         phoneNumber: normalizedPhoneNumber,
         organizationId: organizationId,
-        isDeleted: false
+        isDeleted: { not: true },
       }
     })
 
     if (existingContact) {
       return NextResponse.json({
         success: false,
-        error: 'A contact with this phone number already exists'
+        error: 'A contact with this phone number already exists',
+        existingId: existingContact.id,
       }, { status: 409 })
+    }
+
+    // Check if a soft-deleted contact with this number exists — restore it instead of creating a duplicate
+    const deletedContact = await prisma.contact.findFirst({
+      where: {
+        phoneNumber: normalizedPhoneNumber,
+        organizationId: organizationId,
+        isDeleted: true,
+      }
+    })
+
+    if (deletedContact) {
+      // Restore the soft-deleted contact with updated details
+      const restored = await prisma.contact.update({
+        where: { id: deletedContact.id },
+        data: {
+          firstName: firstName?.trim() || deletedContact.firstName || '',
+          lastName: lastName?.trim() || deletedContact.lastName || '',
+          email: email?.trim() || deletedContact.email || '',
+          tags: tags ? JSON.stringify(parseTagsInput(tags)) : deletedContact.tags,
+          optInStatus: optInStatus || deletedContact.optInStatus,
+          isDeleted: false,
+          deletedAt: null,
+        }
+      })
+      return NextResponse.json({ success: true, data: restored, restored: true }, { status: 200 })
     }
 
     // Create new contact - associate with authenticated user
