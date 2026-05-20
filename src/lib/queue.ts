@@ -798,63 +798,69 @@ async function updateCampaignStatsFromQueue(
     }
   });
 
-  // Update each campaign's stats
-  for (const [campaignId, stats] of campaignResults) {
+  if (campaignResults.size === 0) return;
+
+  const campaignIds = Array.from(campaignResults.keys());
+
+  // Single fetch for all affected campaigns
+  const campaigns = await prisma.campaign.findMany({
+    where: { id: { in: campaignIds } },
+    select: { id: true, stats: true, status: true }
+  });
+
+  const campaignMap = new Map(campaigns.map(c => [c.id, c]));
+
+  // Check remaining queue counts in one query per campaign (still needed per campaign)
+  const remainingCounts = await Promise.all(
+    campaignIds.map(cid =>
+      prisma.whatsAppMessageQueue.count({
+        where: { campaignId: cid, status: { in: ['queued', 'pending', 'sending'] } }
+      }).then(count => ({ campaignId: cid, count }))
+    )
+  );
+  const remainingMap = new Map(remainingCounts.map(r => [r.campaignId, r.count]));
+
+  // Build batch updates
+  const updates = campaignIds.map(campaignId => {
+    const campaign = campaignMap.get(campaignId);
+    if (!campaign) return null;
+
+    const delta = campaignResults.get(campaignId)!;
+    let currentStats = { totalSent: 0, delivered: 0, read: 0, failed: 0, clicked: 0 };
     try {
-      // Get current campaign stats
-      const campaign = await prisma.campaign.findUnique({
-        where: { id: campaignId },
-        select: { stats: true, status: true }
-      });
-
-      if (!campaign) continue;
-
-      let currentStats = { totalSent: 0, delivered: 0, read: 0, failed: 0, clicked: 0 };
-      try {
-        currentStats = JSON.parse(campaign.stats || '{}');
-      } catch (e) {
-        // Keep default stats
-      }
-
-      // Update stats with new results
-      const updatedStats = {
-        ...currentStats,
-        totalSent: currentStats.totalSent + stats.succeeded,
-        failed: currentStats.failed + stats.failed,
-      };
-
-      await prisma.campaign.update({
-        where: { id: campaignId },
-        data: {
-          stats: JSON.stringify(updatedStats)
-        }
-      });
-
-      console.log(`[Queue] Updated campaign ${campaignId} stats: +${stats.succeeded} sent, +${stats.failed} failed`);
-
-      // Check if campaign should be marked as completed
-      if (campaign.status === 'running') {
-        const remaining = await prisma.whatsAppMessageQueue.count({
-          where: { 
-            campaignId, 
-            status: { in: ['queued', 'pending', 'sending'] } 
-          }
-        });
-
-        if (remaining === 0) {
-          await prisma.campaign.update({
-            where: { id: campaignId }, 
-            data: { status: 'completed' }
-          });
-          console.log(`[Queue] Campaign ${campaignId} marked as completed`);
-        }
-      }
-    } catch (error) {
-      console.error(`[Queue] Error updating campaign ${campaignId} stats:`, error);
+      const parsed = JSON.parse(campaign.stats || '{}');
+      if (parsed && typeof parsed === 'object') currentStats = { ...currentStats, ...parsed };
+    } catch {
+      // use defaults
     }
+
+    const updatedStats = {
+      ...currentStats,
+      totalSent: (currentStats.totalSent || 0) + delta.succeeded,
+      failed: (currentStats.failed || 0) + delta.failed,
+    };
+
+    const shouldComplete = campaign.status === 'running' && (remainingMap.get(campaignId) ?? 1) === 0;
+
+    return prisma.campaign.update({
+      where: { id: campaignId },
+      data: {
+        stats: JSON.stringify(updatedStats),
+        ...(shouldComplete ? { status: 'completed' } : {}),
+      }
+    });
+  }).filter((u): u is Exclude<typeof u, null> => u !== null);
+
+  if (updates.length > 0) {
+    await prisma.$transaction(updates);
   }
 
-  return;
+  for (const [campaignId, delta] of campaignResults) {
+    console.log(`[Queue] Updated campaign ${campaignId} stats: +${delta.succeeded} sent, +${delta.failed} failed`);
+    if ((remainingMap.get(campaignId) ?? 1) === 0 && campaignMap.get(campaignId)?.status === 'running') {
+      console.log(`[Queue] Campaign ${campaignId} marked as completed`);
+    }
+  }
 }
 
 /**

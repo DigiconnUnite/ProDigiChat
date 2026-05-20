@@ -197,9 +197,14 @@ export async function PUT(
 
   try {
     const userId = token.sub as string
+    const organizationId = token.organizationId as string | undefined
     const { id } = await params
     const body = await request.json()
-    
+
+    if (!organizationId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const {
       name,
       type,
@@ -209,11 +214,11 @@ export async function PUT(
       audienceSegmentId
     } = body
 
-    // Check if campaign exists AND belongs to the authenticated user
+    // Check campaign belongs to the authenticated user's organization
     const existingCampaign = await prisma.campaign.findFirst({
-      where: { 
+      where: {
         id,
-        createdBy: userId
+        organizationId,
       }
     })
 
@@ -267,14 +272,18 @@ export async function DELETE(
   }
 
   try {
-    const userId = token.sub as string
+    const organizationId = token.organizationId as string | undefined
     const { id } = await params
 
-    // Check if campaign exists AND belongs to the authenticated user
+    if (!organizationId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check campaign belongs to the authenticated user's organization
     const existingCampaign = await prisma.campaign.findFirst({
-      where: { 
+      where: {
         id,
-        createdBy: userId
+        organizationId,
       }
     })
 

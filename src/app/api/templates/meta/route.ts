@@ -147,11 +147,11 @@ export async function GET(request: NextRequest) {
           // Extract full translation data from Meta template
           const translation = extractTranslationFromMetaTemplate(metaTemplate);
 
-          // Check if template already exists (in this organization OR globally by name)
-          // Note: Due to unique constraint on name, we need to check more broadly
+          // Check if template already exists within this organization
           const existing = await prisma.messageTemplate.findFirst({
-            where: { 
+            where: {
               name: metaTemplate.name,
+              organizationId: orgId,
             }
           });
 

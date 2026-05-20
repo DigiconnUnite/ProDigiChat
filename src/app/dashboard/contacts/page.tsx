@@ -164,6 +164,7 @@ export default function ContactsPage() {
 
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [totalCount, setTotalCount] = useState(0)
 
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     field: 'createdAt',
@@ -201,6 +202,7 @@ export default function ContactsPage() {
 
       if (result.success) {
         setContacts(result.data)
+        setTotalCount(result.total ?? 0)
       } else {
         setError(result.error || "Failed to fetch contacts")
         toast.error(result.error || "Failed to fetch contacts")
@@ -236,10 +238,10 @@ export default function ContactsPage() {
   }
 
   const handlePageChange = useCallback((page: number) => {
-    if (page >= 1 && page <= Math.ceil(contacts.length / itemsPerPage)) {
+    if (page >= 1 && page <= Math.ceil(totalCount / itemsPerPage)) {
       setCurrentPage(page)
     }
-  }, [contacts.length, itemsPerPage])
+  }, [totalCount, itemsPerPage])
 
   const handleItemsPerPageChange = useCallback((value: string) => {
     setItemsPerPage(Number(value))
@@ -287,11 +289,17 @@ export default function ContactsPage() {
     if (!confirm(`Delete ${selectedContacts.size} contacts? This cannot be undone.`)) return
 
     try {
-      const promises = Array.from(selectedContacts).map((id) =>
-        fetch(`/api/contacts?id=${id}`, { method: 'DELETE' })
+      const results = await Promise.all(
+        Array.from(selectedContacts).map((id) =>
+          fetch(`/api/contacts?id=${id}`, { method: 'DELETE' })
+        )
       )
-      await Promise.all(promises)
-      toast.success(`Deleted ${selectedContacts.size} contacts`)
+      const failed = results.filter((r) => !r.ok).length
+      if (failed > 0) {
+        toast.error(`Failed to delete ${failed} contact(s)`)
+      } else {
+        toast.success(`Deleted ${selectedContacts.size} contacts`)
+      }
       handleClearSelection()
       fetchContacts()
     } catch (error) {
@@ -380,17 +388,15 @@ export default function ContactsPage() {
     return filtered
   }, [contacts, searchQuery, segmentFilter, sortConfig])
 
-  const paginatedContacts = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage
-    return filteredContacts.slice(startIndex, startIndex + itemsPerPage)
-  }, [filteredContacts, currentPage, itemsPerPage])
+  // Pagination is server-side — API returns only the current page's contacts
+  const paginatedContacts = filteredContacts
 
   const paginationMeta: PaginationMeta = useMemo(() => ({
-    total: filteredContacts.length,
+    total: totalCount,
     page: currentPage,
     limit: itemsPerPage,
-    totalPages: Math.ceil(filteredContacts.length / itemsPerPage),
-  }), [filteredContacts.length, currentPage, itemsPerPage])
+    totalPages: Math.ceil(totalCount / itemsPerPage),
+  }), [totalCount, currentPage, itemsPerPage])
 
   const handleDeleteContact = async () => {
     if (!contactToDelete) return
@@ -417,7 +423,7 @@ export default function ContactsPage() {
   }
 
   const handleSendMessage = (contact: Contact) => {
-    toast.info(`Send message to ${contact.firstName} ${contact.lastName}`)
+    toast.info(`Send message to ${contact.firstName || ''} ${contact.lastName || ''}`.trim() || 'contact')
   }
 
   const handleEditFromDrawer = (contact: Contact) => {

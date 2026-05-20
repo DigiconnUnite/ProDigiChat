@@ -147,7 +147,7 @@ export function WebhooksTab({ organizationId }: WebhooksTabProps) {
 
   const fetchDeliveryLogs = async () => {
     try {
-      const response = await fetch('/api/settings/webhooks', { method: 'OPTIONS' });
+      const response = await fetch('/api/settings/webhooks?type=logs', { method: 'GET' });
       if (response.ok) {
         const data = await response.json();
         setDeliveryLogs(data.logs || []);

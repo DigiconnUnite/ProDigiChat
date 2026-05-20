@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
+import { rateLimit } from '@/lib/rate-limit'
 
-const MAX_EXPORT_ROWS = 50000
+const MAX_EXPORT_ROWS = 10000
 const ALLOWED_LIFECYCLE_STATUS = new Set(['lead', 'active', 'suppressed', 'blocked', 'bounced'])
 
 async function getUserAndOrgId(request: NextRequest): Promise<{ userId: string | null; organizationId: string | null }> {
@@ -49,6 +50,11 @@ function parseTags(tags: string | null | undefined): string[] {
 }
 
 export async function GET(request: NextRequest) {
+  const rateLimitResult = await rateLimit(request, 'export')
+  if (!rateLimitResult.allowed && rateLimitResult.response) {
+    return rateLimitResult.response
+  }
+
   const { userId, organizationId } = await getUserAndOrgId(request)
   if (!userId || !organizationId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

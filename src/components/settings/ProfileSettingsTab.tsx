@@ -23,6 +23,7 @@ interface UserProfile {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   avatarUrl?: string;
   role: string;
   organizationRole?: string;
@@ -384,7 +385,7 @@ export function ProfileSettingsTab({ organizationId }: ProfileSettingsTabProps) 
               if (profile) {
                 setName(profile.name || '')
                 setEmail(profile.email || '')
-                setPhone((profile as any)?.phone || '')
+                setPhone(profile.phone || '')
               }
             }}
           >

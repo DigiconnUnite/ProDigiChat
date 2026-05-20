@@ -9,20 +9,10 @@ async function getOrganizationId(request: NextRequest): Promise<string | null> {
     return null
   }
 
-  // Try to get orgId from query params first
-  const { searchParams } = new URL(request.url)
-  const orgIdParam = searchParams.get('orgId')
-
-  if (orgIdParam) {
-    return orgIdParam
-  }
-
-  // Try to get from token
   if (token.organizationId) {
     return token.organizationId as string
   }
 
-  // No fallback - require explicit organization context
   return null
 }
 
@@ -85,19 +75,7 @@ export async function GET(request: NextRequest) {
       source: 'oauth'
     })))
 
-    // 2. Get from legacy WhatsAppNumber model
-    const legacyNumbers = await prisma.whatsappNumber.findMany({})
-    
-    allNumbers.push(...legacyNumbers.map(n => ({
-      id: n.id,
-      phoneNumber: n.phoneNumber,
-      displayName: n.phoneNumber,
-      qualityScore: n.qualityRating,
-      isDefault: false,
-      source: 'legacy'
-    })))
-
-    // 3. Add phone numbers from credentials (including phoneNumberId field)
+    // 2. Add phone numbers from credentials (including phoneNumberId field)
     for (const cred of creds) {
       // Add phone number from credential if exists
       if (cred.phoneNumberId) {

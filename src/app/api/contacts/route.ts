@@ -72,10 +72,10 @@ export async function GET(request: NextRequest) {
     const sortOrder = sortOrderParam === 'asc' ? 'asc' : 'desc'
 
     // Build query conditions - filter by organization
-    // Note: Due to Prisma MongoDB boolean filtering bug, 
-    // we fetch all contacts and filter isDeleted in application logic
     const conditions: any = {
-      organizationId: organizationId
+      organizationId: organizationId,
+      // Use `not: true` for MongoDB compatibility (avoids Prisma boolean false-filter issue)
+      ...(!includeDeleted ? { isDeleted: { not: true } } : {}),
     }
     
     if (status && status !== 'all') {
@@ -113,39 +113,19 @@ export async function GET(request: NextRequest) {
         break
     }
 
-    // Query contacts from database with sorting - filter by organizationId
-    // Note: We handle isDeleted filtering in application logic due to MongoDB boolean filtering bug
-    const [allContacts, allTotal, allOptedInCount, allOptedOutCount, allPendingCount] = await Promise.all([
+    // Query contacts from database with DB-level pagination and filtering
+    const [contacts, total, optedInCount, optedOutCount, pendingCount] = await Promise.all([
       prisma.contact.findMany({
         where: conditions,
         orderBy,
+        skip,
+        take: limit,
       }),
       prisma.contact.count({ where: conditions }),
       prisma.contact.count({ where: { ...conditions, optInStatus: 'opted_in' } }),
       prisma.contact.count({ where: { ...conditions, optInStatus: 'opted_out' } }),
       prisma.contact.count({ where: { ...conditions, optInStatus: 'pending' } }),
     ])
-
-    // Filter out deleted contacts in application logic
-    const contacts = includeDeleted 
-      ? allContacts.slice(skip, skip + limit)
-      : allContacts.filter(contact => !contact.isDeleted).slice(skip, skip + limit)
-    
-    const total = includeDeleted 
-      ? allTotal 
-      : allContacts.filter(contact => !contact.isDeleted).length
-    
-    const optedInCount = includeDeleted 
-      ? allOptedInCount 
-      : allContacts.filter(contact => !contact.isDeleted && contact.optInStatus === 'opted_in').length
-    
-    const optedOutCount = includeDeleted 
-      ? allOptedOutCount 
-      : allContacts.filter(contact => !contact.isDeleted && contact.optInStatus === 'opted_out').length
-    
-    const pendingCount = includeDeleted 
-      ? allPendingCount 
-      : allContacts.filter(contact => !contact.isDeleted && contact.optInStatus === 'pending').length
 
     return NextResponse.json({
       success: true,

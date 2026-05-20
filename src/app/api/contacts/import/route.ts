@@ -296,6 +296,14 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { success: false, error: 'File too large. Maximum allowed size is 10 MB.' },
+        { status: 413 }
+      )
+    }
+
     // Parse tags from comma-separated string
     const defaultTags = parseTagsInput(tagsParam)
 

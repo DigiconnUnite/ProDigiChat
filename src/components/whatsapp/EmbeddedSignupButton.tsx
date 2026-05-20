@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
@@ -22,8 +22,12 @@ export function EmbeddedSignupButton({
   className = ''
 }: EmbeddedSignupButtonProps) {
   const [step, setStep] = useState<SignupStep>('idle');
+  const stepRef = useRef<SignupStep>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [progress, setProgress] = useState(0);
+
+  // Keep ref in sync so setTimeout callbacks always read the latest step value
+  useEffect(() => { stepRef.current = step }, [step]);
 
   const handleConnect = async () => {
     setStep('init');
@@ -78,10 +82,10 @@ export function EmbeddedSignupButton({
         }
       }, 1000);
 
-      // Timeout after 10 minutes
+      // Timeout after 10 minutes — use ref to avoid stale closure on step state
       setTimeout(() => {
         clearInterval(checkClosed);
-        if (step !== 'complete') {
+        if (stepRef.current !== 'complete') {
           setStep('error');
           setErrorMessage('Connection timed out. Please try again.');
         }

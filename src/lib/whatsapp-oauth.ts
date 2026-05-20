@@ -145,14 +145,16 @@ export class WhatsAppOAuthService {
     try {
       console.log('[WhatsApp OAuth] Exchanging session_info for System User token');
       
-      const response = await axios.get(WhatsAppOAuthService.META_TOKEN_URL, {
-        params: {
+      const response = await axios.post(
+        WhatsAppOAuthService.META_TOKEN_URL,
+        new URLSearchParams({
           grant_type: 'fb_exchange_token',
           fb_exchange_token: sessionInfo,
           client_id: this.config.appId,
-          client_secret: this.config.appSecret
-        }
-      });
+          client_secret: this.config.appSecret,
+        }).toString(),
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+      );
 
       if (!response.data.access_token) {
         throw new Error('No access token received in exchange for session_info');

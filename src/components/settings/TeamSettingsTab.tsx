@@ -174,16 +174,26 @@ export function TeamSettingsTab({ organizationId }: TeamSettingsTabProps) {
     }
   };
 
-  const fetchPermissions = async () => {
-    try {
-      const response = await fetch('/api/settings/team', { method: 'OPTIONS' });
-      if (response.ok) {
-        const data = await response.json();
-        setPermissions(data.permissions);
-      }
-    } catch (error) {
-      console.error('Error fetching permissions:', error);
-    }
+  const fetchPermissions = () => {
+    // Role permissions are static — defined by the application's RBAC model
+    setPermissions({
+      owner: {
+        manageBilling: true, manageTeam: true, createCampaigns: true,
+        launchCampaigns: true, manageContacts: true, viewAnalytics: true, manageSettings: true,
+      },
+      admin: {
+        manageBilling: false, manageTeam: true, createCampaigns: true,
+        launchCampaigns: true, manageContacts: true, viewAnalytics: true, manageSettings: true,
+      },
+      manager: {
+        manageBilling: false, manageTeam: false, createCampaigns: true,
+        launchCampaigns: true, manageContacts: true, viewAnalytics: true, manageSettings: false,
+      },
+      member: {
+        manageBilling: false, manageTeam: false, createCampaigns: true,
+        launchCampaigns: false, manageContacts: true, viewAnalytics: true, manageSettings: false,
+      },
+    });
   };
 
   const handleInvite = async () => {

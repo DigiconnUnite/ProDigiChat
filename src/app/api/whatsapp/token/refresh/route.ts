@@ -264,18 +264,16 @@ async function processOrganizationTokenRefresh(
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
   
-  // Authentication check
+  // Authentication: accept either a valid session token or a valid CRON_SECRET Bearer header
   const token = await getToken({ req: request });
-  if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  
-  // Allow cron calls with CRON_SECRET
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
-  if (authHeader && authHeader.startsWith('Bearer ') && authHeader.slice(7) === cronSecret) {
-    // Allow cron calls - skip token validation
-  } else if (!token) {
+  const validCronAuth =
+    cronSecret &&
+    authHeader?.startsWith('Bearer ') &&
+    authHeader.slice(7) === cronSecret;
+
+  if (!token && !validCronAuth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   

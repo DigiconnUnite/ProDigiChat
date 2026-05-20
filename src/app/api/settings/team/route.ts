@@ -4,10 +4,14 @@ import { getSettings, updateSettings } from "@/lib/settings-storage"
 import { requireRole } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import crypto from 'crypto'
+import bcrypt from 'bcrypt'
 
 // GET: Fetch team members
 export async function GET(request: NextRequest) {
   const token = await getToken({ req: request });
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const orgId = (token?.organizationId || token?.orgId) as string;
 
   if (!orgId) {
@@ -90,12 +94,13 @@ export async function POST(request: NextRequest) {
     let user = await prisma.user.findUnique({ where: { email } })
 
     if (!user) {
-      // Create a placeholder user for invitation
+      const tempPassword = crypto.randomBytes(32).toString('hex')
+      const hashedPassword = await bcrypt.hash(tempPassword, 12)
       user = await prisma.user.create({
         data: {
           email,
           name: email.split('@')[0],
-          password: crypto.randomBytes(32).toString('hex'), // Temporary password
+          password: hashedPassword,
           role: 'user',
         }
       })

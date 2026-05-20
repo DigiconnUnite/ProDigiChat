@@ -11,7 +11,6 @@ import {
   sendMessageAck,
 } from "@/lib/whatsapp-incoming-message";
 
-const WEBHOOK_SECRET = process.env.WHATSAPP_WEBHOOK_SECRET || "default_secret";
 
 /**
  * Verify Meta webhook HMAC-SHA256 signature

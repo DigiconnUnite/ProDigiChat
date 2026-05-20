@@ -511,6 +511,7 @@ export default function InboxPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const socketRef = useRef<any>(null)
+  const selectedConversationRef = useRef<typeof selectedConversation>(null)
 
   // ─── Fetch connection status ──────────────────────────────
   const checkWhatsAppConnection = useCallback(async () => {
@@ -542,13 +543,9 @@ export default function InboxPage() {
       const response = await fetch("/api/inbox")
       if (!response.ok) throw new Error("Failed to fetch conversations")
       const data = await response.json()
-      if (data.conversations && data.conversations.length > 0 && isWhatsAppConnected) {
-        setConversations(data.conversations)
-      } else if (isWhatsAppConnected) {
-        setConversations([])
-      }
+      setConversations(data.conversations || [])
     } catch (err) {
-      if (isWhatsAppConnected) setError("Failed to load conversations")
+      setError("Failed to load conversations")
     } finally {
       setIsLoading(false)
     }
@@ -620,6 +617,8 @@ export default function InboxPage() {
   useEffect(() => { if (conversations.length > 0 && !selectedConversation) setSelectedConversation(conversations[0]) }, [conversations, selectedConversation])
   useEffect(() => { if (selectedConversation) fetchMessages(selectedConversation.id) }, [selectedConversation, fetchMessages])
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages])
+  // Keep ref in sync so WebSocket handlers always read the latest selected conversation
+  useEffect(() => { selectedConversationRef.current = selectedConversation }, [selectedConversation])
 
   // ─── WebSocket ──────────────────────────────
   useEffect(() => {
@@ -634,8 +633,9 @@ export default function InboxPage() {
       socket.emit('join-inbox', orgId)
 
       socket.on('new-message', (data: any) => {
-        if (selectedConversation && data.contactId === selectedConversation.id) {
-          const rawContent = typeof data.content === 'string' ? data.content : JSON.stringify(data.content)
+        const current = selectedConversationRef.current
+        if (current && data.contactId === current.id) {
+          const rawContent = typeof data.content === 'string' ? data.content : JSON.stringify(data.content || '')
           const parsed = parseContent(rawContent)
           setMessages(prev => [...prev, {
             id: data.messageId,
@@ -657,7 +657,7 @@ export default function InboxPage() {
     }
 
     return () => { if (socketRef.current) { socketRef.current.disconnect(); socketRef.current = null } }
-  }, [session, isWhatsAppConnected, selectedConversation?.id, fetchConversations])
+  }, [session, isWhatsAppConnected, fetchConversations])
 
   // ─── Send message ──────────────────────────────
   const handleSendMessage = async () => {
@@ -1009,10 +1009,10 @@ export default function InboxPage() {
                   {/* Input Area */}
                   <div className="px-3 py-3 bg-[#f0f2f5] shrink-0">
                     <div className="flex items-center gap-2 bg-white rounded-xl px-2 py-1.5 border border-slate-200">
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground rounded-lg shrink-0">
+                      <Button variant="ghost" size="sm" disabled title="Document upload coming soon" className="h-8 w-8 p-0 text-muted-foreground rounded-lg shrink-0 opacity-40 cursor-not-allowed">
                         <FileText className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground rounded-lg shrink-0">
+                      <Button variant="ghost" size="sm" disabled title="Image upload coming soon" className="h-8 w-8 p-0 text-muted-foreground rounded-lg shrink-0 opacity-40 cursor-not-allowed">
                         <ImageIcon className="w-4 h-4" />
                       </Button>
                       <Input

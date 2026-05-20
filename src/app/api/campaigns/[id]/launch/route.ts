@@ -143,13 +143,26 @@ export async function POST(
       )
     }
 
-    // Parse message content to validate
-    let messageContent: any = {}
+    // Parse and validate message content
+    interface MessageContent {
+      type?: string
+      templateId?: string
+      freeformMessage?: string
+      variables?: unknown
+      mediaAttachments?: Array<{ type?: string; url?: string }>
+      templateVariables?: Record<string, string>
+      [key: string]: unknown
+    }
+    let messageContent: MessageContent = {}
     try {
-      messageContent = JSON.parse(campaign.messageContent)
+      const parsed = JSON.parse(campaign.messageContent)
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new Error('messageContent must be an object')
+      }
+      messageContent = parsed as MessageContent
     } catch (e) {
       return NextResponse.json(
-        { success: false, error: 'Invalid message content' },
+        { success: false, error: 'Invalid message content format' },
         { status: 400 }
       )
     }

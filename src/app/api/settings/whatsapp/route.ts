@@ -324,7 +324,15 @@ export async function POST(request: NextRequest) {
       if (!accountId) {
         return NextResponse.json({ error: 'Account ID is required' }, { status: 400 });
       }
-      
+
+      // Verify the account belongs to this organization before setting as default
+      const ownedCredential = await prisma.whatsAppCredential.findFirst({
+        where: { id: accountId, organizationId: orgId }
+      });
+      if (!ownedCredential) {
+        return NextResponse.json({ error: 'Account not found' }, { status: 404 });
+      }
+
       // First, unset all defaults for this organization
       await prisma.whatsAppCredential.updateMany({
         where: { organizationId: orgId },
@@ -348,7 +356,15 @@ export async function POST(request: NextRequest) {
       if (!accountId || !accountName) {
         return NextResponse.json({ error: 'Account ID and name are required' }, { status: 400 });
       }
-      
+
+      // Verify the account belongs to this organization before renaming
+      const ownedCredential = await prisma.whatsAppCredential.findFirst({
+        where: { id: accountId, organizationId: orgId }
+      });
+      if (!ownedCredential) {
+        return NextResponse.json({ error: 'Account not found' }, { status: 404 });
+      }
+
       await prisma.whatsAppCredential.update({
         where: { id: accountId },
         data: { accountName: accountName.trim() }

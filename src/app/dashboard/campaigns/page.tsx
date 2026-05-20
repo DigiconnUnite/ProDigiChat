@@ -320,7 +320,7 @@ export default function CampaignsPage() {
         case 'type': comparison = a.type.localeCompare(b.type); break
         case 'status': comparison = a.status.localeCompare(b.status); break
         case 'audienceSize': comparison = a.audienceSize - b.audienceSize; break
-        case 'scheduledDate': comparison = a.scheduledDate.localeCompare(b.scheduledDate); break
+        case 'scheduledDate': comparison = (a.scheduledDate || '').localeCompare(b.scheduledDate || ''); break
         default: comparison = 0
       }
       return sortConfig.order === 'asc' ? comparison : -comparison

@@ -28,6 +28,11 @@ export const RATE_LIMITS = {
     windowMs: 60 * 1000,
     windowSec: 60,
   },
+  export: {
+    limit: 5, // 5 exports per minute per org
+    windowMs: 60 * 1000,
+    windowSec: 60,
+  },
 } as const;
 
 export type RateLimitEndpoint = keyof typeof RATE_LIMITS;
@@ -61,6 +66,10 @@ const rateLimiters = redis ? {
   webhooks: new Ratelimit({
     redis,
     limiter: Ratelimit.slidingWindow(RATE_LIMITS.webhooks.limit, `${RATE_LIMITS.webhooks.windowSec} s`),
+  }),
+  export: new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(RATE_LIMITS.export.limit, `${RATE_LIMITS.export.windowSec} s`),
   }),
 } : null;
 

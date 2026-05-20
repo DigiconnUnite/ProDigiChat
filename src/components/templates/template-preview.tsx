@@ -58,7 +58,7 @@ export function TemplatePreview({ preview, className }: TemplatePreviewComponent
       case 'text':
         return (
           <div className="font-semibold text-base mb-1.5 text-gray-900">
-            {renderFormattedText(preview.header.text || '')}
+            {renderFormattedText(replaceVariables(preview.header.text || ''))}
           </div>
         );
       case 'image':

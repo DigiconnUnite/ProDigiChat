@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { EmbeddedSignupCard, ManualCredentialCard } from '@/components/whatsapp/ConnectionCard';
 import { ManualCredentialForm, ManualCredentialFormData } from '@/components/whatsapp/ManualCredentialForm';
 import { OAuthProgressStepper, OAuthStep } from '@/components/whatsapp/OAuthProgressStepper';
@@ -25,24 +26,33 @@ type ConnectPageState = 'entry' | 'connecting' | 'success' | 'error';
 function ConnectPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
   const [pageState, setPageState] = useState<ConnectPageState>('entry');
   const [isLoading, setIsLoading] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | undefined>();
   const [currentStep, setCurrentStep] = useState<OAuthStep>('idle');
-  const [organizationId, setOrganizationId] = useState<string>('');
+  const [connectedAccount, setConnectedAccount] = useState<WhatsAppAccountInfo | null>(null);
 
-  // Check for existing connection and URL params
+  // organizationId always comes from the authenticated session — never from query params
+  const organizationId = (session?.user as Record<string, unknown>)?.organizationId as string || '';
+
+  // Check for OAuth callback status params
   useEffect(() => {
-    const orgId = searchParams.get('orgId') || 'default';
-    setOrganizationId(orgId);
-
     const status = searchParams.get('status');
     const error = searchParams.get('error');
     const message = searchParams.get('message');
 
     if (status === 'success') {
       setPageState('success');
+      // Fetch the real connected account details
+      fetch('/api/whatsapp/accounts/list')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          const accounts: WhatsAppAccountInfo[] = data?.accounts || data?.data || [];
+          if (accounts[0]) setConnectedAccount(accounts[0]);
+        })
+        .catch(() => { /* show generic success if fetch fails */ });
     } else if (status === 'error' || error) {
       setPageState('error');
       setConnectionError(message || error || 'Connection failed');
@@ -220,18 +230,12 @@ function ConnectPageContent() {
 
   // Success state - show account info
   if (pageState === 'success') {
-    // In real implementation, fetch account details
-    const mockAccount: WhatsAppAccountInfo = {
-      id: '1',
+    const displayAccount: WhatsAppAccountInfo = connectedAccount ?? {
+      id: '',
       accountName: 'WhatsApp Business',
-      businessAccountId: '123456789',
-      businessAccountName: 'My Business',
-      phoneNumber: '+91 9876543210',
-      phoneNumberDisplayName: '+91 9876543210',
+      businessAccountId: '',
       accountStatus: 'approved',
-      qualityRating: 'High',
-      messagingTier: 'Tier 1 (1,000/day)',
-      connectedAt: new Date().toISOString()
+      connectedAt: new Date().toISOString(),
     };
 
     return (
@@ -251,7 +255,7 @@ function ConnectPageContent() {
             </div>
 
             <AccountInfoCard
-              account={mockAccount}
+              account={displayAccount}
               onViewSettings={() => router.push('/dashboard/settings?tab=whatsapp')}
               onTestMessage={() => router.push('/dashboard/testing')}
             />

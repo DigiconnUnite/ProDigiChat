@@ -48,11 +48,13 @@ export async function POST(request: NextRequest) {
     
     const fullKey = `wa_${crypto.randomBytes(32).toString("hex")}`
     const prefix = fullKey.substring(0, 12)
-    
-    const newKey = {
+    const keyHash = crypto.createHash('sha256').update(fullKey).digest('hex')
+
+    const storedKey = {
       id: crypto.randomUUID(),
       name,
       prefix,
+      keyHash,
       scopes: scopes || ["campaigns:read", "campaigns:write", "contacts:read", "messages:write"],
       rateLimit: 1000,
       maxRequests: null,
@@ -61,16 +63,15 @@ export async function POST(request: NextRequest) {
       lastUsedAt: null,
       isActive: true,
       createdAt: new Date().toISOString(),
-      fullKey,
     }
-    
-    const updated = await updateSettings(orgId, {
-      apiKeys: [...settings.apiKeys, newKey]
+
+    await updateSettings(orgId, {
+      apiKeys: [...settings.apiKeys, storedKey]
     })
-    
+
     return NextResponse.json({
       message: "API key created successfully",
-      apiKey: newKey,
+      apiKey: { ...storedKey, fullKey },
     })
   } catch (error) {
     console.error("Error creating API key:", error)
@@ -134,23 +135,25 @@ export async function PATCH(request: NextRequest) {
     // Generate new key
     const fullKey = `wa_${crypto.randomBytes(32).toString("hex")}`
     const prefix = fullKey.substring(0, 12)
-    
-    // Update the key
+    const keyHash = crypto.createHash('sha256').update(fullKey).digest('hex')
+
+    // Update the key — never persist fullKey
     const updatedKeys = [...settings.apiKeys]
     updatedKeys[keyIndex] = {
       ...updatedKeys[keyIndex],
       prefix,
-      fullKey,
+      keyHash,
+      fullKey: undefined,
       lastUsedAt: null,
       requestCount: 0,
       updatedAt: new Date().toISOString(),
     }
-    
+
     await updateSettings(orgId, { apiKeys: updatedKeys })
-    
+
     return NextResponse.json({
       message: "API key regenerated successfully",
-      apiKey: updatedKeys[keyIndex],
+      apiKey: { ...updatedKeys[keyIndex], fullKey },
     })
   } catch (error) {
     console.error("Error regenerating API key:", error)

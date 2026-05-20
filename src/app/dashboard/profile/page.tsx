@@ -333,7 +333,9 @@ export default function ProfilePage() {
                       </Avatar>
                       <button
                         type="button"
-                        className="absolute bottom-0 right-0 bg-green-600 text-white p-2 rounded-full shadow-md hover:bg-green-700 transition-colors"
+                        disabled
+                        title="Avatar upload coming soon"
+                        className="absolute bottom-0 right-0 bg-green-600 text-white p-2 rounded-full shadow-md opacity-50 cursor-not-allowed"
                       >
                         <Camera className="h-4 w-4" />
                       </button>

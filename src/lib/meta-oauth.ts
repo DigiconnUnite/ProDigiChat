@@ -277,10 +277,16 @@ export async function getLongLivedToken(shortLivedToken: string): Promise<MetaAu
  * @returns Promise resolving to the debug token response
  */
 export async function debugAccessToken(accessToken: string): Promise<MetaDebugTokenResponse> {
+  const appId = process.env.META_APP_ID
+  const appSecret = process.env.META_APP_SECRET
+  if (!appId || !appSecret) {
+    throw new Error('META_APP_ID and META_APP_SECRET must be set to validate tokens')
+  }
   try {
     const params = new URLSearchParams({
       input_token: accessToken,
-      access_token: accessToken,
+      // Debug endpoint requires app-level token, not the user token being inspected
+      access_token: `${appId}|${appSecret}`,
     });
 
     const response = await fetch(
@@ -535,7 +541,7 @@ export async function getLinkedBusinessAccount(wabaId: string, accessToken: stri
   try {
     const params = new URLSearchParams({
       access_token: accessToken,
-      fields: 'linked商业账户',
+      fields: 'linked_business_account',
     });
 
     const response = await fetch(

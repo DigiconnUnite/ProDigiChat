@@ -275,21 +275,25 @@ export default function NewCampaignPage() {
         }
         
         const accountsRes = await fetch('/api/settings/whatsapp')
-        const accountsData = await accountsRes.json()
-        if (accountsData.accounts) {
-          setWhatsAppAccounts(accountsData.accounts || [])
-          if (accountsData.accounts.length === 1 && !formData.fromNumber) {
-            setFormData(prev => ({ ...prev, fromNumber: accountsData.accounts[0].id }))
-          }
-          if (accountsData.defaultAccountId && !formData.fromNumber) {
-            setFormData(prev => ({ ...prev, fromNumber: accountsData.defaultAccountId }))
+        if (accountsRes.ok) {
+          const accountsData = await accountsRes.json()
+          if (accountsData.accounts) {
+            setWhatsAppAccounts(accountsData.accounts || [])
+            if (accountsData.accounts.length === 1 && !formData.fromNumber) {
+              setFormData(prev => ({ ...prev, fromNumber: accountsData.accounts[0].id }))
+            }
+            if (accountsData.defaultAccountId && !formData.fromNumber) {
+              setFormData(prev => ({ ...prev, fromNumber: accountsData.defaultAccountId }))
+            }
           }
         }
-        
+
         const contactsRes = await fetch('/api/contacts?limit=1')
-        const contactsData = await contactsRes.json()
-        if (contactsData.success) {
-          setTotalContacts(contactsData.optedIn || 0)
+        if (contactsRes.ok) {
+          const contactsData = await contactsRes.json()
+          if (contactsData.success) {
+            setTotalContacts(contactsData.optedIn || 0)
+          }
         }
       } catch (error) {
         console.error('Error fetching campaign data:', error)
@@ -299,6 +303,11 @@ export default function NewCampaignPage() {
     }
     
     fetchData()
+
+    // Re-fetch account list when user returns to this tab (e.g. after connecting WhatsApp)
+    const handleFocus = () => fetchData()
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
   }, [])
   
   const [formData, setFormData] = useState<CampaignFormData>({

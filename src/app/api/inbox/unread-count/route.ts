@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const userId = token?.sub;
     const orgId = token?.organizationId || token?.orgId;
 
-    if (!userId && !orgId) {
+    if (!userId || !orgId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
