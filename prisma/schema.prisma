@@ -342,12 +342,19 @@ model Message {
   contactId        String   @db.ObjectId
   campaignId       String?  @db.ObjectId
   direction        String   // "incoming", "outgoing"
-  status           String   @default("sent") // "sent", "delivered", "read", "failed"
+  status           String   @default("pending") // "pending", "sent", "delivered", "read", "failed"
   content          String   // JSON object with text, mediaUrl
   whatsappMessageId String?
+  providerMsgId    String?  // WhatsApp message ID for tracking (alias for whatsappMessageId)
   sentBy           String?  @db.ObjectId
   organizationId   String   @db.ObjectId
   stats            String   // JSON object with totalSent, delivered, read, failed, clicked
+  failureReason    String?  // Reason for failure (e.g., "Phone number not registered")
+  errorMessage     String?  // Detailed error message from WhatsApp API
+  sentAt           DateTime?
+  deliveredAt      DateTime?
+  readAt           DateTime?
+  failedAt         DateTime?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -362,6 +369,7 @@ model Message {
   @@index([organizationId, createdAt])
   @@index([contactId])
   @@index([campaignId])
+  @@index([campaignId, status])
   @@map("messages")
 }
 

@@ -57,7 +57,7 @@ export default function LoginPage() {
           <div className="flex flex-col items-center justify-center py-20 min-h-[calc(100vh-80px)]">
             <div className="w-full max-w-md">
               <div className="mb-8 text-center">
-                <h1 className="text-foreground text-2xl font-bold mb-2">
+                <h1 className="text-foreground text-2xl font-bold mb-1">
                   Sign in to your account
                 </h1>
               </div>

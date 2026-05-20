@@ -269,7 +269,7 @@ export function TemplateManagement({
         <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5 py-10">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div>
-              <h1 className="text-foreground text-3xl font-bold mb-2">Manage Templates</h1>
+              <h1 className="text-foreground text-2xl font-bold mb-1">Manage Templates</h1>
               <p className="text-muted-foreground text-lg">Manage your WhatsApp message templates</p>
             </div>
             <div className="flex items-center gap-2">
@@ -319,7 +319,7 @@ export function TemplateManagement({
         <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5 py-10">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div>
-              <h1 className="text-foreground text-3xl font-bold mb-2">Manage Templates</h1>
+              <h1 className="text-foreground text-2xl font-bold mb-1">Manage Templates</h1>
               <p className="text-muted-foreground text-lg">Manage your WhatsApp message templates</p>
             </div>
             <div className="flex items-center gap-2">
@@ -358,7 +358,7 @@ export function TemplateManagement({
         {/* ═══ Page Header ═══ */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-foreground text-3xl font-bold mb-2">Manage Templates</h1>
+            <h1 className="text-foreground text-2xl font-bold mb-1">Manage Templates</h1>
             <p className="text-muted-foreground text-lg">Manage your WhatsApp message templates</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">

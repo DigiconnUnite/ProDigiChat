@@ -91,9 +91,11 @@ function formatTime(date: Date): string {
 // ─── Robust Content Parser ──────────────────────────────
 
 function parseContent(raw: string): ParsedContent {
+  console.log("parseContent - Raw Input:", raw);
   // Try the imported utility first
   try {
     const parsed = parseMessageContent(raw)
+    console.log("parseContent - Parsed using parseMessageContent:", parsed);
     if (parsed && (parsed.type || parsed.text)) {
       // Convert MessageContent to ParsedContent format
       return {
@@ -114,88 +116,156 @@ function parseContent(raw: string): ParsedContent {
   // Fallback: try JSON parse
   try {
     const obj = JSON.parse(raw)
-    if (obj.type === 'text' || obj.text) {
-      return { type: 'text', text: obj.text || raw }
+    
+    // Handle text messages - check multiple possible text fields
+    if (obj.text) {
+      return { type: 'text', text: obj.text }
     }
+    if (obj.body) {
+      return { type: 'text', text: obj.body }
+    }
+    if (obj.content) {
+      return { type: 'text', text: obj.content }
+    }
+    
+    // Handle image messages
     if (obj.type === 'image' || obj.image) {
       return {
         type: 'image',
-        caption: obj.image?.caption || obj.caption || obj.body,
+        caption: obj.image?.caption || obj.caption || obj.body || obj.text,
         mediaUrl: obj.image?.url || obj.media?.url || obj.mediaUrl,
         mediaType: obj.image?.mime_type || obj.image?.type,
       }
     }
+    
+    // Handle video messages
     if (obj.type === 'video' || obj.video) {
       return {
         type: 'video',
-        caption: obj.video?.caption || obj.caption || obj.body,
+        caption: obj.video?.caption || obj.caption || obj.body || obj.text,
         mediaUrl: obj.video?.url || obj.media?.url || obj.mediaUrl,
         mediaType: obj.video?.mime_type || obj.video?.type,
       }
     }
+    
+    // Handle document messages
     if (obj.type === 'document' || obj.document) {
       return {
         type: 'document',
-        caption: obj.document?.caption || obj.caption || obj.body,
+        caption: obj.document?.caption || obj.caption || obj.body || obj.text,
         fileName: obj.document?.filename || obj.document?.name || 'Document',
         fileSize: obj.document?.file_size,
         mediaUrl: obj.document?.url || obj.media?.url || obj.mediaUrl,
         mediaType: obj.document?.mime_type || obj.document?.type,
       }
     }
+    
+    // Handle interactive messages
     if (obj.type === 'interactive' || obj.interactive) {
       return {
         type: 'interactive',
-        text: obj.interactive?.body?.text || obj.body?.text || '',
+        text: obj.interactive?.body?.text || obj.body?.text || obj.text || '',
         interactive: obj.interactive || obj.body,
       }
     }
+    
+    // Handle template messages
     if (obj.type === 'template' || obj.template) {
       return {
         type: 'template',
-        text: obj.template?.body?.text || obj.body?.text || '',
+        text: obj.template?.body?.text || obj.body?.text || obj.text || '',
         interactive: obj.template?.body,
       }
     }
+    
+    // Handle location messages
     if (obj.type === 'location' || obj.location) {
       return {
         type: 'location',
         location: obj.location,
       }
     }
+    
+    // Handle list messages
     if (obj.type === 'list' || obj.list) {
       return {
         type: 'list',
         list: obj.list,
       }
     }
+    
+    // Handle sticker messages
     if (obj.type === 'sticker' || obj.sticker) {
       return {
         type: 'sticker',
         mediaUrl: obj.sticker?.url || obj.media?.url || obj.mediaUrl,
       }
     }
-    // Fallback to raw text
-    return { type: 'text', text: raw }
-  } catch {}
-
-  // Ultimate fallback
-  return { type: 'text', text: raw }
+    
+    // If it's a simple string in the JSON, treat it as text
+    if (typeof obj === 'string') {
+      return { type: 'text', text: obj }
+    }
+    
+    // If we have a type but no specific handler, try to extract text
+    if (obj.type) {
+      const textContent = obj.text || obj.body || obj.content || obj.caption || JSON.stringify(obj)
+      return { type: 'text', text: textContent }
+    }
+    
+    // Fallback to raw text if it's a simple string
+    if (typeof raw === 'string' && !raw.startsWith('{')) {
+      return { type: 'text', text: raw }
+    }
+    
+    // Last resort - try to find any text field in the object
+    const possibleTextFields = ['text', 'body', 'content', 'caption', 'message']
+    for (const field of possibleTextFields) {
+      if (obj[field] && typeof obj[field] === 'string') {
+        return { type: 'text', text: obj[field] }
+      }
+    }
+    
+    // Final fallback - show a clean message instead of raw JSON
+    return { type: 'text', text: 'Message content' }
+    
+  } catch (e) {
+    // If JSON parsing fails, treat as plain text
+    if (typeof raw === 'string' && !raw.includes('{') && !raw.includes('[')) {
+      return { type: 'text', text: raw }
+    }
+    // Final fallback
+    return { type: 'text', text: 'Message content' }
+  }
 }
 
 // ─── Message Bubble Renderer ──────────────────────────
 
 function MessageBubble({ message }: { message: Message }) {
+  console.log("MessageBubble - Message data:", message);
   const parsed = message.parsed
   const isSent = message.type === "sent"
 
-  if (!parsed) {
+  if (!parsed || !parsed.text) {
+    console.log("MessageBubble - No parsed text, using fallback");
+    // Try to extract text from rawText if it's not JSON
+    let displayText = message.rawText
+    try {
+      const parsed = JSON.parse(message.rawText)
+      displayText = parsed.text || parsed.body || parsed.content || 'Message'
+    } catch {
+      // If rawText is not JSON, use it as is
+      if (message.rawText.startsWith('{') || message.rawText.startsWith('[')) {
+        displayText = 'Message'
+      }
+    }
+    
     return (
       <div className={cn(
         "max-w-[70%] rounded-xl p-3 shadow-sm min-w-0 break-words",
         isSent ? "bg-[#005c4b] text-white rounded-tr-sm" : "bg-white text-foreground rounded-tl-sm"
       )}>
-        <p className="text-sm whitespace-pre-wrap leading-relaxed opacity-60 break-all overflow-wrap-anywhere word-break-break-all">{message.rawText}</p>
+        <p className="text-sm whitespace-pre-wrap leading-relaxed break-all overflow-wrap-anywhere word-break-break-all">{displayText}</p>
         <MessageMeta time={message.time} status={message.status} isSent={isSent} />
       </div>
     )
@@ -387,12 +457,15 @@ function MessageBubble({ message }: { message: Message }) {
       )
 
     default: // text or unknown
+      const displayText = parsed?.text || message.rawText || 'Message'
+      const cleanText = displayText.startsWith('{') || displayText.startsWith('[') ? 'Message' : displayText
+      
       return (
         <div className={cn(
           "max-w-[70%] rounded-xl p-3 shadow-sm min-w-0 break-words",
           isSent ? "bg-[#005c4b] text-white rounded-tr-sm" : "bg-white text-foreground rounded-tl-sm"
         )}>
-          <p className="text-sm whitespace-pre-wrap leading-relaxed break-all overflow-wrap-anywhere word-break-break-all">{parsed?.text || message.rawText}</p>
+          <p className="text-sm whitespace-pre-wrap leading-relaxed break-all overflow-wrap-anywhere word-break-break-all">{cleanText}</p>
           <MessageMeta time={message.time} status={message.status} isSent={isSent} />
         </div>
       )
@@ -601,11 +674,14 @@ export default function InboxPage() {
       if (!response.ok) throw new Error("Failed to send message")
 
       const data = await response.json()
-      const rawContent = data.message?.content ? (typeof data.message.content === 'string' ? data.message.content : JSON.stringify(data.message.content)) : messageInput.trim()
-      const parsed = parseContent(rawContent)
+      
+      // Always use the original message text for sent messages
+      const messageText = messageInput.trim()
+      const parsed = { type: 'text', text: messageText }
+      const rawContent = messageText
 
       setMessages(prev => [...prev, {
-        id: data.messageId || Date.now().toString(),
+        id: data.messageId || data.message?.id || Date.now().toString(),
         type: "sent",
         parsed,
         rawText: rawContent,
@@ -661,7 +737,7 @@ export default function InboxPage() {
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h1 className="text-foreground text-3xl font-bold mb-2">Inbox</h1>
+              <h1 className="text-foreground text-2xl font-bold mb-1">Inbox</h1>
               <p className="text-muted-foreground text-lg">Manage your WhatsApp conversations</p>
             </div>
           </div>
@@ -685,7 +761,7 @@ export default function InboxPage() {
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h1 className="text-foreground text-3xl font-bold mb-2">Inbox</h1>
+              <h1 className="text-foreground text-2xl font-bold mb-1">Inbox</h1>
               <p className="text-muted-foreground text-lg">Manage your WhatsApp conversations</p>
             </div>
             <Button className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm" onClick={() => window.location.href = '/dashboard/settings/whatsapp'}>
@@ -742,8 +818,8 @@ export default function InboxPage() {
   // ═════════════════════════════════════════════════════════════
 
   return (
-    <StandardLayout className="h-[87vh]">
-      <div className="w-full h-full flex rounded-xl border-2 border-green-950 bg-white overflow-hidden">
+    <StandardLayout className="max-h-[87vh] overflow-hidden">
+      <div className="w-full h-[calc(100vh-160px)]  flex rounded-xl border-2 border-green-950 bg-white overflow-hidden">
 
             {/* ─── Conversations List ─── */}
             <div className="w-80 border-r-2 border-slate-100 flex flex-col bg-white shrink-0">
@@ -860,7 +936,7 @@ export default function InboxPage() {
 
             {/* ─── Chat Window ─── */}
             <div
-              className="flex-1 flex flex-col min-w-0 overflow-hidden"
+              className="flex-1 flex flex-col min-w-0  overflow-hidden"
               style={{
                 backgroundColor: "#ECE5DD",
                 backgroundImage: "url('/whatsapp-doodle-bg.png')",
@@ -905,7 +981,7 @@ export default function InboxPage() {
                   </div>
 
                   {/* Messages */}
-                  <ScrollArea className="flex-1 min-h-0 p-4">
+                  <ScrollArea className="flex-1 min-h-0 p-4 h-full">
                     <div className="space-y-2 pb-2">
                       {isLoadingMessages ? (
                         <div className="flex items-center justify-center py-16">

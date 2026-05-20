@@ -32,7 +32,7 @@ export default function CTASection({
     <section className={`relative overflow-hidden bg-transparent border-slate-300 px-2.5 lg:px-0 ${className}`}>
       <div className="max-w-[1440px] mx-auto relative bg-linear-30 from-lime-50 to-green-100 border-t border-l border-r border-slate-300 px-5">
         <StripesBackground position="full" opacity="opacity-10" />
-        <div className="text-center py-20">
+        <div className="relative z-20 text-center py-20">
           <h2 className="text-foreground text-4xl font-bold mb-4">
             {title}
           </h2>

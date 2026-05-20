@@ -1172,7 +1172,7 @@ function WhatsAppSettingsTabContent({ organizationId }: WhatsAppSettingsTabProps
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-foreground text-3xl font-bold mb-2">WhatsApp Configuration</h1>
+        <h1 className="text-foreground text-2xl font-bold mb-1">WhatsApp Configuration</h1>
         <p className="text-muted-foreground text-lg">Manage your Meta WhatsApp Business API accounts and phone numbers</p>
       </div>
 

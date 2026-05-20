@@ -458,7 +458,7 @@ export default function CampaignsPage() {
         <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5 py-10">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div>
-              <h1 className="text-foreground text-3xl font-bold mb-2">Campaigns</h1>
+              <h1 className="text-foreground text-2xl font-bold mb-1">Campaigns</h1>
               <p className="text-muted-foreground text-lg">Create and manage your marketing campaigns</p>
             </div>
             <Button
@@ -496,7 +496,7 @@ export default function CampaignsPage() {
         <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5 py-10">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div>
-              <h1 className="text-foreground text-3xl font-bold mb-2">Campaigns</h1>
+              <h1 className="text-foreground text-2xl font-bold mb-1">Campaigns</h1>
               <p className="text-muted-foreground text-lg">Create and manage your marketing campaigns</p>
             </div>
             <Button disabled className="rounded-lg bg-green-600 text-white text-sm">
@@ -526,7 +526,7 @@ export default function CampaignsPage() {
         {/* ═══ Page Header ═══ */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-foreground text-3xl font-bold mb-2">Campaigns</h1>
+            <h1 className="text-foreground text-2xl font-bold mb-1">Campaigns</h1>
             <p className="text-muted-foreground text-lg">Create and manage your marketing campaigns</p>
           </div>
           <Button

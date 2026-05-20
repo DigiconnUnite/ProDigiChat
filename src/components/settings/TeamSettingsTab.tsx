@@ -339,7 +339,7 @@ export function TeamSettingsTab({ organizationId }: TeamSettingsTabProps) {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-foreground text-3xl font-bold mb-2">Team Management</h1>
+        <h1 className="text-foreground text-2xl font-bold mb-1">Team Management</h1>
         <p className="text-muted-foreground text-lg">Invite members and manage their access roles</p>
       </div>
 

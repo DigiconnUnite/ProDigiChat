@@ -345,6 +345,38 @@ export async function getReadyMessages(
 }
 
 /**
+ * Categorize WhatsApp API errors into human-readable failure reasons
+ */
+function categorizeError(
+  errorCode?: string | number | null,
+  errorMessage?: string | null
+): string {
+  const msg = (errorMessage || '').toLowerCase()
+  const code = Number(errorCode)
+
+  // WhatsApp API error codes
+  if (code === 100) return 'INVALID_RECIPIENT'
+  if (code === 131026) return 'RECIPIENT_NOT_ON_WHATSAPP'
+  if (code === 131047) return 'RECIPIENT_BLOCKED_BUSINESS'
+  if (code === 131052) return 'TEMPLATE_NOT_APPROVED'
+  if (code === 131013) return 'DAILY_LIMIT_EXCEEDED'
+  if (code === 4) return 'RATE_LIMITED'
+  if (code === 10) return 'PERMISSION_DENIED'
+
+  // String-based categorization
+  if (msg.includes('not on whatsapp')) return 'RECIPIENT_NOT_ON_WHATSAPP'
+  if (msg.includes('invalid phone') || msg.includes('invalid recipient')) return 'INVALID_PHONE_NUMBER'
+  if (msg.includes('rate limit') || msg.includes('too many')) return 'RATE_LIMITED'
+  if (msg.includes('template') && msg.includes('not approved')) return 'TEMPLATE_NOT_APPROVED'
+  if (msg.includes('blocked')) return 'RECIPIENT_BLOCKED_BUSINESS'
+  if (msg.includes('opted out') || msg.includes('opt-out')) return 'RECIPIENT_OPTED_OUT'
+  if (msg.includes('timeout') || msg.includes('timed out')) return 'TIMEOUT'
+  if (msg.includes('network') || msg.includes('connection')) return 'NETWORK_ERROR'
+
+  return 'UNKNOWN_ERROR'
+}
+
+/**
  * Process a single message from the queue
  */
 export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise<{
@@ -518,35 +550,25 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
       });
     }
 
-    // Persist outgoing message row so webhook status updates can be matched by whatsappMessageId.
-    if (whatsappMessageId) {
-      const contact = await resolveContact();
-
-      if (contact) {
-        const existingMessage = await prisma.message.findFirst({
-          where: { whatsappMessageId },
-          select: { id: true },
-        });
-
-        if (!existingMessage) {
-          await prisma.message.create({
-            data: {
-              contactId: contact.id,
-              campaignId: queueItem.campaignId || undefined,
-              organizationId: contact.organizationId || organizationId,
-              direction: 'outgoing',
-              status: 'sent',
-              content: queueItem.messageContent,
-              whatsappMessageId,
-              stats: JSON.stringify({ totalSent: 1, delivered: 0, read: 0, failed: 0, clicked: 0 }),
-            },
-          }).catch((e) => {
-            console.error('[Queue] Failed to create Message record:', e);
-          });
-        }
-      } else {
-        console.warn(`[Queue] Could not resolve contact for message ${id}; skipping Message row creation`);
-      }
+    // Create Message record for successful send
+    const contact = await resolveContact();
+    if (contact) {
+      await prisma.message.create({
+        data: {
+          contactId: contact.id,
+          campaignId: queueItem.campaignId || undefined,
+          organizationId: contact.organizationId || organizationId,
+          direction: 'outgoing',
+          status: 'sent',
+          content: queueItem.messageContent,
+          whatsappMessageId,
+          stats: JSON.stringify({ totalSent: 1, delivered: 0, read: 0, failed: 0, clicked: 0 }),
+        },
+      }).catch((e) => {
+        console.error('[Queue] Failed to create Message record:', e);
+      });
+    } else {
+      console.warn(`[Queue] Could not resolve contact for message ${id}; skipping Message row creation`);
     }
 
     console.log(`[Queue] Message ${id} sent successfully`);
@@ -643,6 +665,36 @@ export async function processQueueItem(queueItem: WhatsAppMessageQueue): Promise
         claimedAt: null,
       },
     });
+
+    // ✅ CREATE MESSAGE RECORD FOR FAILED MESSAGE
+    // Only create a Message record if this is a final failure (no more retries)
+    if (nextStatus === QueueStatus.FAILED) {
+      const contact = await resolveContact();
+      if (contact) {
+        const classification = classifyMetaError(error);
+        const failureReason = classification.reason;
+        const errorMessage = error?.message || error?.response?.data?.error?.message || 'Unknown error';
+        
+        await prisma.message.create({
+          data: {
+            contactId: contact.id,
+            campaignId: queueItem.campaignId || undefined,
+            organizationId: contact.organizationId || organizationId,
+            direction: 'outgoing',
+            status: 'failed',
+            content: queueItem.messageContent,
+            failureReason,
+            errorMessage,
+            sentAt: null,
+            failedAt: new Date(),
+          },
+        } as any).catch((e) => {
+          console.error('[Queue] Failed to create failure Message record:', e);
+        });
+      } else {
+        console.warn(`[Queue] Could not resolve contact for failed message ${id}; skipping Message row creation`);
+      }
+    }
 
     return {
       success: false,
