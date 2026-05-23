@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#16a34a;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#166534;stop-opacity:1"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#g)"/>
+  <rect x="60" y="60" width="1080" height="510" rx="24" fill="rgba(255,255,255,0.06)"/>
+  <text x="100" y="200" font-family="system-ui,sans-serif" font-size="22" fill="rgba(255,255,255,0.7)" letter-spacing="3">PRODIGICHAT • STRATEGY</text>
+  <text x="100" y="320" font-family="system-ui,sans-serif" font-size="52" fill="white" font-weight="700">Contact Segmentation</text>
+  <rect x="100" y="370" width="120" height="6" rx="3" fill="rgba(255,255,255,0.4)"/>
+  <text x="100" y="450" font-family="system-ui,sans-serif" font-size="24" fill="rgba(255,255,255,0.6)">prodigichat.com</text>
+  <circle cx="1050" cy="315" r="180" fill="rgba(255,255,255,0.04)"/>
+  <circle cx="1050" cy="315" r="120" fill="rgba(255,255,255,0.04)"/>
+</svg>
