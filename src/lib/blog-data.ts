@@ -82,7 +82,7 @@ Remember, successful WhatsApp marketing is about building long-term relationship
     category: "Marketing Strategy",
     tags: ["WhatsApp Marketing", "Campaign Strategy", "Conversion Optimization"],
     featured: true,
-    image: "/blog/whatsapp-campaigns.jpg"
+    image: "/blog/how-to-create-high-converting-whatsapp-campaigns.svg"
   },
   {
     id: "2",
@@ -153,7 +153,7 @@ Both options can be powerful tools for customer communication. Choose based on y
     category: "Business Tools",
     tags: ["WhatsApp API", "Business Tools", "Scalability"],
     featured: false,
-    image: "/blog/api-vs-app.jpg"
+    image: "/blog/whatsapp-business-api-vs-app.svg"
   },
   {
     id: "3",
@@ -221,7 +221,7 @@ Remember to comply with WhatsApp's messaging policies and obtain proper consent 
     category: "Templates",
     tags: ["Message Templates", "Engagement", "Marketing"],
     featured: false,
-    image: "/blog/templates.jpg"
+    image: "/blog/whatsapp-marketing-templates.svg"
   },
   {
     id: "4",
@@ -279,7 +279,7 @@ Building loyalty takes time but pays dividends in customer retention and word-of
     category: "Customer Engagement",
     tags: ["Customer Loyalty", "Relationship Building", "Retention"],
     featured: false,
-    image: "/blog/loyalty.jpg"
+    image: "/blog/building-customer-loyalty-whatsapp.svg"
   },
   {
     id: "5",
