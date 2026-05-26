@@ -33,71 +33,71 @@ import {
 const features = [
   {
     icon: Users,
-    title: "Contact Management",
+    title: "Contact Ka Full Control",
     description:
-      "Import, organize, and segment contacts with custom tags and attributes.",
+      "CSV se import karo, custom tags lagao, segments banao. VIP customers, cold leads, loyal buyers — sab ek jagah manage karo.",
   },
   {
     icon: Send,
-    title: "Campaign Management",
+    title: "1 Click — Lakhon Messages",
     description:
-      "Create and manage broadcast campaigns with customizable templates.",
+      "Ek baar mein poore contact list ko personalized messages bhejo. {{name}} variables se har message feel hoga personally written.",
   },
   {
     icon: BarChart3,
-    title: "Advanced Analytics",
+    title: "Data Jo Samajh Mein Aaye",
     description:
-      "Track delivery rates, read rates, and campaign performance with real-time insights.",
+      "Delivered, Read, Replied, Clicked — har metric real-time dashboard mein. Ab andaze pe nahi, data pe decisions lena shuru karo.",
   },
   {
     icon: MessageSquare,
-    title: "Real-time Inbox",
+    title: "Ek Jagah Se Sab Baat-Cheet",
     description:
-      "Handle 1-on-1 WhatsApp conversations with a unified chat interface.",
+      "Multiple agents, ek shared inbox. Customer ne reply kiya? Turant dikhega. Poori team saath mein conversations manage kar sakti hai.",
   },
   {
     icon: Target,
-    title: "Dynamic Segments",
+    title: "Sahi Message, Sahi Insaan Ko",
     description:
-      "Create targeted segments for precision marketing campaigns.",
+      "Behavior, tags, aur attributes se dynamic audience segments banao — phir unhe precisely target karo.",
   },
   {
     icon: Shield,
-    title: "Multi-Organization Support",
+    title: "100% Safe — Ban Ka Zero Darr",
     description:
-      "Manage multiple organizations with role-based access control.",
+      "Official Meta WhatsApp Cloud API use karta hai ProDigiChat. Account 100% safe, GDPR compliant, aur policy-friendly.",
   },
 ]
 
 const stats = [
-  { label: "Messages Delivered", value: "10M+" },
-  { label: "Active Users", value: "50K+" },
-  { label: "Countries", value: "120+" },
-  { label: "Uptime", value: "99.9%" },
+  { label: "Setup Time", value: "< 5 Min" },
+  { label: "WhatsApp Network", value: "2.5B+" },
+  { label: "Meta Verified API", value: "✓ Official" },
+  { label: "Message Delivery", value: "98%+" },
 ]
 
 const capabilities = [
   {
     icon: Smartphone,
-    title: "Mobile-First Design",
-    description: "Manage campaigns on the go with our responsive interface.",
+    title: "Mobile Pe Bhi Kaam Kare",
+    description: "Office se bahar? Koi baat nahi. ProDigiChat mobile pe bhi utna hi smooth hai.",
   },
   {
     icon: Globe,
-    title: "Global Reach",
+    title: "Poori Duniya Tak Pahuncho",
     description:
-      "Connect with customers worldwide through WhatsApp's network.",
+      "WhatsApp ke 2.5 billion+ users ka network — apne customers se kahan bhi connect karo.",
   },
   {
     icon: Clock,
-    title: "24/7 Support",
+    title: "24/7 Support Hamesha",
     description:
-      "Round-the-clock assistance to ensure your campaigns run smoothly.",
+      "Koi bhi problem ho — din ho ya raat, hum available hain. Aapka business kabhi nahi rukta.",
   },
   {
     icon: Target,
-    title: "Targeted Campaigns",
-    description: "Reach the right audience with precision targeting tools.",
+    title: "Precision Targeting",
+    description: "Sahi campaign, sahi audience — ProDigiChat ke smart segmentation tools ke saath.",
   },
 ]
 
@@ -124,23 +124,26 @@ export default function LandingPage() {
             <div className="grid gap-12 pt-12 lg:grid-cols-[1fr_1fr] lg:pt-20 lg:pl-12 pb-0 lg:pb-0 min-h-[400px] lg:min-h-[500px] relative z-30">
               <div className="flex flex-col items-start justify-center  gap-5 lg:gap-8">
                 <h1 className="text-foreground text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
-                  The Complete WhatsApp Marketing Platform
+                  Ab WhatsApp Se Karo Business Grow! 🚀
                 </h1>
                 <p className="text-muted-foreground text-base md:text-lg lg:text-xl leading-relaxed">
-                  Manage contacts, create targeted campaigns, and automate your WhatsApp marketing at scale. Connect multiple Business accounts and track performance with powerful analytics.
+                  Kya aap abhi bhi manually messages copy-paste kar rahe ho? Chodo yeh jugaad — ProDigiChat se 1 click mein lakhon customers tak pahuncho, automatically.
                 </p>
                 <div className="flex flex-wrap gap-4">
                   <Button asChild size="lg" className="rounded-full">
-                    <Link href="/pricing">
-                      Try for free
+                    <Link href="/signup">
+                      Bilkul Free Mein Shuru Karo
                     </Link>
                   </Button>
                   <Button asChild variant="outline" size="lg" className="rounded-full">
-                    <Link href="/pricing">
-                      Book a demo
+                    <Link href="/support">
+                      Live Demo Dekho
                     </Link>
                   </Button>
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  ✅ No credit card needed &nbsp;✅ 5 minute setup &nbsp;✅ Cancel anytime
+                </p>
               </div>
 
               <div className="relative z-30">
@@ -183,11 +186,10 @@ export default function LandingPage() {
             {/* Section header */}
             <div className="text-center mb-16 pt-20 pb-4">
               <h2 className="text-foreground text-4xl font-bold mb-4">
-                Everything You Need for WhatsApp Marketing Success
+                Sab Kuch Ek Jagah — Zero Jhanjhat
               </h2>
               <p className="text-muted-foreground text-xl max-w-3xl mx-auto">
-                Powerful features built to help you scale your WhatsApp marketing, 
-                manage customer relationships, and drive business growth.
+                ProDigiChat mein woh sab hai jo aapka business WhatsApp pe dominate karne ke liye chahiye — chote business se badi company tak.
               </p>
             </div>
 
@@ -392,8 +394,8 @@ export default function LandingPage() {
         <section id="prodigichat-dashboard" className="relative overflow-hidden bg-transparent px-2.5 lg:px-0">
           <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-gray-300 px-0">
             <div className="grid grid-cols-1 gap-4 border-b border-gray-300 px-6 pb-6 pt-20 lg:grid-cols-2 lg:gap-12 lg:px-8 lg:pb-12 lg:pt-32">
-              <h1 className="text-foreground text-3xl font-semibold tracking-tight">See Every Message, Understand Every Campaign, and Act with Unmatched Speed</h1>
-              <p className="text-gray-600 text-base">Our unified dashboard brings all your contacts, campaigns, and analytics into a single panoramic view—updated in real time.</p>
+              <h1 className="text-foreground text-3xl font-semibold tracking-tight">Dekho Kitna Simple Hai 👇</h1>
+              <p className="text-gray-600 text-base">Fancy setup nahi chahiye. Koi coding nahi chahiye. Bas login karo aur kaam shuru karo — aur real-time mein dekho sab kuch kaise kaam karta hai.</p>
             </div>
             <div className="relative bg-linear-0 bg-linear-to-brrom-lime-50 to-green-50">
               <div className="z-10 p-5 lg:p-20">
@@ -409,7 +411,7 @@ export default function LandingPage() {
                 <div className="flex h-full w-full justify-between gap-2">
                   <div>
                     <h3 className="text-base font-semibold">Click-Through Detail</h3>
-                    <p className="mt-2 text-sm text-gray-600">Drill from high‑level numbers straight into the underlying messages, contacts, and campaign performance.</p>
+                    <p className="mt-2 text-sm text-gray-600">Campaign ke andar tak jaao — message level pe dekho kaunse contacts ne respond kiya aur kaunse nahi.</p>
                   </div>
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary w-4 h-4">
                     <path d="M15 13a3 3 0 1 0-6 0"></path>
@@ -422,7 +424,7 @@ export default function LandingPage() {
                 <div className="flex h-full w-full justify-between gap-2">
                   <div>
                     <h3 className="text-base font-semibold">One-Click Campaigns</h3>
-                    <p className="mt-2 text-sm text-gray-600">Launch WhatsApp campaigns in seconds—no complex setup required, just select contacts and send.</p>
+                    <p className="mt-2 text-sm text-gray-600">Audience select karo, message type karo, bhejo. Bas itna. Setup mein 2 minute se zyada nahi lagega.</p>
                   </div>
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary w-4 h-4">
                     <path d="m3 16 4 4 4-4"></path>
@@ -436,7 +438,7 @@ export default function LandingPage() {
                 <div className="flex h-full w-full justify-between gap-2">
                   <div>
                     <h3 className="text-base font-semibold">Smart Alerts & Insights</h3>
-                    <p className="mt-2 text-sm text-gray-600">Set thresholds once and get proactive notifications when delivery rates dip, responses spike, or engagement changes.</p>
+                    <p className="mt-2 text-sm text-gray-600">Delivery rate giri? Reply spike aaya? ProDigiChat turant notify karta hai — act karo before it's too late.</p>
                   </div>
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary w-4 h-4">
                     <rect width="7" height="12" x="2" y="6" rx="1"></rect>
@@ -450,7 +452,7 @@ export default function LandingPage() {
                 <div className="flex h-full w-full justify-between gap-2">
                   <div>
                     <h3 className="text-base font-semibold">Enterprise-Grade Security</h3>
-                    <p className="mt-2 text-sm text-gray-600">AES‑256 encryption, SOC&nbsp;2 Type II compliance, and MFA baked in to keep every message—and every customer—safe.</p>
+                    <p className="mt-2 text-sm text-gray-600">AES-256 encryption, role-based access, aur audit logs. Aapka aur customers ka data 100% safe.</p>
                   </div>
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary w-4 h-4">
                     <path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v1"></path>
@@ -473,21 +475,21 @@ export default function LandingPage() {
               {/* Left – copy + checklist */}
               <div>
                 <h2 className="text-foreground text-4xl font-bold mb-6">
-                  Why Choose ProDigiChat?
+                  Kyun Choose Karein ProDigiChat? 🤔
                 </h2>
                 <p className="text-muted-foreground text-xl mb-8 leading-relaxed">
-                  We&apos;re built for businesses that want to leverage
-                  WhatsApp&apos;s massive user base for marketing, customer
-                  support, and sales automation.
+                  Hum banaye gaye hain un businesses ke liye jo WhatsApp ki
+                  massive user base ko marketing, support, aur sales automation
+                  ke liye use karna chahte hain — India mein aur globally.
                 </p>
 
                 <div className="space-y-4">
                   {[
                     "Official WhatsApp Business API integration",
-                    "Advanced message scheduling and automation",
-                    "Real-time analytics and reporting",
-                    "Multi-language support",
-                    "GDPR and privacy compliant",
+                    "Advanced message scheduling aur automation",
+                    "Real-time analytics aur detailed reporting",
+                    "Multi-language support — Hinglish bhi!",
+                    "GDPR aur privacy compliant",
                     "Enterprise-grade security",
                   ].map((item, i) => (
                     <div key={i} className="flex items-center gap-3">
@@ -524,14 +526,14 @@ export default function LandingPage() {
             FINAL CTA – Reusable component
         ══════════════════════════════════════════ */}
         <CTASection
-          title="Ready to Scale Your WhatsApp Marketing?"
-          description="Join thousands of businesses using ProDigiChat to manage contacts, launch campaigns, and drive results through WhatsApp."
+          title="Ab Aur Wait Kisliye? 🚀"
+          description="Har din jo aap manually messages bhejte ho, woh ek din hai jo competitors aage nikal rahe hain. ProDigiChat pe switch karo — free mein — aur dekhte hai kaisa lagta hai jab marketing khud kaam kare."
           primaryButton={{
-            text: "Get Started Free",
+            text: "Free Mein Shuru Karo",
             href: "/signup"
           }}
           secondaryButton={{
-            text: "View Pricing",
+            text: "Pricing Dekho",
             href: "/pricing"
           }}
         />
