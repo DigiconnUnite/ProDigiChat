@@ -26,9 +26,10 @@ import { useState } from "react"
 const plans = [
   {
     name: "Free",
-    description: "Perfect for getting started with WhatsApp marketing.",
+    description: "Shuru karo bina ek paisa lagaye — test karo, feel karo.",
     monthlyPrice: 0,
     yearlyPrice: 0,
+    ctaText: "Abhi Free Mein Shuru Karo",
     features: [
       { text: "100 contacts", included: true },
       { text: "1,000 messages/month", included: true },
@@ -42,17 +43,18 @@ const plans = [
       { text: "Team collaboration", included: false },
       { text: "API access", included: false },
       { text: "Custom branding", included: false },
-    ]
+    ],
   },
   {
     name: "Professional",
-    description: "For growing businesses that need more power.",
-    monthlyPrice: 60,
-    yearlyPrice: 48,
+    description: "Growing businesses ke liye — poori power, sahi price.",
+    monthlyPrice: 4999,
+    yearlyPrice: 3999,
     highlight: true,
+    ctaText: "7 Din Free Trial Shuru Karo",
     features: [
       { text: "10,000 contacts", included: true },
-      { text: "100,000 messages/month", included: true },
+      { text: "1,00,000 messages/month", included: true },
       { text: "10 team members", included: true },
       { text: "Advanced analytics", included: true },
       { text: "Priority support", included: true },
@@ -63,13 +65,14 @@ const plans = [
       { text: "API access", included: true },
       { text: "Custom branding", included: false },
       { text: "Dedicated account manager", included: false },
-    ]
+    ],
   },
   {
     name: "Enterprise",
-    description: "For large organizations with custom needs.",
-    monthlyPrice: 120,
-    yearlyPrice: 96,
+    description: "Bade khiladi ke liye — sab kuch unlimited, dedicated support.",
+    monthlyPrice: null as number | null,
+    yearlyPrice: null as number | null,
+    ctaText: "Sales Se Baat Karo",
     features: [
       { text: "Unlimited contacts", included: true },
       { text: "Unlimited messages", included: true },
@@ -83,35 +86,41 @@ const plans = [
       { text: "Full API access", included: true },
       { text: "Custom branding", included: true },
       { text: "Dedicated account manager", included: true },
-    ]
-  }
+    ],
+  },
 ]
 
 const faqs = [
   {
-    question: "What's included in the free plan?",
-    answer: "The free plan includes basic WhatsApp messaging features, up to 100 contacts, and 1,000 messages per month. Perfect for testing and small-scale use."
+    question: "Free plan mein kya kya milta hai?",
+    answer:
+      "Free plan mein 100 contacts, 1,000 messages/month, 1 WhatsApp account, aur basic analytics milti hai. Testing ke liye perfect — koi time limit nahi, lifetime free!",
   },
   {
-    question: "Can I change plans later?",
-    answer: "Yes, you can upgrade or downgrade your plan at any time. Changes take effect at the next billing cycle."
+    question: "Kya baad mein plan change kar sakte hain?",
+    answer:
+      "Bilkul! Jab chaaho upgrade ya downgrade karo. Changes next billing cycle pe laagu honge. Koi penalty nahi, koi jhanjhat nahi.",
   },
   {
-    question: "What payment methods do you accept?",
-    answer: "We accept all major credit cards, PayPal, and wire transfers for Enterprise plans."
+    question: "Payment kaise karte hain?",
+    answer:
+      "Hum credit/debit cards, UPI, net banking — sab accept karte hain. Indian payment methods fully supported hain. Secure checkout ke saath.",
   },
   {
-    question: "Is there a long-term contract?",
-    answer: "No long-term contracts. All plans are month-to-month and you can cancel anytime. Yearly plans offer a 20% discount."
+    question: "Koi contract sign karna padega?",
+    answer:
+      "Nahi bilkul! Sab month-to-month hai. Yearly plan pe 20% discount milta hai — but koi lock-in nahi. Jab chaaho cancel karo.",
   },
   {
-    question: "Do you offer a free trial?",
-    answer: "Yes! All paid plans come with a 14-day free trial. No credit card required for the trial period."
+    question: "Free trial milega?",
+    answer:
+      "Haan! Sabhi paid plans pe 7-day free trial milta hai. Koi credit card ki zarurat nahi trial ke liye. Try karo, pasand aaye toh raho.",
   },
   {
-    question: "What is WhatsApp Business API?",
-    answer: "It's the official API from Meta that allows businesses to send messages at scale. We help you get set up and manage it easily."
-  }
+    question: "WhatsApp Business API kya hota hai?",
+    answer:
+      "Yeh Meta ka official API hai jo businesses ko scale pe messages bhejne deta hai. Hum aapko poora setup karwate hain — koi technical knowledge required nahi.",
+  },
 ]
 
 const features = [
@@ -157,10 +166,10 @@ export default function PricingPage() {
           <div className="max-w-[1440px] mx-auto relative bg-linear-30 from-lime-50 to-green-100 border-l border-r border-slate-300 px-5">
             <div className="text-center py-20">
               <h1 className="text-foreground text-4xl font-bold mb-4">
-                Simple, Transparent Pricing
+                Sahi Plan, Sahi Price 💰
               </h1>
               <p className="text-muted-foreground text-xl max-w-3xl mx-auto mb-8">
-                Choose the perfect plan for your business. Start with our free plan or upgrade as you grow.
+                Na zyada, na kam — aapke business ke size ke hisaab se plan chuno. Free se shuru karo, grow karo jab ready ho.
               </p>
               
               {/* Billing Toggle */}
@@ -181,7 +190,7 @@ export default function PricingPage() {
                 >
                   Yearly
                   <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">
-                    Save 20%
+                    20% Bachao
                   </span>
                 </button>
               </div>
@@ -208,7 +217,7 @@ export default function PricingPage() {
                     <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                       <div className="bg-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
                         <Star className="h-4 w-4" />
-                        Most Popular
+                        Sabse Popular ⭐
                       </div>
                     </div>
                   )}
@@ -222,13 +231,23 @@ export default function PricingPage() {
                     </p>
                     
                     <div className="mb-6">
-                      <span className="text-5xl font-bold text-foreground">
-                        ${isYearly ? plan.yearlyPrice : plan.monthlyPrice}
-                      </span>
-                      <span className="text-muted-foreground text-lg">/month</span>
-                      {plan.monthlyPrice > 0 && isYearly && (
+                      {plan.monthlyPrice === null ? (
+                        <span className="text-5xl font-bold text-foreground">Custom</span>
+                      ) : (
+                        <>
+                          <span className="text-5xl font-bold text-foreground">
+                            {plan.monthlyPrice === 0
+                              ? "₹0"
+                              : `₹${((isYearly ? plan.yearlyPrice : plan.monthlyPrice) ?? 0).toLocaleString("en-IN")}`}
+                          </span>
+                          {plan.monthlyPrice > 0 && (
+                            <span className="text-muted-foreground text-lg">/month</span>
+                          )}
+                        </>
+                      )}
+                      {plan.monthlyPrice !== null && plan.monthlyPrice > 0 && isYearly && (
                         <div className="text-sm text-green-600 mt-2">
-                          Billed annually (${plan.yearlyPrice * 12}/year)
+                          Saal bhar ka plan — ₹{((plan.yearlyPrice ?? 0) * 12).toLocaleString("en-IN")}/year
                         </div>
                       )}
                     </div>
@@ -254,7 +273,7 @@ export default function PricingPage() {
                       className="w-full rounded-full h-12"
                       variant={plan.highlight ? "default" : "outline"}
                     >
-                      {plan.monthlyPrice === 0 ? "Get Started Free" : "Start Free Trial"}
+                      {plan.ctaText}
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </Link>
@@ -271,10 +290,10 @@ export default function PricingPage() {
           <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5">
             <div className="text-center mb-16 pt-20 pb-4">
               <h2 className="text-foreground text-4xl font-bold mb-4">
-                Everything You Need to Succeed
+                Sab Plans Mein Yeh Sab Milta Hai ✅
               </h2>
               <p className="text-muted-foreground text-xl max-w-3xl mx-auto">
-                Powerful features included in every plan to help you connect with customers.
+                Koi bhi plan lo — yeh core features har jagah included hain.
               </p>
             </div>
 
@@ -306,10 +325,10 @@ export default function PricingPage() {
           <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5">
             <div className="text-center mb-16 pt-20 pb-4">
               <h2 className="text-foreground text-4xl font-bold mb-4">
-                Frequently Asked Questions
+                Aksar Pooche Jaane Wale Sawaal 🙋
               </h2>
               <p className="text-muted-foreground text-xl max-w-3xl mx-auto">
-                Got questions? We've got answers.
+                Koi confusion? Yahan jawaab hai — aur nahi mila toh hum hain hi support ke liye.
               </p>
             </div>
 
@@ -337,15 +356,15 @@ export default function PricingPage() {
             CTA SECTION – Reusable component
         ══════════════════════════════════════════ */}
         <CTASection
-          title="Ready to Get Started?"
-          description="Join thousands of businesses using ProDigiChat to reach customers effectively."
+          title="Shuru Karne Ke Liye Ready Ho? 🚀"
+          description="Hazaron Indian businesses ProDigiChat use kar rahe hain apne customers tak effectively pahunchne ke liye. Aapki baari hai."
           primaryButton={{
-            text: "Start Free Trial",
+            text: "Free Trial Shuru Karo",
             href: "/signup"
           }}
           secondaryButton={{
-            text: "Schedule Demo",
-            href: "/demo"
+            text: "Support Se Baat Karo",
+            href: "/support"
           }}
         />
       </main>
