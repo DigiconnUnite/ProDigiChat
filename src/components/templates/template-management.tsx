@@ -57,6 +57,8 @@ import {
 } from '@/components/ui/dialog';
 import { WhatsAppTemplate, TemplateCategory, TemplateStatus } from '@/types/template';
 import { cn } from '@/lib/utils';
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageError } from "@/components/ui/page-error";
 
 // Constants
 const ITEMS_PER_PAGE_OPTIONS = [50, 100, 200];
@@ -260,56 +262,6 @@ export function TemplateManagement({
 
 
   // ═══════════════════════════════════════════════════════════════
-  // ERROR STATE
-  // ═══════════════════════════════════════════════════════════════
-
-  if (error) {
-    return (
-      <div className="bg-transparent px-2.5 lg:px-0">
-        <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5 py-10">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-            <div>
-              <h1 className="text-foreground text-2xl font-bold mb-1">Manage Templates</h1>
-              <p className="text-muted-foreground text-lg">Manage your WhatsApp message templates</p>
-            </div>
-            <div className="flex items-center gap-2">
-              {onSyncFromMeta && (
-                <Button variant="outline" size="icon" className="rounded-lg border-slate-300" onClick={onSyncFromMeta} disabled={isSyncing}>
-                  <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                </Button>
-              )}
-              {onOpenLibrary && (
-                <Button variant="outline" className="rounded-lg border-slate-300 text-sm" onClick={onOpenLibrary}>
-                  <BookOpen className="w-4 h-4 mr-2" />
-                  Browse Templates
-                </Button>
-              )}
-              <Button className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm" onClick={onCreateNew}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create New Template
-              </Button>
-            </div>
-          </div>
-
-          <div className="p-5 rounded-xl border-2 border-red-400 bg-red-50 text-center py-16">
-            <div className="h-14 w-14 rounded-xl bg-red-100 flex items-center justify-center mx-auto mb-4">
-              <RefreshCw className="h-7 w-7 text-red-500" />
-            </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">Error Loading Templates</h3>
-            <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto">{error}</p>
-            {onRetry && (
-              <Button onClick={onRetry} variant="outline" className="rounded-lg border-slate-300 text-sm">
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Try Again
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════
   // LOADING STATE
   // ═══════════════════════════════════════════════════════════════
 
@@ -387,6 +339,13 @@ export function TemplateManagement({
         </div>
 
 
+        {/* ═══ Error State ═══ */}
+        {error && (
+          <div className="mb-6">
+            <PageError message={error} onRetry={onRetry} />
+          </div>
+        )}
+
         {/* ═══ Table Card ═══ */}
         <div className="rounded-xl">
 
@@ -460,7 +419,33 @@ export function TemplateManagement({
             )}
           </div>
 
+          {/* Empty State */}
+          {!isLoading && !error && filteredTemplates.length === 0 && (
+            <div className="rounded-xl border-2 border-t-0 border-green-950 bg-white shadow-sm overflow-hidden">
+              <EmptyState
+                icon={FileText}
+                title={searchQuery ? "No templates match your search" : "No templates yet"}
+                description={
+                  searchQuery
+                    ? "Try a different search term or clear your filters."
+                    : "Create a WhatsApp message template to start sending campaigns."
+                }
+                action={
+                  !searchQuery
+                    ? { label: "Create Template", onClick: onCreateNew }
+                    : undefined
+                }
+                secondaryAction={
+                  !searchQuery && onSyncFromMeta
+                    ? { label: "Sync from Meta", onClick: onSyncFromMeta }
+                    : undefined
+                }
+              />
+            </div>
+          )}
+
           {/* Table */}
+          {filteredTemplates.length > 0 && (
           <div className="rounded-xl border-2 border-t-0 border-green-950 bg-white shadow-sm overflow-hidden">
             <Table>
               <TableHeader className="bg-green-950">
@@ -496,45 +481,7 @@ export function TemplateManagement({
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y divide-slate-100">
-                {paginatedTemplates.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="py-16">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="h-14 w-14 rounded-xl border-2 border-slate-200 bg-slate-50 flex items-center justify-center">
-                          <FileText className="h-7 w-7 text-slate-400" />
-                        </div>
-                        <p className="text-sm font-medium text-foreground">
-                          {templates.length === 0
-                            ? 'No templates found'
-                            : 'No templates match your filters'}
-                        </p>
-                        {templates.length === 0 ? (
-                          <div className="flex flex-col items-center gap-2">
-                            <p className="text-xs text-muted-foreground">
-                              Create your first template or browse the template library
-                            </p>
-                            <div className="flex items-center gap-2">
-                              {onOpenLibrary && (
-                                <Button variant="outline" className="rounded-lg border-slate-300 text-sm" onClick={onOpenLibrary}>
-                                  <BookOpen className="w-4 h-4 mr-2" />
-                                  Browse Templates
-                                </Button>
-                              )}
-                              <Button className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm" onClick={onCreateNew}>
-                                <Plus className="w-4 h-4 mr-2" />
-                                Create Template
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <Button variant="ghost" className="rounded-lg text-sm" onClick={resetFilters}>
-                            Clear filters
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
+                {(
                   paginatedTemplates.map((template) => {
                     const status = statusConfig[template.status] || statusConfig.draft;
                     const StatusIcon = status.icon;
@@ -691,9 +638,10 @@ export function TemplateManagement({
               </TableBody>
             </Table>
           </div>
+          )}
 
           {/* Pagination */}
-          {paginationMeta.totalPages > 1 && (
+          {filteredTemplates.length > 0 && paginationMeta.totalPages > 1 && (
             <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-200 px-1">
               <div className="text-sm text-muted-foreground">
                 Showing {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, paginationMeta.total)} of {paginationMeta.total}
