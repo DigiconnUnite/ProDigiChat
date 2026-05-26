@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { toast } from "sonner"
 import {
   Search,
@@ -62,6 +62,8 @@ import { ContactDetailDrawer } from "@/components/contacts/contact-detail-drawer
 import { BulkTagDialog } from "@/components/contacts/bulk-tag-dialog"
 import { cn } from "@/lib/utils"
 import { parseTags } from "@/types/common"
+import { EmptyState } from "@/components/ui/empty-state"
+import { PageError } from "@/components/ui/page-error"
 
 // Constants
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100]
@@ -182,6 +184,9 @@ export default function ContactsPage() {
 
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set())
   const [selectAll, setSelectAll] = useState(false)
+
+  const createContactTriggerRef = useRef<HTMLButtonElement>(null)
+  const importContactsTriggerRef = useRef<HTMLButtonElement>(null)
 
   // Fetch contacts
   const fetchContacts = useCallback(async () => {
@@ -499,17 +504,7 @@ export default function ContactsPage() {
             </ContactFormDialog>
           </div>
 
-          <div className="p-5 rounded-xl border-2 border-red-400 bg-red-50 text-center py-16">
-            <div className="h-14 w-14 rounded-xl bg-red-100 flex items-center justify-center mx-auto mb-4">
-              <RefreshCw className="h-7 w-7 text-red-500" />
-            </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">Error Loading Contacts</h3>
-            <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto">{error}</p>
-            <Button onClick={fetchContacts} variant="outline" className="rounded-lg border-slate-300 text-sm">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Try Again
-            </Button>
-          </div>
+          <PageError message={error} onRetry={fetchContacts} />
         </div>
       </div>
     )
@@ -728,8 +723,42 @@ export default function ContactsPage() {
             )}
           </div>
 
+          {/* Hidden dialog triggers for EmptyState actions */}
+          <ContactFormDialog
+            contact={null}
+            onSuccess={() => { setCurrentPage(1); fetchContacts() }}
+          >
+            <button ref={createContactTriggerRef} style={{ display: 'none' }} aria-hidden="true" />
+          </ContactFormDialog>
+          <ImportContactsDialog onImportComplete={() => fetchContacts()}>
+            <button ref={importContactsTriggerRef} style={{ display: 'none' }} aria-hidden="true" />
+          </ImportContactsDialog>
+
+          {/* Empty state (shown outside table when no contacts) */}
+          {!isLoading && paginatedContacts.length === 0 && (
+            <EmptyState
+              icon={Users}
+              title={searchQuery || segmentFilter !== "all" || lifecycleFilter !== "all" ? "No contacts match your filters" : "No contacts yet"}
+              description={
+                searchQuery || segmentFilter !== "all" || lifecycleFilter !== "all"
+                  ? "Try adjusting your search or filters."
+                  : "Import your contacts or add them one by one to get started."
+              }
+              action={
+                !searchQuery && segmentFilter === "all" && lifecycleFilter === "all"
+                  ? { label: "Add Contact", onClick: () => createContactTriggerRef.current?.click() }
+                  : undefined
+              }
+              secondaryAction={
+                !searchQuery && segmentFilter === "all" && lifecycleFilter === "all"
+                  ? { label: "Import CSV", onClick: () => importContactsTriggerRef.current?.click() }
+                  : undefined
+              }
+            />
+          )}
+
           {/* Table */}
-          <div className="rounded-xl border-2 border-t-0 border-green-950 bg-white shadow-sm overflow-hidden">
+          <div className={cn("rounded-xl border-2 border-t-0 border-green-950 bg-white shadow-sm overflow-hidden", paginatedContacts.length === 0 && "hidden")}>
             <Table>
               <TableHeader className="bg-green-950">
                 <TableRow className="bg-green-950 hover:bg-green-950">
@@ -771,42 +800,7 @@ export default function ContactsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y divide-slate-100">
-                {paginatedContacts.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="py-16">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="h-14 w-14 rounded-xl border-2 border-slate-200 bg-slate-50 flex items-center justify-center">
-                          <Users className="h-7 w-7 text-slate-400" />
-                        </div>
-                        <p className="text-sm font-medium text-foreground">
-                          {contacts.length === 0
-                            ? "No contacts found"
-                            : "No contacts match your filters"}
-                        </p>
-                        {contacts.length === 0 ? (
-                          <div className="flex flex-col items-center gap-2">
-                            <p className="text-xs text-muted-foreground">
-                              Try importing contacts or create your first contact
-                            </p>
-                            <ContactFormDialog
-                              contact={null}
-                              onSuccess={() => { setCurrentPage(1); fetchContacts() }}
-                            >
-                              <Button variant="outline" className="rounded-lg border-slate-300 text-sm">
-                                <Plus className="w-4 h-4 mr-2" />
-                                Create your first contact
-                              </Button>
-                            </ContactFormDialog>
-                          </div>
-                        ) : (
-                          <Button variant="ghost" className="rounded-lg text-sm" onClick={resetFilters}>
-                            Clear filters
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
+                {(
                   paginatedContacts.map((contact) => {
                     const initials = getInitials(contact.firstName, contact.lastName)
                     const avatarColor = getAvatarColor(contact.firstName)
