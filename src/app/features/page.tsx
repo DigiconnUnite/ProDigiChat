@@ -27,155 +27,155 @@ import {
 const features = [
   {
     icon: MessageSquare,
-    title: "Bulk Messaging",
-    description: "Send personalized messages to thousands of contacts instantly with advanced scheduling and delivery tracking.",
+    title: "Bulk Campaigns",
+    description: "Ek baar mein poori duniya ko message bhejo — personalized, scheduled, aur tracked.",
     highlights: [
-      "Send up to 100,000 messages/day",
+      "1,00,000 messages/day tak",
       "Personalized message templates",
-      "Schedule campaigns in advance",
-      "Real-time delivery tracking"
-    ]
+      "Schedule karo advance mein",
+      "Real-time delivery tracking",
+    ],
   },
   {
     icon: Users,
     title: "Contact Management",
-    description: "Organize and segment your contacts with advanced filtering, tagging, and smart group management.",
+    description: "Sab contacts ek jagah — clean, organized, aur action-ready.",
     highlights: [
-      "Unlimited contact storage",
+      "CSV se import karo",
       "Advanced segmentation",
-      "Custom tags and labels",
-      "Import/Export functionality"
-    ]
+      "Custom tags aur labels",
+      "Import/Export functionality",
+    ],
   },
   {
     icon: BarChart3,
     title: "Analytics Dashboard",
-    description: "Track delivery rates, open rates, and campaign performance with comprehensive analytics and reporting.",
+    description: "Numbers jo real decisions dilwate hain — real-time, clear, aur exportable.",
     highlights: [
       "Real-time campaign metrics",
       "Detailed performance reports",
       "Conversion tracking",
-      "Custom dashboard views"
-    ]
+      "CSV export available",
+    ],
   },
   {
     icon: Bot,
-    title: "AI-Powered Automation",
-    description: "Set up intelligent automated responses and chatbots to handle customer inquiries 24/7.",
+    title: "Smart Automation",
+    description: "Aap soye, bot jaage — 24/7 automated responses bina kisi extra staff ke.",
     highlights: [
-      "Smart chatbot builder",
-      "Natural language processing",
-      "Automated workflows",
-      "Multi-language support"
-    ]
+      "Drag & drop workflow builder",
+      "Keyword-based auto-replies",
+      "Automated welcome messages",
+      "Cart abandonment flows",
+    ],
   },
   {
     icon: Shield,
     title: "Enterprise Security",
-    description: "Bank-level security with end-to-end encryption, GDPR compliance, and advanced data protection.",
+    description: "Aapka data — sirf aapka. Bank-level security se har message protected.",
     highlights: [
-      "End-to-end encryption",
+      "AES-256 encryption",
       "GDPR compliant",
       "Role-based access control",
-      "Audit logs and monitoring"
-    ]
+      "Audit logs aur monitoring",
+    ],
   },
   {
     icon: Smartphone,
-    title: "Mobile Apps",
-    description: "Manage your WhatsApp marketing on the go with our native iOS and Android mobile applications.",
+    title: "Mobile-Friendly",
+    description: "Office se bahar? Koi baat nahi — ProDigiChat mobile pe bhi utna hi powerful.",
     highlights: [
-      "Native iOS & Android apps",
+      "Fully responsive design",
       "Push notifications",
-      "Offline mode support",
-      "Biometric authentication"
-    ]
+      "On-the-go campaign management",
+      "Touch-optimized interface",
+    ],
   },
   {
     icon: Globe,
     title: "Multi-Language Support",
-    description: "Connect with customers globally with support for 50+ languages and automatic translation.",
+    description: "Hinglish se English tak, Tamil se Bengali — aapki choice, aapki language.",
     highlights: [
       "50+ languages supported",
-      "Auto-translation features",
       "Localized templates",
-      "Regional compliance"
-    ]
+      "Regional compliance",
+      "Auto-translation features",
+    ],
   },
   {
     icon: Zap,
     title: "Lightning Fast",
-    description: "Experience blazing-fast performance with optimized infrastructure and instant message delivery.",
+    description: "Message bhejo, result turant — 99.9% uptime ke saath har time.",
     highlights: [
       "99.9% uptime guarantee",
       "Sub-second delivery",
       "Global CDN network",
-      "Auto-scaling infrastructure"
-    ]
+      "Auto-scaling infrastructure",
+    ],
   },
   {
     icon: Target,
     title: "Smart Targeting",
-    description: "Reach the right audience with AI-powered targeting and behavioral analysis.",
+    description: "Sahi message, sahi insaan ko — AI-powered targeting se waste zero.",
     highlights: [
       "Behavioral targeting",
       "Predictive analytics",
       "Customer journey mapping",
-      "A/B testing tools"
-    ]
+      "A/B testing tools",
+    ],
   },
   {
     icon: Clock,
     title: "24/7 Support",
-    description: "Get help whenever you need it with our round-the-clock customer support team.",
+    description: "Hum hain na — koi bhi problem ho, hum resolve karte hain.",
     highlights: [
       "24/7 live chat support",
       "Dedicated account managers",
       "Comprehensive knowledge base",
-      "Video tutorials and guides"
-    ]
+      "Video tutorials aur guides",
+    ],
   },
   {
     icon: TrendingUp,
     title: "Growth Tools",
-    description: "Scale your business with advanced growth tools and conversion optimization features.",
+    description: "Grow karte raho bina ruke — conversion optimization se results multiply karo.",
     highlights: [
       "Conversion optimization",
       "Growth hacking tools",
       "Performance insights",
-      "Competitor analysis"
-    ]
+      "Competitor analysis",
+    ],
   },
   {
     icon: Settings,
     title: "Custom Integrations",
-    description: "Connect with your favorite tools through our extensive API and integration marketplace.",
+    description: "Aapke existing stack ke saath connect karo — API, webhooks, Zapier sab available.",
     highlights: [
       "REST API access",
       "Webhook support",
       "Zapier integration",
-      "Custom app development"
-    ]
-  }
+      "Custom app development",
+    ],
+  },
 ]
 
 const categories = [
   {
-    name: "Messaging & Communication",
-    features: ["Bulk Messaging", "AI-Powered Automation", "Multi-Language Support", "Mobile Apps"]
+    name: "Messaging & Campaigns",
+    features: ["Bulk Campaigns", "Smart Automation", "Multi-Language Support", "Mobile-Friendly"],
   },
   {
     name: "Analytics & Insights",
-    features: ["Analytics Dashboard", "Smart Targeting", "Growth Tools"]
+    features: ["Analytics Dashboard", "Smart Targeting", "Growth Tools"],
   },
   {
-    name: "Management & Organization",
-    features: ["Contact Management", "Custom Integrations"]
+    name: "Management & Contacts",
+    features: ["Contact Management", "Custom Integrations"],
   },
   {
     name: "Security & Reliability",
-    features: ["Enterprise Security", "Lightning Fast", "24/7 Support"]
-  }
+    features: ["Enterprise Security", "Lightning Fast", "24/7 Support"],
+  },
 ]
 
 export default function FeaturesPage() {
@@ -199,20 +199,20 @@ export default function FeaturesPage() {
                 <Star className="h-10 w-10 text-primary" />
               </div>
               <h1 className="text-foreground text-4xl font-bold mb-4">
-                Powerful Features for WhatsApp Marketing
+                ProDigiChat Ki Full Powers 💪
               </h1>
               <p className="text-muted-foreground text-xl max-w-3xl mx-auto mb-8">
-                Everything you need to supercharge your WhatsApp marketing, engage customers, and grow your business.
+                Ek platform — sab kuch andar. Messaging se leke analytics tak, automation se leke live chat tak — yahan sab hai. Officially Meta ke through.
               </p>
               <div className="flex flex-wrap gap-4 justify-center">
                 <Button asChild size="lg" className="rounded-full">
                   <Link href="/signup">
-                    Start Free Trial
+                    Free Trial Shuru Karo
                   </Link>
                 </Button>
                 <Button asChild variant="outline" size="lg" className="rounded-full">
-                  <Link href="/demo">
-                    Schedule Demo
+                  <Link href="/support">
+                    Demo Schedule Karo
                   </Link>
                 </Button>
               </div>
@@ -227,10 +227,10 @@ export default function FeaturesPage() {
           <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5">
             <div className="text-center mb-16 pt-20 pb-4">
               <h2 className="text-foreground text-4xl font-bold mb-4">
-                Organized by Category
+                Category-Wise Dekho Kya Kya Hai
               </h2>
               <p className="text-muted-foreground text-xl max-w-3xl mx-auto">
-                Find exactly what you need with our organized feature categories
+                Exactly woh features dhundo jo aapke business ke liye sabse zyada kaam ke hain.
               </p>
             </div>
 
@@ -264,10 +264,10 @@ export default function FeaturesPage() {
           <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5">
             <div className="text-center mb-16 pt-20 pb-4">
               <h2 className="text-foreground text-4xl font-bold mb-4">
-                All Features at a Glance
+                Har Feature — Ek Nazar Mein
               </h2>
               <p className="text-muted-foreground text-xl max-w-3xl mx-auto">
-                Comprehensive tools designed to make WhatsApp marketing simple and effective
+                ProDigiChat ke comprehensive tools — WhatsApp marketing ko simple aur effective banane ke liye design kiye gaye hain.
               </p>
             </div>
 
@@ -307,10 +307,10 @@ export default function FeaturesPage() {
           <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5">
             <div className="text-center mb-16 pt-20 pb-4">
               <h2 className="text-foreground text-4xl font-bold mb-4">
-                Compare Plans & Features
+                Kaunse Plan Mein Kya Milta Hai?
               </h2>
               <p className="text-muted-foreground text-xl max-w-3xl mx-auto">
-                See which features are included in each plan
+                Har plan mein kaunse features hain — ek baar mein dekho aur decide karo.
               </p>
             </div>
 
@@ -360,14 +360,14 @@ export default function FeaturesPage() {
             CTA SECTION – Reusable component
         ══════════════════════════════════════════ */}
         <CTASection
-          title="Ready to Experience These Features?"
-          description="Join thousands of businesses using ProDigiChat to transform their WhatsApp marketing."
+          title="Yeh Sab Features Try Karne Ke Liye Ready Ho? 🚀"
+          description="Hazaron businesses ProDigiChat use kar rahe hain apna WhatsApp marketing transform karne ke liye. Aap kab shuru kar rahe ho?"
           primaryButton={{
-            text: "Start Free Trial",
+            text: "Free Trial Shuru Karo",
             href: "/signup"
           }}
           secondaryButton={{
-            text: "View Pricing",
+            text: "Pricing Dekho",
             href: "/pricing"
           }}
         />
