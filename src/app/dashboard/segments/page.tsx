@@ -41,6 +41,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PageError } from '@/components/ui/page-error';
 
 interface Segment {
   id: string;
@@ -58,6 +61,7 @@ export default function SegmentsPage() {
 
   const [segments, setSegments] = useState<Segment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -72,6 +76,7 @@ export default function SegmentsPage() {
 
   const fetchSegments = async () => {
     try {
+      setError(null);
       setIsLoading(true);
       const response = await fetch('/api/segments');
       const data = await response.json();
@@ -80,10 +85,12 @@ export default function SegmentsPage() {
         setSegments(data.segments || []);
       } else {
         toast.error('Failed to fetch segments');
+        setError('Failed to load segments. Please try again.');
       }
     } catch (error) {
       console.error('Error fetching segments:', error);
       toast.error('Failed to fetch segments');
+      setError('Failed to load segments. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -184,25 +191,33 @@ export default function SegmentsPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-muted-foreground">Loading segments...</div>
+            <div className="space-y-3 p-4">
+              {[1,2,3].map(i => (
+                <div key={i} className="flex items-center gap-4">
+                  <Skeleton className="h-5 w-48" />
+                  <Skeleton className="h-5 w-16" />
+                  <Skeleton className="h-5 w-24" />
+                  <Skeleton className="h-5 w-8 ml-auto" />
+                </div>
+              ))}
             </div>
+          ) : error ? (
+            <PageError message={error} onRetry={fetchSegments} />
           ) : filteredSegments.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Users className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No segments found</h3>
-              <p className="text-muted-foreground text-center mb-4">
-                {searchQuery
-                  ? 'No segments match your search'
-                  : 'Get started by creating your first segment'}
-              </p>
-              {!searchQuery && (
-                <Button onClick={() => setShowCreateDialog(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Segment
-                </Button>
-              )}
-            </div>
+            <EmptyState
+              icon={Users}
+              title={searchQuery ? "No segments match your search" : "No segments yet"}
+              description={
+                searchQuery
+                  ? "Try a different search term."
+                  : "Create a segment to group contacts for targeted campaigns."
+              }
+              action={
+                !searchQuery
+                  ? { label: "Create Segment", onClick: () => setShowCreateDialog(true) }
+                  : undefined
+              }
+            />
           ) : (
             <Table>
               <TableHeader>
