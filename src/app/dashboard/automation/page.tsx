@@ -78,126 +78,41 @@ export default function AutomationPage() {
         </Button>
       </div>
 
-      {/* Coming Soon Notice */}
-      <Card className="border-dashed">
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <Zap className="h-16 w-16 text-muted-foreground mb-4" />
-          <h3 className="text-xl font-semibold text-muted-foreground mb-2">
-            Automation Coming Soon
-          </h3>
-          <p className="text-sm text-muted-foreground text-center max-w-md">
-            Advanced automation workflows are currently in development. You'll be able to create automated customer journeys, drip campaigns, and smart follow-ups soon.
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Automation Workflows Table */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Automation Workflows</CardTitle>
-              <CardDescription>
-                {automationWorkflowsData.length} workflow{automationWorkflowsData.length !== 1 ? "s" : ""} (Coming Soon)
-              </CardDescription>
+      {/* Empty State */}
+      <div className="rounded-xl border-2 border-dashed border-green-200 bg-green-50/30 p-12 text-center">
+        <div className="h-16 w-16 rounded-2xl bg-green-100 flex items-center justify-center mx-auto mb-4">
+          <Zap className="h-8 w-8 text-green-600" />
+        </div>
+        <h3 className="text-xl font-semibold text-foreground mb-2">
+          Build your first automation
+        </h3>
+        <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
+          Automatically send welcome messages, follow-ups, and re-engagement campaigns based on contact actions.
+        </p>
+        <div className="flex items-center justify-center gap-3">
+          <Button
+            className="bg-green-600 hover:bg-green-700 text-white rounded-lg gap-2"
+            onClick={() => setIsCanvasOpen(true)}
+          >
+            <Plus className="h-4 w-4" />
+            New Workflow
+          </Button>
+        </div>
+        <div className="grid grid-cols-3 gap-4 mt-8 max-w-lg mx-auto">
+          {[
+            { icon: UserPlus, label: "New contact joins", desc: "Trigger on contact creation" },
+            { icon: MessageSquare, label: "Reply received", desc: "Trigger on inbound message" },
+            { icon: Timer, label: "Scheduled delay", desc: "Wait N days then send" },
+          ].map(({ icon: Icon, label, desc }) => (
+            <div key={label} className="rounded-lg border border-green-200 bg-white p-3 text-left">
+              <Icon className="h-5 w-5 text-green-600 mb-2" />
+              <p className="text-xs font-medium text-foreground">{label}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[600px]">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Workflow Name</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Trigger</TableHead>
-                  <TableHead>Steps</TableHead>
-                  <TableHead>Last Run</TableHead>
-                  <TableHead>Success Rate</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {automationWorkflowsData.map((workflow) => {
-                  const status = statusConfig[workflow.status as keyof typeof statusConfig]
-                  const StatusIcon = status.icon
-                  return (
-                    <TableRow key={workflow.id}>
-                      <TableCell>
-                        <div className="font-medium">{workflow.name}</div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={`${status.color} gap-1`}>
-                          <StatusIcon className="h-3 w-3" />
-                          {status.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {workflow.trigger}
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-mono text-sm">
-                          {workflow.steps} steps
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {workflow.lastRun}
-                      </TableCell>
-                      <TableCell>
-                        {workflow.successRate > 0 ? (
-                          <span className="text-sm font-medium text-primary">
-                            {workflow.successRate}%
-                          </span>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => {
-                              setSelectedWorkflow(workflow)
-                              setIsCanvasOpen(true)
-                            }}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View/Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Copy className="mr-2 h-4 w-4" />
-                              Duplicate
-                            </DropdownMenuItem>
-                            {workflow.status === "active" && (
-                              <DropdownMenuItem>
-                                <Pause className="mr-2 h-4 w-4" />
-                                Pause Workflow
-                              </DropdownMenuItem>
-                            )}
-                            {workflow.status === "paused" && (
-                              <DropdownMenuItem>
-                                <Play className="mr-2 h-4 w-4" />
-                                Resume Workflow
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem className="text-destructive">
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+          ))}
+        </div>
+      </div>
+
 
       {/* Automation Canvas Dialog */}
       <Dialog open={isCanvasOpen} onOpenChange={setIsCanvasOpen}>
