@@ -307,11 +307,17 @@ export function TemplateWizard({ initialData, onSave, onCancel, isLoading = fals
                   onChange={(e) => updateTranslation({ body: e.target.value })}
                   className={cn(errors.body && 'border-red-500')}
                   rows={6}
+                  maxLength={1024}
                 />
                 {errors.body && <p className="text-sm text-red-500">{errors.body}</p>}
-                <p className="text-xs text-muted-foreground">
-                  {currentTranslation?.body?.length || 0}/1024 characters
-                </p>
+                <div className="flex items-center justify-between mt-1">
+                  <p className={`text-xs ${(currentTranslation?.body?.length ?? 0) > 960 ? 'text-red-600' : 'text-muted-foreground'}`}>
+                    {currentTranslation?.body?.length ?? 0} / 1024 characters
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {(currentTranslation?.body?.match(/\{\{\d+\}\}/g) ?? []).length} variable{(currentTranslation?.body?.match(/\{\{\d+\}\}/g) ?? []).length !== 1 ? 's' : ''}
+                  </p>
+                </div>
               </div>
 
               <div className="space-y-2">
