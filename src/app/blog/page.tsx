@@ -27,64 +27,64 @@ import {
 const blogPosts = [
   {
     id: 1,
-    title: "10 WhatsApp Marketing Strategies That Drive Results",
-    excerpt: "Discover proven strategies to boost engagement and conversions through WhatsApp marketing campaigns.",
+    title: "10 WhatsApp Tricks Jo Aapka Business 10x Kar De",
+    excerpt: "Proven strategies jo aapka engagement aur conversions boost karengi — real case studies ke saath.",
     author: "Sarah Johnson",
     publishedAt: "2024-01-15",
     readTime: 8,
     category: "Strategy",
-    image: "https://picsum.photos/seed/whatsapp-strategy/400/300.jpg"
+    image: "/blog/whatsapp-marketing-strategies.svg",
   },
   {
     id: 2,
-    title: "How to Automate WhatsApp Responses Without Losing Personal Touch",
-    excerpt: "Learn the balance between automation and personalization in WhatsApp customer service.",
+    title: "Bot Rakho, Insaan Ka Touch Bhi Raho — Yeh Hai Balance",
+    excerpt: "Automation aur personalization ka perfect balance — customer service mein dono ka fayda uthao.",
     author: "Mike Chen",
     publishedAt: "2024-01-12",
     readTime: 6,
     category: "Automation",
-    image: "https://picsum.photos/seed/whatsapp-automation/400/300.jpg"
+    image: "/blog/whatsapp-automation.svg",
   },
   {
     id: 3,
-    title: "WhatsApp Business API vs Regular WhatsApp: What's the Difference?",
-    excerpt: "Understanding the key differences and benefits of WhatsApp Business API for your business.",
+    title: "Normal WhatsApp vs Business API — Kya Farq Hai Bhai?",
+    excerpt: "Dono mein kya difference hai aur aapke business ke liye kaun sa sahi hai — poori clarity.",
     author: "Emily Davis",
     publishedAt: "2024-01-10",
     readTime: 10,
     category: "API",
-    image: "https://picsum.photos/seed/whatsapp-api/400/300.jpg"
+    image: "/blog/whatsapp-business-api.svg",
   },
   {
     id: 4,
-    title: "Measuring ROI in WhatsApp Marketing: Key Metrics to Track",
-    excerpt: "Essential metrics and KPIs to measure the success of your WhatsApp marketing campaigns.",
+    title: "WhatsApp Marketing Mein Paisa Laga — Kitna Wapas Aaya?",
+    excerpt: "ROI measure karne ke asaan tarike — kaunse metrics track karne chahiye aur kaise.",
     author: "David Wilson",
     publishedAt: "2024-01-08",
     readTime: 7,
     category: "Analytics",
-    image: "https://picsum.photos/seed/whatsapp-analytics/400/300.jpg"
+    image: "/blog/whatsapp-analytics.svg",
   },
   {
     id: 5,
-    title: "Building WhatsApp Communities That Convert",
-    excerpt: "Step-by-step guide to creating and nurturing WhatsApp communities that drive business growth.",
+    title: "WhatsApp Group Se Business? Haan, Possible Hai!",
+    excerpt: "WhatsApp communities ko kaise convert karein real business growth mein — step-by-step guide.",
     author: "Lisa Anderson",
     publishedAt: "2024-01-05",
     readTime: 9,
     category: "Community",
-    image: "https://picsum.photos/seed/whatsapp-community/400/300.jpg"
+    image: "/blog/whatsapp-community.svg",
   },
   {
     id: 6,
-    title: "WhatsApp Marketing Compliance: Rules You Must Follow",
-    excerpt: "Important compliance guidelines and best practices for WhatsApp marketing campaigns.",
+    title: "WhatsApp Ban Se Kaise Bache — Compliance Ka Full Guide",
+    excerpt: "Important rules aur best practices jo aapka account safe rakhenge — ban ka darr khatam karo.",
     author: "Robert Taylor",
     publishedAt: "2024-01-03",
     readTime: 8,
     category: "Compliance",
-    image: "https://picsum.photos/seed/whatsapp-compliance/400/300.jpg"
-  }
+    image: "/blog/whatsapp-compliance.svg",
+  },
 ]
 
 const categories = ["Strategy", "Automation", "API", "Analytics", "Community", "Compliance"]
@@ -108,10 +108,10 @@ export default function BlogPage() {
           <div className="max-w-[1440px] mx-auto relative bg-linear-30 from-lime-50 to-green-100 border-t border-l border-r border-slate-300 px-5">
             <div className="text-center mb-16 pt-20 pb-4">
               <h2 className="text-foreground text-4xl font-bold mb-4">
-                Featured Articles
+                Must-Read Articles 📚
               </h2>
               <p className="text-muted-foreground text-xl max-w-3xl mx-auto">
-                Hand-picked insights and strategies to transform your WhatsApp marketing
+                ProDigiChat ke experts dwara — strategies, tips, aur real case studies jo aapka WhatsApp marketing level-up karein.
               </p>
             </div>
 
@@ -169,10 +169,10 @@ export default function BlogPage() {
           <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5">
             <div className="text-center mb-16 pt-20 pb-4">
               <h2 className="text-foreground text-4xl font-bold mb-4">
-                All Articles
+                Poore Articles Padho
               </h2>
               <p className="text-muted-foreground text-xl max-w-3xl mx-auto">
-                Browse our complete collection of WhatsApp marketing insights
+                WhatsApp marketing insights ka poora collection — beginners se experts tak sab ke liye.
               </p>
             </div>
 
@@ -229,15 +229,15 @@ export default function BlogPage() {
             CTA SECTION – Reusable component
         ══════════════════════════════════════════ */}
         <CTASection
-          title="Ready to Transform Your WhatsApp Marketing?"
-          description="Join thousands of businesses using ProDigiChat to reach customers effectively."
+          title="WhatsApp Marketing Shuru Karna Hai? 🚀"
+          description="Sirf padhna kaafi nahi — ProDigiChat pe shuru karo aur apne business ko actually grow karte dekho."
           primaryButton={{
-            text: "Get Started Free",
+            text: "Free Mein Shuru Karo",
             href: "/signup"
           }}
           secondaryButton={{
-            text: "Schedule Demo",
-            href: "/demo"
+            text: "Support Se Baat Karo",
+            href: "/support"
           }}
         />
       </main>
