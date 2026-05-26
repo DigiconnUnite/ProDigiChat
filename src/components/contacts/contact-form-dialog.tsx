@@ -41,7 +41,10 @@ import { Textarea } from "@/components/ui/textarea"
 const contactFormSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().optional().nullable(),
-  phoneNumber: z.string().min(1, "Phone number is required"),
+  phoneNumber: z
+    .string()
+    .min(10, "Phone number must be at least 10 digits")
+    .regex(/^\+?[1-9]\d{9,14}$/, "Enter a valid phone number with country code (e.g. +91xxxxxxxxxx)"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   lifecycleStatus: z.enum(["lead", "active", "suppressed", "blocked", "bounced"]),
   optInStatus: z.enum(["opted_in", "opted_out", "pending"]),
