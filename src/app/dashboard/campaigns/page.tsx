@@ -62,6 +62,9 @@ import {
 } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
+import { EmptyState } from "@/components/ui/empty-state"
+import { PageError } from "@/components/ui/page-error"
+import { toast } from "sonner"
 
 // Constants
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100]
@@ -438,53 +441,15 @@ export default function CampaignsPage() {
       const response = await fetch(`/api/campaigns/${campaignToDelete.id}`, { method: 'DELETE' })
       const result = await response.json()
       if (result.success) fetchCampaigns()
-      else setError(result.error || 'Failed to delete campaign')
+      else toast.error("Failed to delete campaign. Please try again.")
     } catch (err) {
-      setError('Failed to delete campaign')
+      toast.error("Failed to delete campaign. Please try again.")
     } finally {
       setActionLoading(null)
       setDeleteDialogOpen(false)
       setCampaignToDelete(null)
     }
   }, [campaignToDelete, fetchCampaigns])
-
-  // ═══════════════════════════════════════════════════════════════
-  // ERROR STATE
-  // ═══════════════════════════════════════════════════════════════
-
-  if (error) {
-    return (
-      <div className="bg-transparent px-2.5 lg:px-0">
-        <div className="max-w-[1440px] mx-auto relative border-t border-l border-r border-slate-300 px-5 py-10">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-            <div>
-              <h1 className="text-foreground text-2xl font-bold mb-1">Campaigns</h1>
-              <p className="text-muted-foreground text-lg">Create and manage your marketing campaigns</p>
-            </div>
-            <Button
-              className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm"
-              onClick={() => router.push("/dashboard/campaigns/new")}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              New Campaign
-            </Button>
-          </div>
-
-          <div className="p-5 rounded-xl border-2 border-red-400 bg-red-50 text-center py-16">
-            <div className="h-14 w-14 rounded-xl bg-red-100 flex items-center justify-center mx-auto mb-4">
-              <RefreshCw className="h-7 w-7 text-red-500" />
-            </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">Error Loading Campaigns</h3>
-            <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto">{error}</p>
-            <Button onClick={fetchCampaigns} variant="outline" className="rounded-lg border-slate-300 text-sm">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Try Again
-            </Button>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   // ═══════════════════════════════════════════════════════════════
   // LOADING STATE
@@ -539,6 +504,13 @@ export default function CampaignsPage() {
         </div>
 
         
+        {/* ═══ Error State ═══ */}
+        {!isLoading && error && (
+          <div className="mb-6">
+            <PageError message={error} onRetry={fetchCampaigns} />
+          </div>
+        )}
+
         {/* ═══ Filter & Table Card ═══ */}
         <div className="rounded-xl ">
 
@@ -650,27 +622,25 @@ export default function CampaignsPage() {
               <TableBody className="divide-y divide-slate-100">
                 {paginatedCampaigns.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="py-16">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="h-14 w-14 rounded-xl border-2 border-slate-200 bg-slate-50 flex items-center justify-center">
-                          <MessageSquare className="h-7 w-7 text-slate-400" />
-                        </div>
-                        <p className="text-sm font-medium text-foreground">No campaigns found</p>
-                        {campaignsData.length === 0 ? (
-                          <Button
-                            variant="outline"
-                            className="rounded-lg border-slate-300 text-sm"
-                            onClick={() => router.push("/dashboard/campaigns/new")}
-                          >
-                            <Plus className="w-4 h-4 mr-2" />
-                            Create your first campaign
-                          </Button>
-                        ) : (
+                    <TableCell colSpan={9} className="p-0">
+                      {campaignsData.length === 0 && !isLoading && !error ? (
+                        <EmptyState
+                          icon={Send}
+                          title="No campaigns yet"
+                          description="Send your first WhatsApp campaign and start reaching your audience."
+                          action={{ label: "Create Campaign", onClick: () => router.push("/dashboard/campaigns/new") }}
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center gap-3 py-16">
+                          <div className="h-14 w-14 rounded-xl border-2 border-slate-200 bg-slate-50 flex items-center justify-center">
+                            <MessageSquare className="h-7 w-7 text-slate-400" />
+                          </div>
+                          <p className="text-sm font-medium text-foreground">No campaigns found</p>
                           <Button variant="ghost" className="rounded-lg text-sm" onClick={resetFilters}>
                             Clear filters
                           </Button>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ) : (
