@@ -143,6 +143,24 @@ function formatDate(value?: string | null) {
   })
 }
 
+// ─── Campaign Status Badge Helper ───
+
+function getCampaignStatusBadge(status: string) {
+  const map: Record<string, { bg: string; text: string; label: string }> = {
+    running:   { bg: "bg-green-100",  text: "text-green-800",  label: "Active" },
+    active:    { bg: "bg-green-100",  text: "text-green-800",  label: "Active" },
+    scheduled: { bg: "bg-blue-100",   text: "text-blue-800",   label: "Scheduled" },
+    paused:    { bg: "bg-yellow-100", text: "text-yellow-800", label: "Paused" },
+    completed: { bg: "bg-slate-100",  text: "text-slate-700",  label: "Completed" },
+    draft:     { bg: "bg-gray-100",   text: "text-gray-700",   label: "Draft" },
+    failed:    { bg: "bg-red-100",    text: "text-red-800",    label: "Failed" },
+  }
+  const cfg = map[status.toLowerCase()] ?? { bg: "bg-gray-100", text: "text-gray-700", label: status }
+  return (
+    <Badge className={`${cfg.bg} ${cfg.text} border-0`}>{cfg.label}</Badge>
+  )
+}
+
 // ─── Stat Card Component ───
 
 function StatCard({
@@ -373,12 +391,7 @@ export default function CampaignReportPage() {
               <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
               Refresh
             </Button>
-            {status && StatusIcon && (
-              <Badge className={cn("text-xs border flex items-center gap-1.5 w-fit", status.badgeClass)}>
-                <StatusIcon className="w-3 h-3" />
-                {status.label}
-              </Badge>
-            )}
+            {campaign.status && getCampaignStatusBadge(campaign.status)}
           </div>
         </div>
 
