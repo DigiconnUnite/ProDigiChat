@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Download, ArrowUpRight, ArrowDownRight, AlertCircle, Phone, CheckCircle, XCircle, AlertTriangle, RefreshCw } from "lucide-react"
+import { PageError } from "@/components/ui/page-error"
 
 // Type definitions for Analytics API response
 interface CampaignDetail {
@@ -86,35 +87,36 @@ export default function AnalyticsPage() {
   const [isLoadingReport, setIsLoadingReport] = useState(false)
 
   // Fetch analytics data
-  useEffect(() => {
-    const fetchAnalyticsData = async () => {
-      setIsLoading(true)
-      setError(null)
+  const fetchAnalyticsData = async () => {
+    setIsLoading(true)
+    setError(null)
 
-      try {
-        const response = await fetch(`/api/analytics?dateRange=${dateRange}`)
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch analytics: ${response.status}`)
-        }
-        
-        const result = await response.json()
-        
-        if (result.success && result.data) {
-          setAnalyticsData(result.data)
-        } else {
-          throw new Error(result.error || "Failed to fetch analytics data")
-        }
-      } catch (err) {
-        console.error("Error fetching analytics:", err)
-        setError(err instanceof Error ? err.message : "An error occurred")
-        setAnalyticsData(defaultAnalyticsData)
-      } finally {
-        setIsLoading(false)
+    try {
+      const response = await fetch(`/api/analytics?dateRange=${dateRange}`)
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch analytics: ${response.status}`)
       }
-    }
 
+      const result = await response.json()
+
+      if (result.success && result.data) {
+        setAnalyticsData(result.data)
+      } else {
+        throw new Error(result.error || "Failed to fetch analytics data")
+      }
+    } catch (err) {
+      console.error("Error fetching analytics:", err)
+      setError(err instanceof Error ? err.message : "An error occurred")
+      setAnalyticsData(defaultAnalyticsData)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
     fetchAnalyticsData()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRange])
 
   // Fetch WhatsApp business report when tab is active
@@ -211,15 +213,12 @@ export default function AnalyticsPage() {
     <div className="bg-transparent px-2.5 border h-full lg:px-0">
       <div className="max-w-[1440px] mx-auto relative border-l min-h-[87vh] border-r border-slate-300 px-5 space-y-6">
       {/* Error Message */}
-      {error && (
-        <Card className="border-destructive/50 bg-destructive/10">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-destructive">
-              <AlertCircle className="h-4 w-4" />
-              <p className="text-sm">Error loading data: {error}. Showing fallback data.</p>
-            </div>
-          </CardContent>
-        </Card>
+      {!isLoading && error && (
+        <PageError
+          title="Could not load analytics"
+          message={error}
+          onRetry={fetchAnalyticsData}
+        />
       )}
 
       {/* Header */}
@@ -343,17 +342,14 @@ export default function AnalyticsPage() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">
-                  <span title="Click tracking not yet implemented. Will be available when WhatsApp adds click analytics to their webhooks.">
-                    Click Rate
-                    <span className="ml-1 text-xs text-muted-foreground">(N/A)</span>
-                  </span>
-                </CardTitle>
+                <CardTitle className="text-sm font-medium">Click Rate</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-muted-foreground">N/A</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Click tracking coming soon
+                <div className="text-2xl font-bold text-muted-foreground">—</div>
+                <div className="mt-1">
+                  <Badge variant="outline" className="text-xs text-muted-foreground border-muted">
+                    Click tracking coming soon
+                  </Badge>
                 </div>
               </CardContent>
             </Card>
