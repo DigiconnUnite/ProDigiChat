@@ -237,6 +237,8 @@ function WhatsAppSettingsTabContent({ organizationId }: WhatsAppSettingsTabProps
   const [showAccountNameDialog, setShowAccountNameDialog] = useState(false);
   const [newAccountName, setNewAccountName] = useState('');
   const [isAddingAccount, setIsAddingAccount] = useState(false);
+  const [deleteAccountId, setDeleteAccountId] = useState<string | null>(null);
+  const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
 
   const [editingAccount, setEditingAccount] = useState<WhatsAppAccount | null>(null);
   const [editAccountName, setEditAccountName] = useState('');
@@ -253,6 +255,15 @@ function WhatsAppSettingsTabContent({ organizationId }: WhatsAppSettingsTabProps
   const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
 
   const [localSettings, setLocalSettings] = useState<WhatsAppSettings>({
+    autoRefreshToken: true,
+    webhookEnabled: true,
+    notificationsEnabled: true,
+    notifyOnMessage: true,
+    notifyOnCampaign: true,
+    notifyOnError: true,
+    debugMode: false
+  });
+  const [savedSettings, setSavedSettings] = useState<WhatsAppSettings>({
     autoRefreshToken: true,
     webhookEnabled: true,
     notificationsEnabled: true,
@@ -326,8 +337,7 @@ function WhatsAppSettingsTabContent({ organizationId }: WhatsAppSettingsTabProps
         }
 
         if (data.settings) {
-          setLocalSettings(prev => ({
-            ...prev,
+          const fetched: WhatsAppSettings = {
             autoRefreshToken: data.settings.autoRefreshToken ?? true,
             webhookEnabled: data.settings.webhookEnabled ?? true,
             webhookUrl: data.settings.webhookUrl,
@@ -337,7 +347,9 @@ function WhatsAppSettingsTabContent({ organizationId }: WhatsAppSettingsTabProps
             notifyOnCampaign: data.settings.notifyOnCampaign ?? true,
             notifyOnError: data.settings.notifyOnError ?? true,
             debugMode: data.settings.debugMode ?? false
-          }));
+          };
+          setLocalSettings(fetched);
+          setSavedSettings(fetched);
         }
 
         if (!data.isConnected) {
@@ -478,13 +490,10 @@ function WhatsAppSettingsTabContent({ organizationId }: WhatsAppSettingsTabProps
 
   const handleAddAccountClick = () => {
     setNewAccountName('');
-    setShowAccountNameDialog(true);
+    setConnectionError(null);
+    setManualConfig({ apiKey: '', phoneNumberId: '', businessAccountId: '', webhookSecret: '' });
+    setConnectionMethodTab('auth');
     setIsAddingAccount(true);
-  };
-
-  const proceedToAddAccount = () => {
-    setShowAccountNameDialog(false);
-    setIsConnecting(true);
   };
 
   const saveManualConfig = async () => {
@@ -565,6 +574,7 @@ function WhatsAppSettingsTabContent({ organizationId }: WhatsAppSettingsTabProps
 
       if (response.ok) {
         toast.success('Settings saved successfully');
+        setSavedSettings(localSettings);
       } else {
         throw new Error('Failed to save settings');
       }
@@ -626,18 +636,21 @@ function WhatsAppSettingsTabContent({ organizationId }: WhatsAppSettingsTabProps
     }
   };
 
-  const handleDeleteAccount = async (accountId: string) => {
-    if (!confirm('Are you sure you want to delete this WhatsApp account? This will remove all associated phone numbers and cannot be undone.')) {
-      return;
-    }
+  const handleDeleteAccount = (accountId: string) => {
+    setDeleteAccountId(accountId);
+    setShowDeleteAccountDialog(true);
+  };
 
+  const confirmDeleteAccount = async () => {
+    if (!deleteAccountId) return;
     setIsDisconnecting(true);
+    setShowDeleteAccountDialog(false);
 
     try {
       const response = await fetch('/api/settings/whatsapp', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ organizationId, accountId })
+        body: JSON.stringify({ organizationId, accountId: deleteAccountId })
       });
 
       if (!response.ok) {
@@ -650,6 +663,7 @@ function WhatsAppSettingsTabContent({ organizationId }: WhatsAppSettingsTabProps
       toast.error('Failed to delete WhatsApp account');
     } finally {
       setIsDisconnecting(false);
+      setDeleteAccountId(null);
     }
   };
 
@@ -1079,87 +1093,159 @@ function WhatsAppSettingsTabContent({ organizationId }: WhatsAppSettingsTabProps
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // CONNECTING STATE
+  // ADDING ACCOUNT STATE (connected but adding another)
   // ═══════════════════════════════════════════════════════════════
 
   if (isConnecting || isAddingAccount) {
     return (
       <div className="space-y-6">
-        <StyledCard
-          title="Add WhatsApp Account"
-          description="Connect another WhatsApp Business account"
-          titleIcon={Plus}
-          warning
-        >
-          <div className="space-y-2">
-            <Label htmlFor="accountName" className="text-sm font-medium text-foreground">Account Name</Label>
-            <Input
-              id="accountName"
-              value={newAccountName}
-              onChange={(e) => setNewAccountName(e.target.value)}
-              placeholder="e.g., Marketing Team, Support, Sales"
-              className="text-sm rounded-lg border-slate-300"
-            />
-            <p className="text-xs text-muted-foreground">Give this account a friendly name</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-foreground text-2xl font-bold mb-1">Add WhatsApp Account</h1>
+            <p className="text-muted-foreground">Connect another WhatsApp Business account to your organization</p>
+          </div>
+          <Button variant="outline" onClick={() => { setIsConnecting(false); setIsAddingAccount(false); setConnectionError(null); }} className="rounded-lg border-slate-300 text-sm">
+            ← Back
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <StyledCard
+              title="Connect Account"
+              description="Choose a connection method for the new account"
+              titleIcon={Link2}
+            >
+              <Tabs
+                value={connectionMethodTab}
+                onValueChange={(value) => setConnectionMethodTab(value as 'auth' | 'manual')}
+                className="w-full"
+              >
+                <TabsList className="grid w-full grid-cols-2 h-auto p-1 bg-muted border rounded-lg mb-6">
+                  <TabsTrigger
+                    value="auth"
+                    className="text-sm py-2.5 rounded-md text-muted-foreground data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:border-2 data-[state=active]:border-green-950 flex items-center justify-center gap-2"
+                  >
+                    <Shield className="w-4 h-4" />
+                    Auth (OAuth)
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="manual"
+                    className="text-sm py-2.5 text-muted-foreground rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:border-2 data-[state=active]:border-green-950 flex items-center justify-center gap-2"
+                  >
+                    <Settings2 className="w-4 h-4" />
+                    Manual
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="auth" className="space-y-4">
+                  <div className="p-4 rounded-xl border-2 border-green-200 bg-green-50/50">
+                    <h4 className="text-sm font-semibold text-green-800 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4" />
+                      Recommended Method
+                    </h4>
+                    <p className="text-xs text-green-700 mt-1">
+                      Connect using Meta's official OAuth flow for automatic token refresh.
+                    </p>
+                  </div>
+
+                  <EmbeddedSignupButton
+                    organizationId={organizationId}
+                    onSuccess={() => { fetchWhatsAppStatus(); setIsAddingAccount(false); setIsConnecting(false); }}
+                    onError={(error) => setConnectionError(error)}
+                  />
+
+                  {connectionError && (
+                    <div className="p-5 rounded-xl border-2 border-red-300 bg-red-50">
+                      <h4 className="text-sm font-semibold text-red-700 flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4" />
+                        Connection Error
+                      </h4>
+                      <p className="text-xs text-red-600 mt-2">{connectionError}</p>
+                      <Button variant="outline" className="w-full mt-4 rounded-lg border-red-300 text-red-700 hover:bg-red-50 text-sm" onClick={() => setConnectionError(null)}>
+                        Try Again
+                      </Button>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="manual" className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="addAccountName" className="text-sm font-medium text-foreground">Account Name (Optional)</Label>
+                    <Input
+                      id="addAccountName"
+                      value={newAccountName}
+                      onChange={(e) => setNewAccountName(e.target.value)}
+                      placeholder="e.g., Marketing Team, Support, Sales"
+                      className="text-sm rounded-lg border-slate-300"
+                    />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-foreground">WhatsApp API Access Token <span className="text-red-500">*</span></Label>
+                      <div className="relative">
+                        <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type={showApiKey ? "text" : "password"}
+                          value={manualConfig.apiKey}
+                          onChange={(e) => setManualConfig({ ...manualConfig, apiKey: e.target.value })}
+                          placeholder="Enter your access token"
+                          className="pl-10 pr-10 font-mono text-sm rounded-lg border-slate-300"
+                        />
+                        <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3 bg-transparent border-l rounded-l-none rounded-r-lg" onClick={() => setShowApiKey(!showApiKey)}>
+                          {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-foreground">Phone Number ID</Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input value={manualConfig.phoneNumberId} onChange={(e) => setManualConfig({ ...manualConfig, phoneNumberId: e.target.value })} placeholder="e.g., 991957080667897" className="pl-10 font-mono text-sm rounded-lg border-slate-300" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-foreground">Business Account ID</Label>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input value={manualConfig.businessAccountId} onChange={(e) => setManualConfig({ ...manualConfig, businessAccountId: e.target.value })} placeholder="e.g., 1545549869849783" className="pl-10 font-mono text-sm rounded-lg border-slate-300" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-foreground">Webhook Secret (Optional)</Label>
+                      <div className="relative">
+                        <Webhook className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input value={manualConfig.webhookSecret} onChange={(e) => setManualConfig({ ...manualConfig, webhookSecret: e.target.value })} placeholder="Optional webhook secret" className="pl-10 font-mono text-sm rounded-lg border-slate-300" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {connectionError && (
+                    <div className="flex items-start text-red-600 text-sm bg-red-50 p-4 rounded-lg border border-red-200">
+                      <AlertCircle className="w-4 h-4 mr-2 shrink-0 mt-0.5" />
+                      {connectionError}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+                    <p className="text-xs text-muted-foreground">Get these values from Meta Business Manager</p>
+                    <Button onClick={saveManualConfig} disabled={isSavingConfig} className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm">
+                      {isSavingConfig ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                      Add Account
+                    </Button>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </StyledCard>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 mt-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-foreground">WhatsApp API Access Token</Label>
-              <Input
-                type={showApiKey ? "text" : "password"}
-                value={manualConfig.apiKey}
-                onChange={(e) => setManualConfig({ ...manualConfig, apiKey: e.target.value })}
-                placeholder="Enter your access token"
-                className="font-mono text-sm rounded-lg border-slate-300"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-foreground">Phone Number ID</Label>
-              <Input
-                value={manualConfig.phoneNumberId}
-                onChange={(e) => setManualConfig({ ...manualConfig, phoneNumberId: e.target.value })}
-                placeholder="e.g., 991957080667897"
-                className="font-mono text-sm rounded-lg border-slate-300"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-foreground">Business Account ID</Label>
-              <Input
-                value={manualConfig.businessAccountId}
-                onChange={(e) => setManualConfig({ ...manualConfig, businessAccountId: e.target.value })}
-                placeholder="e.g., 1545549869849783"
-                className="font-mono text-sm rounded-lg border-slate-300"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-foreground">Webhook Secret (Optional)</Label>
-              <Input
-                value={manualConfig.webhookSecret}
-                onChange={(e) => setManualConfig({ ...manualConfig, webhookSecret: e.target.value })}
-                placeholder="Optional webhook secret"
-                className="font-mono text-sm rounded-lg border-slate-300"
-              />
-            </div>
+          <div className="lg:col-span-1">
+            <StyledCard title="Setup Guide" description="Follow our step-by-step instructions" titleIcon={BookOpen} className="h-full">
+              <GuideContent />
+            </StyledCard>
           </div>
-
-          {connectionError && (
-            <div className="flex items-start text-red-600 text-sm bg-red-50 p-4 rounded-lg border border-red-200 mt-4">
-              <AlertCircle className="w-4 h-4 mr-2 shrink-0 mt-0.5" />
-              {connectionError}
-            </div>
-          )}
-
-          <div className="flex items-center justify-between pt-6 border-t border-slate-200">
-            <Button variant="outline" onClick={() => { setIsConnecting(false); setIsAddingAccount(false); }} className="rounded-lg border-slate-300 text-sm">
-              Cancel
-            </Button>
-            <Button onClick={saveManualConfig} disabled={isSavingConfig} className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm">
-              {isSavingConfig ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Add Account
-            </Button>
-          </div>
-        </StyledCard>
+        </div>
       </div>
     );
   }
@@ -1280,7 +1366,7 @@ function WhatsAppSettingsTabContent({ organizationId }: WhatsAppSettingsTabProps
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" className="rounded-lg border-slate-300 text-xs h-8" onClick={() => refreshAccountDetails(account.id)}>
                   Refresh
                 </Button>
@@ -1454,12 +1540,12 @@ function WhatsAppSettingsTabContent({ organizationId }: WhatsAppSettingsTabProps
 
           <div className="p-4 rounded-xl border-2 border-slate-200 bg-slate-50/50">
             <div className="text-xs text-muted-foreground">Messages Today</div>
-            <div className="text-lg font-bold mt-2 text-foreground">1,240</div>
+            <div className="text-sm font-medium mt-2 text-muted-foreground">See Analytics</div>
           </div>
 
           <div className="p-4 rounded-xl border-2 border-slate-200 bg-slate-50/50">
             <div className="text-xs text-muted-foreground">Delivery Rate</div>
-            <div className="text-lg font-bold mt-2 text-green-700">98.4%</div>
+            <div className="text-sm font-medium mt-2 text-muted-foreground">See Analytics</div>
           </div>
         </div>
 
@@ -1468,8 +1554,8 @@ function WhatsAppSettingsTabContent({ organizationId }: WhatsAppSettingsTabProps
             {isLoadingHealth ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Play className="w-3 h-3 mr-1" />}
             Run Health Check
           </Button>
-          <Button variant="outline" size="sm" className="rounded-lg border-slate-300 text-xs">
-            View Logs
+          <Button variant="outline" size="sm" className="rounded-lg border-slate-300 text-xs" onClick={() => window.open('/dashboard/analytics', '_self')}>
+            View Analytics
           </Button>
         </div>
       </StyledCard>
@@ -1482,7 +1568,7 @@ function WhatsAppSettingsTabContent({ organizationId }: WhatsAppSettingsTabProps
             WhatsApp changes may affect live campaigns
           </span>
           <div className="flex items-center gap-2">
-            <Button variant="outline"  className="rounded-lg border-slate-300 text-sm">
+            <Button variant="outline" className="rounded-lg border-slate-300 text-sm" onClick={() => setLocalSettings(savedSettings)}>
               Discard
             </Button>
             <Button onClick={saveSettings} disabled={isSavingSettings} className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm">
@@ -1492,6 +1578,28 @@ function WhatsAppSettingsTabContent({ organizationId }: WhatsAppSettingsTabProps
           </div>
         </div>
       </div>
+
+      {/* Delete Account Confirmation Dialog */}
+      <Dialog open={showDeleteAccountDialog} onOpenChange={setShowDeleteAccountDialog}>
+        <DialogContent className="rounded-xl border-2 border-slate-200">
+          <DialogHeader>
+            <DialogTitle className="text-red-700 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Delete WhatsApp Account
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              This will permanently remove the account and all associated phone numbers. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteAccountDialog(false)} className="rounded-lg border-slate-300">Cancel</Button>
+            <Button variant="destructive" onClick={confirmDeleteAccount} disabled={isDisconnecting} className="rounded-lg">
+              {isDisconnecting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+              Delete Account
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Account Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>

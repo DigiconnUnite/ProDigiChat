@@ -24,6 +24,7 @@ import {
   ChevronRight,
   Send,
   UserCog,
+  AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -152,6 +153,7 @@ export function TeamSettingsTab({ organizationId }: TeamSettingsTabProps) {
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
   const [editRole, setEditRole] = useState('');
   const [removingMember, setRemovingMember] = useState<string | null>(null);
+  const [removeMemberDialog, setRemoveMemberDialog] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     fetchTeamMembers();
@@ -263,9 +265,14 @@ export function TeamSettingsTab({ organizationId }: TeamSettingsTabProps) {
     }
   };
 
-  const handleRemoveMember = async (memberId: string) => {
-    if (!confirm('Are you sure you want to remove this team member?')) return;
+  const handleRemoveMember = (memberId: string, memberName: string) => {
+    setRemoveMemberDialog({ id: memberId, name: memberName });
+  };
 
+  const confirmRemoveMember = async () => {
+    if (!removeMemberDialog) return;
+    const { id: memberId } = removeMemberDialog;
+    setRemoveMemberDialog(null);
     setRemovingMember(memberId);
     try {
       const response = await fetch(`/api/settings/team?id=${memberId}&organizationId=${organizationId}`, {
@@ -516,7 +523,7 @@ export function TeamSettingsTab({ organizationId }: TeamSettingsTabProps) {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-2">
                     {member.status === 'invited' && (
                       <Button
                         onClick={() => handleResendInvite(member.id)}
@@ -609,7 +616,7 @@ export function TeamSettingsTab({ organizationId }: TeamSettingsTabProps) {
                       variant="outline"
                       size="sm"
                       className="rounded-lg border-red-200 text-red-600 hover:bg-red-50 text-xs h-8"
-                      onClick={() => handleRemoveMember(member.id)}
+                      onClick={() => handleRemoveMember(member.id, member.name)}
                       disabled={removingMember === member.id}
                     >
                       {removingMember === member.id ? (
@@ -693,6 +700,28 @@ export function TeamSettingsTab({ organizationId }: TeamSettingsTabProps) {
           </p>
         </div>
       </StyledCard>
+
+      {/* Remove Member Confirmation Dialog */}
+      <Dialog open={!!removeMemberDialog} onOpenChange={() => setRemoveMemberDialog(null)}>
+        <DialogContent className="rounded-xl border-2 border-slate-200">
+          <DialogHeader>
+            <DialogTitle className="text-red-700 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Remove Team Member
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Are you sure you want to remove <span className="font-semibold text-foreground">{removeMemberDialog?.name}</span> from your team? They will immediately lose access to all resources.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRemoveMemberDialog(null)} className="rounded-lg border-slate-300">Cancel</Button>
+            <Button variant="destructive" onClick={confirmRemoveMember} className="rounded-lg">
+              <Trash2 className="w-4 h-4 mr-2" />
+              Remove Member
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

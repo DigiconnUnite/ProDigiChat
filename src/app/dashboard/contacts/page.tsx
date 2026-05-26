@@ -303,7 +303,8 @@ export default function ContactsPage() {
       if (failed > 0) {
         toast.error(`Failed to delete ${failed} contact(s)`)
       } else {
-        toast.success(`Deleted ${selectedContacts.size} contacts`)
+        const count = selectedContacts.size
+        toast.success(`${count} contact${count !== 1 ? 's' : ''} deleted`)
       }
       handleClearSelection()
       fetchContacts()

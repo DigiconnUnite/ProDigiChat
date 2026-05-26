@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
   try {
-    const token = await getToken({ req: request });
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
     const userId = token?.sub;
     const orgId = token?.organizationId || token?.orgId;
 

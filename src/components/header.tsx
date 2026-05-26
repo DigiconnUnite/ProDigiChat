@@ -95,7 +95,7 @@ export function Header({ variant = "public", className }: HeaderProps) {
         )}
         style={{backgroundColor: '#072507'}}
       >
-        <div className="max-w-[1440px] py-4 border-x border-green-800 mx-auto px-5 flex items-center justify-between w-full">
+        <div className="py-4 mx-auto px-5 flex items-center justify-between w-full">
         {/* Logo and Nav Links */}
         <div className="flex items-center gap-8">
           {/* Logo */}

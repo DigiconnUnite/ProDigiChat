@@ -392,7 +392,7 @@ export function WebhooksTab({ organizationId }: WebhooksTabProps) {
         {showCreateForm && (
           <>
             <Separator className="my-6" />
-            <div className="bg-gray-50 rounded-lg p-6 space-y-6">
+            <div className="bg-green-50/30 rounded-xl border-2 border-green-950 p-5 space-y-5">
               {Object.keys(formErrors).length > 0 && (
                 <Alert className="border-red-200 bg-red-50">
                   <AlertCircle className="h-4 w-4 text-red-600" />
@@ -409,7 +409,7 @@ export function WebhooksTab({ organizationId }: WebhooksTabProps) {
               
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Endpoint Name</Label>
+                  <Label className="text-sm font-medium text-foreground">Endpoint Name</Label>
                   <Input
                     placeholder="e.g. CRM Integration"
                     value={newWebhookName}
@@ -428,7 +428,7 @@ export function WebhooksTab({ organizationId }: WebhooksTabProps) {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">URL</Label>
+                  <Label className="text-sm font-medium text-foreground">URL</Label>
                   <Input
                     type="url"
                     placeholder="https://yourapp.com/webhook"
@@ -458,10 +458,10 @@ export function WebhooksTab({ organizationId }: WebhooksTabProps) {
                   {WEBHOOK_EVENTS.map((event) => (
                     <label
                       key={event.id}
-                      className={`flex items-center gap-3 text-sm cursor-pointer p-3 rounded-lg border transition-colors ${
+                      className={`flex items-center gap-3 text-sm cursor-pointer p-3 rounded-lg border-2 transition-colors ${
                         newWebhookEvents.includes(event.id)
-                          ? 'border-green-300 bg-green-50 hover:bg-green-100'
-                          : 'border-gray-200 hover:bg-gray-50'
+                          ? 'border-green-950 bg-green-50/50'
+                          : 'border-slate-200 hover:border-slate-300'
                       } ${formErrors.events ? 'border-red-300' : ''}`}
                     >
                       <Checkbox
@@ -491,7 +491,7 @@ export function WebhooksTab({ organizationId }: WebhooksTabProps) {
               </div>
               
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Label className="text-sm font-medium text-foreground flex items-center gap-2">
                   <Shield className="h-4 w-4 text-gray-500" />
                   Secret Key (optional)
                 </Label>
@@ -502,7 +502,7 @@ export function WebhooksTab({ organizationId }: WebhooksTabProps) {
                   onChange={(e) => setNewWebhookSecret(e.target.value)}
                   className="text-sm"
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   We'll send a signature header with each webhook request so you can verify it's from us.
                 </p>
               </div>
@@ -569,21 +569,21 @@ export function WebhooksTab({ organizationId }: WebhooksTabProps) {
             </Button>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-gray-200">
+          <div className="overflow-hidden rounded-xl border border-green-950">
             <table className="w-full">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-700 uppercase tracking-wider">Name</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-700 uppercase tracking-wider">URL</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-700 uppercase tracking-wider">Events</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-700 uppercase tracking-wider">Last Triggered</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+                <tr className="bg-green-950">
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted">Name</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted">URL</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted">Events</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted">Status</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted">Last Triggered</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-slate-100">
                 {webhooks.map((webhook) => (
-                  <tr key={webhook.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={webhook.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="py-4 px-4">
                       <div className="font-medium text-gray-900">{webhook.name}</div>
                     </td>
@@ -670,20 +670,20 @@ export function WebhooksTab({ organizationId }: WebhooksTabProps) {
             <p className="text-xs text-gray-400 mt-1">Logs will appear here once webhooks are triggered</p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-gray-200">
+          <div className="overflow-hidden rounded-xl border border-green-950">
             <table className="w-full">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-700 uppercase tracking-wider">Event</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-700 uppercase tracking-wider">Endpoint</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-700 uppercase tracking-wider">Response Time</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-700 uppercase tracking-wider">Time</th>
+                <tr className="bg-green-950">
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted">Event</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted">Endpoint</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted">Status</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted">Response Time</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted">Time</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-slate-100">
                 {deliveryLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="py-3 px-4">
                       <div className="font-medium text-gray-900">{log.event}</div>
                     </td>

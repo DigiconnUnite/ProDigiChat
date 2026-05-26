@@ -48,6 +48,8 @@ import WhatsAppSettingsTab from "@/components/settings/WhatsAppSettingsTab"
 import { TeamSettingsTab } from "@/components/settings/TeamSettingsTab"
 import { ApiKeysTab } from "@/components/settings/ApiKeysTab"
 import { WebhooksTab } from "@/components/settings/WebhooksTab"
+import { ProfileSettingsTab } from "@/components/settings/ProfileSettingsTab"
+import { PrivacySettingsTab } from "@/components/settings/PrivacySettingsTab"
 
 interface NotificationSettings {
   email: {
@@ -178,6 +180,7 @@ function SettingsPageContent() {
   const { data: session } = useSession()
   const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState<string>(SETTINGS_TABS.WHATSAPP)
+  const ALL_VALID_TABS = [...Object.values(SETTINGS_TABS), 'profile']
   
   // Get organization ID from session - REQUIRED for security
   const organizationId = (session?.user as any)?.organizationId
@@ -202,7 +205,7 @@ function SettingsPageContent() {
   // Handle tab from URL query parameter
   useEffect(() => {
     const tab = searchParams.get('tab')
-    if (tab && Object.values(SETTINGS_TABS).includes(tab as any)) {
+    if (tab && ALL_VALID_TABS.includes(tab)) {
       setActiveTab(tab)
     }
   }, [searchParams])
@@ -331,7 +334,7 @@ function SettingsPageContent() {
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 h-auto p-1 bg-muted border rounded-lg">
+        <TabsList className="grid w-full grid-cols-4 md:grid-cols-8 h-auto p-1 bg-muted border rounded-lg">
           <TabsTrigger
             value={SETTINGS_TABS.WHATSAPP}
             className="text-sm py-2.5 rounded-md text-muted-foreground data-[state=active]:border-2 data-[state=active]:border-green-950 data-[state=active]:bg-white data-[state=active]:shadow-sm"
@@ -368,6 +371,18 @@ function SettingsPageContent() {
           >
             Billing
           </TabsTrigger>
+          <TabsTrigger
+            value={SETTINGS_TABS.PRIVACY}
+            className="text-sm py-2.5 rounded-md text-muted-foreground data-[state=active]:border-2 data-[state=active]:border-green-950 data-[state=active]:bg-white data-[state=active]:shadow-sm"
+          >
+            Privacy
+          </TabsTrigger>
+          <TabsTrigger
+            value="profile"
+            className="text-sm py-2.5 rounded-md text-muted-foreground data-[state=active]:border-2 data-[state=active]:border-green-950 data-[state=active]:bg-white data-[state=active]:shadow-sm"
+          >
+            Profile
+          </TabsTrigger>
         </TabsList>
 
         {/* ==================== WhatsApp Settings Tab ==================== */}
@@ -401,54 +416,6 @@ function SettingsPageContent() {
               </div>
             }
             description="Configure email alerts for important events"
-            headerRight={
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="rounded-lg border-slate-300 text-sm"
-                  onClick={() => {
-                    setNotificationSettings({
-                      email: {
-                        enabled: true,
-                        frequency: "instant",
-                        events: ["campaign.completed", "campaign.failed", "message.failed"],
-                      },
-                      push: {
-                        enabled: true,
-                        soundEnabled: true,
-                        events: ["new.message", "campaign.status"],
-                      },
-                      slack: {
-                        enabled: false,
-                        webhookUrl: null,
-                        channel: null,
-                        events: ["campaign.completed", "campaign.failed"],
-                      },
-                    })
-                  }}
-                >
-                  Discard
-                </Button>
-                <Button
-                  onClick={saveNotificationSettings}
-                  disabled={isSaving}
-                  className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm"
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save
-                    </>
-                  )}
-                </Button>
-              </div>
-            }
           >
             <ToggleRow
               title="Enable Email Notifications"
@@ -629,6 +596,49 @@ function SettingsPageContent() {
               </>
             )}
           </StyledCard>
+
+          {/* Sticky Save Bar */}
+          <div className="p-5 rounded-xl border-2 border-slate-300 bg-white shadow-lg sticky bottom-4">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <span className="text-sm text-muted-foreground">Changes apply to all notification channels</span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  className="rounded-lg border-slate-300 text-sm"
+                  onClick={() => fetchNotificationSettings()}
+                >
+                  Discard
+                </Button>
+                <Button
+                  onClick={saveNotificationSettings}
+                  disabled={isSaving}
+                  className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save Notification Settings
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ==================== Privacy Tab ==================== */}
+        <TabsContent value={SETTINGS_TABS.PRIVACY} className="space-y-6">
+          <PrivacySettingsTab organizationId={organizationId} />
+        </TabsContent>
+
+        {/* ==================== Profile Tab ==================== */}
+        <TabsContent value="profile" className="space-y-6">
+          <ProfileSettingsTab organizationId={organizationId} />
         </TabsContent>
 
         {/* ==================== Billing Tab ==================== */}
@@ -762,18 +772,22 @@ function SettingsPageContent() {
             title="Payment Method"
             description="Manage your payment details"
           >
-            <div className="flex items-center justify-between p-5 rounded-xl border-2 border-slate-200 bg-slate-50/50">
+            <div className="p-3 rounded-lg border border-amber-200 bg-amber-50 mb-4 flex items-center gap-2">
+              <Info className="h-4 w-4 text-amber-600 flex-shrink-0" />
+              <p className="text-xs text-amber-700">Payment management will be available when billing is fully configured.</p>
+            </div>
+            <div className="flex items-center justify-between p-5 rounded-xl border-2 border-slate-200 bg-slate-50/50 opacity-50 pointer-events-none">
               <div className="flex items-center gap-4">
                 <div className="h-12 w-16 rounded-lg bg-gradient-to-r from-blue-600 to-blue-800 flex items-center justify-center">
                   <CreditCard className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground">Visa ending in 4242</p>
-                  <p className="text-sm text-muted-foreground">Expires 12/2025</p>
+                  <p className="font-medium text-foreground">No payment method on file</p>
+                  <p className="text-sm text-muted-foreground">Add a card to activate your subscription</p>
                 </div>
               </div>
               <Button variant="outline" size="sm" className="rounded-lg border-slate-300 text-sm">
-                Update
+                Add Card
               </Button>
             </div>
           </StyledCard>
@@ -783,29 +797,12 @@ function SettingsPageContent() {
             title="Invoices"
             description="View and download your invoices"
           >
-            <div className="space-y-3">
-              {[
-                { id: "INV-2024-001", date: "March 2024", amount: 79, status: "paid" },
-                { id: "INV-2024-002", date: "February 2024", amount: 79, status: "paid" },
-                { id: "INV-2024-003", date: "January 2024", amount: 79, status: "paid" },
-              ].map((invoice) => (
-                <div 
-                  key={invoice.id} 
-                  className="flex items-center justify-between p-4 rounded-xl border-2 border-slate-200 bg-white hover:border-green-950/50 transition-all"
-                >
-                  <div>
-                    <p className="font-medium text-foreground">{invoice.id}</p>
-                    <p className="text-sm text-muted-foreground">{invoice.date}</p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <p className="font-medium text-foreground">${invoice.amount}</p>
-                    <Badge className="bg-green-100 text-green-800 border-green-200">{invoice.status}</Badge>
-                    <Button variant="ghost" size="sm" className="rounded-lg text-muted-foreground hover:text-foreground">
-                      <DownloadIcon className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <div className="h-12 w-12 rounded-xl border-2 border-slate-200 bg-slate-50 flex items-center justify-center mb-3">
+                <DownloadIcon className="h-5 w-5 text-slate-400" />
+              </div>
+              <p className="text-sm font-medium text-foreground">No invoices yet</p>
+              <p className="text-xs text-muted-foreground mt-1">Invoices will appear here once you have an active paid subscription.</p>
             </div>
           </StyledCard>
 

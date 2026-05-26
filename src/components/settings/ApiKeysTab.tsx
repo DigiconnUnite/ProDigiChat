@@ -115,6 +115,7 @@ export function ApiKeysTab({ organizationId }: ApiKeysTabProps) {
   const [newKeyScopes, setNewKeyScopes] = useState<string[]>(['campaigns:read', 'contacts:read']);
   const [generatedKey, setGeneratedKey] = useState<ApiKey | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ type: 'revoke' | 'regenerate'; keyId: string; keyName: string } | null>(null);
 
   useEffect(() => {
     fetchApiKeys();
@@ -175,51 +176,53 @@ export function ApiKeysTab({ organizationId }: ApiKeysTabProps) {
     }
   };
 
-  const handleRevokeKey = async (keyId: string) => {
-    if (!confirm('Are you sure you want to revoke this API key? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/settings/api-keys?id=${keyId}&organizationId=${organizationId}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        toast.success('API key revoked successfully');
-        fetchApiKeys();
-      } else {
-        const error = await response.json();
-        toast.error(error.error || 'Failed to revoke API key');
-      }
-    } catch (error) {
-      console.error('Error revoking API key:', error);
-      toast.error('Failed to revoke API key');
-    }
+  const handleRevokeKey = (keyId: string, keyName: string) => {
+    setConfirmDialog({ type: 'revoke', keyId, keyName });
   };
 
-  const handleRegenerateKey = async (keyId: string) => {
-    if (!confirm('Are you sure you want to regenerate this API key? The old key will stop working immediately.')) {
-      return;
-    }
+  const handleRegenerateKey = (keyId: string, keyName: string) => {
+    setConfirmDialog({ type: 'regenerate', keyId, keyName });
+  };
 
-    try {
-      const response = await fetch(`/api/settings/api-keys?id=${keyId}&organizationId=${organizationId}`, {
-        method: 'PATCH',
-      });
+  const executeConfirmedAction = async () => {
+    if (!confirmDialog) return;
+    const { type, keyId } = confirmDialog;
+    setConfirmDialog(null);
 
-      if (response.ok) {
-        const data = await response.json();
-        setGeneratedKey(data.apiKey);
-        toast.success('API key regenerated successfully');
-        fetchApiKeys();
-      } else {
-        const error = await response.json();
-        toast.error(error.error || 'Failed to regenerate API key');
+    if (type === 'revoke') {
+      try {
+        const response = await fetch(`/api/settings/api-keys?id=${keyId}&organizationId=${organizationId}`, {
+          method: 'DELETE',
+        });
+        if (response.ok) {
+          toast.success('API key revoked successfully');
+          fetchApiKeys();
+        } else {
+          const error = await response.json();
+          toast.error(error.error || 'Failed to revoke API key');
+        }
+      } catch (error) {
+        console.error('Error revoking API key:', error);
+        toast.error('Failed to revoke API key');
       }
-    } catch (error) {
-      console.error('Error regenerating API key:', error);
-      toast.error('Failed to regenerate API key');
+    } else {
+      try {
+        const response = await fetch(`/api/settings/api-keys?id=${keyId}&organizationId=${organizationId}`, {
+          method: 'PATCH',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setGeneratedKey(data.apiKey);
+          toast.success('API key regenerated successfully');
+          fetchApiKeys();
+        } else {
+          const error = await response.json();
+          toast.error(error.error || 'Failed to regenerate API key');
+        }
+      } catch (error) {
+        console.error('Error regenerating API key:', error);
+        toast.error('Failed to regenerate API key');
+      }
     }
   };
 
@@ -469,7 +472,7 @@ export function ApiKeysTab({ organizationId }: ApiKeysTabProps) {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-2">
                   <Button
                     onClick={() => handleCopyKey(key.fullKey || key.prefix, key.id)}
                     variant="outline"
@@ -483,7 +486,7 @@ export function ApiKeysTab({ organizationId }: ApiKeysTabProps) {
                     )}
                   </Button>
                   <Button
-                    onClick={() => handleRegenerateKey(key.id)}
+                    onClick={() => handleRegenerateKey(key.id, key.name)}
                     variant="outline"
                     size="sm"
                     className="rounded-lg border-slate-300 text-xs h-8"
@@ -491,7 +494,7 @@ export function ApiKeysTab({ organizationId }: ApiKeysTabProps) {
                     <RefreshCw className="w-3 h-3" />
                   </Button>
                   <Button
-                    onClick={() => handleRevokeKey(key.id)}
+                    onClick={() => handleRevokeKey(key.id, key.name)}
                     variant="outline"
                     size="sm"
                     className="rounded-lg border-red-200 text-red-600 hover:bg-red-50 text-xs h-8"
@@ -531,7 +534,7 @@ export function ApiKeysTab({ organizationId }: ApiKeysTabProps) {
                   </code>
                 </div>
                 <Button
-                  onClick={() => handleRevokeKey(key.id)}
+                  onClick={() => handleRevokeKey(key.id, key.name)}
                   variant="outline"
                   size="sm"
                   className="rounded-lg border-red-200 text-red-500 hover:bg-red-50 text-xs h-8"
@@ -573,15 +576,15 @@ export function ApiKeysTab({ organizationId }: ApiKeysTabProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 mt-4">
-          <Button variant="outline" size="sm" className="rounded-lg border-slate-300 text-sm">
+          <Button variant="outline" size="sm" className="rounded-lg border-slate-300 text-sm" onClick={() => toast.info('API documentation coming soon!')}>
             <BookOpen className="w-4 h-4 mr-2" />
             View API Docs
           </Button>
-          <Button variant="outline" size="sm" className="rounded-lg border-slate-300 text-sm">
+          <Button variant="outline" size="sm" className="rounded-lg border-slate-300 text-sm" onClick={() => toast.info('Postman collection coming soon!')}>
             <ExternalLink className="w-4 h-4 mr-2" />
             Postman Collection
           </Button>
-          <Button variant="outline" size="sm" className="rounded-lg border-slate-300 text-sm">
+          <Button variant="outline" size="sm" className="rounded-lg border-slate-300 text-sm" onClick={() => toast.info('OpenAPI spec coming soon!')}>
             <FileText className="w-4 h-4 mr-2" />
             OpenAPI Spec
           </Button>
@@ -657,12 +660,41 @@ export function ApiKeysTab({ organizationId }: ApiKeysTabProps) {
             variant="outline"
             size="sm"
             className="mt-3 rounded-lg border-green-700 text-green-400 hover:bg-green-900 hover:text-green-300 text-xs"
+            onClick={() => toast.info('Full documentation coming soon!')}
           >
             <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
             Read Full Documentation
           </Button>
         </div>
       </StyledCard>
+
+      {/* Confirm Action Dialog */}
+      <Dialog open={!!confirmDialog} onOpenChange={() => setConfirmDialog(null)}>
+        <DialogContent className="rounded-xl border-2 border-slate-200">
+          <DialogHeader>
+            <DialogTitle className="text-red-700 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              {confirmDialog?.type === 'revoke' ? 'Revoke API Key' : 'Regenerate API Key'}
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              {confirmDialog?.type === 'revoke'
+                ? `Are you sure you want to revoke "${confirmDialog?.keyName}"? This action cannot be undone and any integrations using this key will stop working.`
+                : `Are you sure you want to regenerate "${confirmDialog?.keyName}"? The old key will stop working immediately.`
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDialog(null)} className="rounded-lg border-slate-300">Cancel</Button>
+            <Button variant="destructive" onClick={executeConfirmedAction} className="rounded-lg">
+              {confirmDialog?.type === 'revoke' ? (
+                <><Trash2 className="w-4 h-4 mr-2" />Revoke Key</>
+              ) : (
+                <><RefreshCw className="w-4 h-4 mr-2" />Regenerate Key</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Generated Key Dialog */}
       <Dialog open={!!generatedKey} onOpenChange={() => setGeneratedKey(null)}>
