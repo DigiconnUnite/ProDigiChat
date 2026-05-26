@@ -508,6 +508,7 @@ export default function InboxPage() {
 
   const [isWhatsAppConnected, setIsWhatsAppConnected] = useState<boolean | null>(null)
   const [isCheckingConnection, setIsCheckingConnection] = useState(true)
+  const [socketConnected, setSocketConnected] = useState(true)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const socketRef = useRef<any>(null)
@@ -631,6 +632,10 @@ export default function InboxPage() {
       socketRef.current = io(socketUrl, { transports: ['websocket', 'polling'] })
       const socket = socketRef.current
       socket.emit('join-inbox', orgId)
+
+      socket.on('connect', () => setSocketConnected(true))
+      socket.on('disconnect', () => setSocketConnected(false))
+      socket.on('connect_error', () => setSocketConnected(false))
 
       socket.on('new-message', (data: any) => {
         const current = selectedConversationRef.current
@@ -979,6 +984,14 @@ export default function InboxPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* WebSocket disconnection indicator */}
+                  {!socketConnected && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-yellow-50 border-b border-yellow-200">
+                      <div className="h-2 w-2 rounded-full bg-yellow-500 animate-pulse" />
+                      <span className="text-xs text-yellow-800">Connection lost — attempting to reconnect…</span>
+                    </div>
+                  )}
 
                   {/* Messages */}
                   <ScrollArea className="flex-1 min-h-0 p-4 h-full">
