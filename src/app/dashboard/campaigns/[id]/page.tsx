@@ -241,6 +241,12 @@ export default function CampaignReportPage() {
     fetchCampaign(1)
   }, [fetchCampaign])
 
+  useEffect(() => {
+    if (campaign?.name) {
+      document.title = `${campaign.name} — Campaign Report`
+    }
+  }, [campaign?.name])
+
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage)
     fetchCampaign(newPage, statusFilter)
