@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { createWhatsAppOAuthService } from '@/lib/whatsapp-oauth';
-import { randomBytes } from 'crypto';
+import { createOAuthState } from '@/lib/oauth-state';
 
 export async function GET(request: NextRequest) {
   try {
@@ -38,13 +38,12 @@ export async function GET(request: NextRequest) {
     // Create OAuth service with dynamic domain detection
     const oauthService = createWhatsAppOAuthService(request.url);
 
-    // Generate state for CSRF protection
+    // Generate a signed state for CSRF protection. The state is HMAC-signed
+    // with a server secret so the callback can detect tampering/forgery, and
+    // it carries a timestamp for replay protection.
     // NOTE: orgId is NOT included in state since it will be re-verified from JWT
-    // in the callback endpoint, preventing orgId forgery attacks
-    const state = Buffer.from(JSON.stringify({ 
-      timestamp: Date.now(),
-      nonce: randomBytes(16).toString('hex')
-    })).toString('base64');
+    // in the callback endpoint, preventing orgId forgery attacks.
+    const state = createOAuthState();
 
     let url: string;
     

@@ -61,6 +61,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    try {
+      const { NotificationHelpers } = await import("@/lib/notifications");
+      await NotificationHelpers.whatsappDisconnected(organizationId);
+    } catch (e) {
+      console.error("[Disconnect] whatsappDisconnected notification error:", e);
+    }
+
     return NextResponse.json({
       success: true,
       message: "WhatsApp account disconnected successfully",

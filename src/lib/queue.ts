@@ -805,7 +805,7 @@ async function updateCampaignStatsFromQueue(
   // Single fetch for all affected campaigns
   const campaigns = await prisma.campaign.findMany({
     where: { id: { in: campaignIds } },
-    select: { id: true, stats: true, status: true }
+    select: { id: true, name: true, stats: true, status: true, organizationId: true, createdBy: true }
   });
 
   const campaignMap = new Map(campaigns.map(c => [c.id, c]));
@@ -819,6 +819,17 @@ async function updateCampaignStatsFromQueue(
     )
   );
   const remainingMap = new Map(remainingCounts.map(r => [r.campaignId, r.count]));
+
+  // Campaigns that transition running -> completed in this tick, so we
+  // can fire a "campaign completed" notification once the queue drains.
+  const justCompleted: Array<{
+    id: string;
+    name: string;
+    organizationId: string | null;
+    createdBy: string | null;
+    totalSent: number;
+    failed: number;
+  }> = [];
 
   // Build batch updates
   const updates = campaignIds.map(campaignId => {
@@ -842,6 +853,17 @@ async function updateCampaignStatsFromQueue(
 
     const shouldComplete = campaign.status === 'running' && (remainingMap.get(campaignId) ?? 1) === 0;
 
+    if (shouldComplete) {
+      justCompleted.push({
+        id: campaign.id,
+        name: campaign.name,
+        organizationId: campaign.organizationId,
+        createdBy: campaign.createdBy,
+        totalSent: updatedStats.totalSent,
+        failed: updatedStats.failed,
+      });
+    }
+
     return prisma.campaign.update({
       where: { id: campaignId },
       data: {
@@ -853,6 +875,33 @@ async function updateCampaignStatsFromQueue(
 
   if (updates.length > 0) {
     await prisma.$transaction(updates);
+  }
+
+  // Fire campaign-completion notifications (in-app + optional email).
+  // Best-effort: notification failures must never break queue stats.
+  if (justCompleted.length > 0) {
+    const { NotificationHelpers } = await import('@/lib/notifications');
+    await Promise.all(
+      justCompleted.map((c) => {
+        if (!c.organizationId) return Promise.resolve();
+        // If every recipient failed, this was effectively a failed
+        // campaign — surface it as such.
+        if (c.totalSent === 0 && c.failed > 0) {
+          return NotificationHelpers.campaignFailed(
+            c.organizationId,
+            c.name,
+            `All ${c.failed} message(s) failed to send. Check recipient opt-in status and template approval.`,
+            c.createdBy,
+          ).catch((e) => console.error('[Queue] campaignFailed notification error:', e));
+        }
+        return NotificationHelpers.campaignCompleted(
+          c.organizationId,
+          c.name,
+          c.totalSent,
+          c.createdBy,
+        ).catch((e) => console.error('[Queue] campaignCompleted notification error:', e));
+      }),
+    );
   }
 
   for (const [campaignId, delta] of campaignResults) {

@@ -257,7 +257,7 @@ function ConnectPageContent() {
             <AccountInfoCard
               account={displayAccount}
               onViewSettings={() => router.push('/dashboard/settings?tab=whatsapp')}
-              onTestMessage={() => router.push('/dashboard/testing')}
+              onTestMessage={() => router.push('/dashboard/settings?tab=whatsapp')}
             />
           </CardContent>
         </Card>

@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Templates - WhatsApp Marketing Tool',
+  title: 'Templates - ProDigiChat',
   description: 'Manage your WhatsApp message templates',
 };
 

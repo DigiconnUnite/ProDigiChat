@@ -158,16 +158,50 @@ export async function downloadMedia(mediaId: string, organizationId?: string): P
       responseType: "arraybuffer",
     });
 
-    // Step 3: Upload to our storage and return the URL
-    // For now, we'll create a data URL (base64) for small files
-    // In production, you'd want to upload to S3/cloud storage
-    const base64Media = Buffer.from(mediaResponse.data).toString("base64");
-    const dataUrl = `data:${mimeType};base64,${base64Media}`;
+    const buffer = Buffer.from(mediaResponse.data);
 
-    return {
-      url: dataUrl,
-      mimeType,
-    };
+    // Step 3: Persist the media and return a durable URL.
+    //
+    // Preferred path: upload to S3 so the bytes are NOT stored inline in
+    // the database. Storing megabytes of base64 in Message.content bloats
+    // the DB and can exceed column limits for video/documents.
+    const s3Configured =
+      !!process.env.AWS_S3_BUCKET_NAME &&
+      !!process.env.AWS_ACCESS_KEY_ID &&
+      !!process.env.AWS_SECRET_ACCESS_KEY;
+
+    if (s3Configured) {
+      try {
+        const { uploadToS3 } = await import("./storage");
+        const extension = mimeType.split("/")[1]?.split(";")[0] || "bin";
+        const key = `whatsapp-media/${orgId}/${mediaId}.${extension}`;
+        const url = await uploadToS3({
+          originalname: key,
+          buffer,
+          mimetype: mimeType,
+        });
+        return { url, mimeType };
+      } catch (uploadError: any) {
+        console.error(
+          "[WhatsApp] S3 upload failed, falling back to inline data URL:",
+          uploadError?.message,
+        );
+        // fall through to base64 fallback below
+      }
+    }
+
+    // Fallback (no storage configured / upload failed): inline data URL.
+    // Guard against storing very large blobs in the database.
+    const MAX_INLINE_BYTES = 1 * 1024 * 1024; // 1MB
+    if (buffer.byteLength > MAX_INLINE_BYTES) {
+      console.warn(
+        `[WhatsApp] Media ${mediaId} is ${buffer.byteLength} bytes and no S3 storage is configured; storing a placeholder instead of inlining.`,
+      );
+      return { url: "", mimeType };
+    }
+
+    const dataUrl = `data:${mimeType};base64,${buffer.toString("base64")}`;
+    return { url: dataUrl, mimeType };
   } catch (error: any) {
     console.error("[WhatsApp] Error downloading media:", error.message);
     return null;
@@ -463,11 +497,18 @@ export async function storeIncomingMessage(
 }
 
 /**
- * Send acknowledgment receipt (read receipt) back to Meta
+ * Send a read receipt back to Meta for an inbound message.
+ *
+ * Meta's /messages endpoint only supports `status: "read"` for marking a
+ * message — there is no "delivered" acknowledgement to send (Meta marks
+ * messages delivered automatically). Marking the most recent inbound
+ * message as read marks the whole conversation read and shows blue ticks
+ * to the customer, so we only call this when an operator actually opens
+ * the conversation.
  */
 export async function sendMessageAck(
   messageId: string,
-  status: "read" | "delivered",
+  status: "read" = "read",
   organizationId?: string
 ): Promise<boolean> {
   try {

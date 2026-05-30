@@ -254,10 +254,10 @@ export function PublicFooter() {
               </li>
               <li>
                 <Link
-                  href="/privacy"
+                  href="/data-deletion"
                   className="text-sm text-green-50 hover:text-white transition-colors"
                 >
-                  Cookie Policy
+                  Data Deletion
                 </Link>
               </li>
               <li>

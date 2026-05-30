@@ -19,9 +19,10 @@ app.prepare().then(() => {
     handle(req, res, parsedUrl);
   });
 
-  // Initialize serverless-compatible WebSocket
+  // Initialize Socket.IO and attach it to the HTTP server so client
+  // connections to /socket.io are handled by the same server.
   const { initializeWebSocket } = require('./src/lib/websocket.cjs');
-  initializeWebSocket();
+  initializeWebSocket(httpServer);
 
   httpServer.listen(port, (err) => {
     if (err) throw err;

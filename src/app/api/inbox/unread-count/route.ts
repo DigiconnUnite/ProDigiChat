@@ -20,7 +20,11 @@ export async function GET(request: NextRequest) {
       where: {
         ...orgFilter,
         direction: "incoming",
-        status: "sent", // Unread messages have status "sent"
+        // Incoming messages are stored with status "delivered" and only
+        // flipped to "read" once an operator opens the conversation. This
+        // must stay in sync with storeIncomingMessage() and the inbox
+        // PATCH (mark-as-read) handler.
+        status: "delivered",
       },
     });
 

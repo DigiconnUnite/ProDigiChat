@@ -8,7 +8,6 @@ import {
   checkDuplicateMessage,
   findOrCreateContact,
   storeIncomingMessage,
-  sendMessageAck,
 } from "@/lib/whatsapp-incoming-message";
 
 
@@ -593,8 +592,11 @@ async function processIncomingMessage(
     console.error('[WhatsApp Webhook] Failed to broadcast incoming message:', broadcastError);
   }
 
-  // Send acknowledgment (read receipt) to Meta
-  await sendMessageAck(id, "delivered", organizationId);
+  // Note: we deliberately do NOT send a read receipt to Meta here. Meta
+  // only supports marking a message as "read" (which shows blue ticks to
+  // the customer), and an inbound message has not actually been read until
+  // an operator opens the conversation. The read receipt is sent from the
+  // inbox PATCH (mark-as-read) handler instead.
 
   // If the customer just opted out, send them a one-shot confirmation
   // reply ("You have been unsubscribed..."). This is permitted under

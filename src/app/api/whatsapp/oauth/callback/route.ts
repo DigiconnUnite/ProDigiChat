@@ -17,6 +17,7 @@ import { createWhatsAppOAuthService } from '@/lib/whatsapp-oauth';
 import { prisma } from '@/lib/prisma';
 import { encryptWhatsAppCredential } from '@/lib/encryption';
 import { META_API_BASE } from '@/lib/meta-config';
+import { verifyOAuthState } from '@/lib/oauth-state';
 import axios from 'axios';
 
 function buildErrorUrl(
@@ -190,22 +191,22 @@ export async function GET(request: NextRequest) {
   const token = await getToken({ req: request });
   const orgId = token?.organizationId as string | undefined;
 
-  // Validate state parameter for CSRF protection (timestamp only, no orgId)
-  if (state) {
-    try {
-      const stateData = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
-      const maxAge = 15 * 60 * 1000;
-      if (Date.now() - (stateData.timestamp || 0) > maxAge) {
-        throw new Error('OAuth state expired. Please try connecting again within 15 minutes.');
-      }
-    } catch (e: any) {
-      console.error('[OAuth Callback] State validation failed:', e.message);
-      return NextResponse.redirect(
-        new URL(buildErrorUrl(e.message || 'Invalid OAuth state. Please try again.', 'INVALID_STATE', false, isEmbedded), request.url)
-      );
-    }
-  } else {
-    console.warn('[OAuth Callback] No state param received (CSRF check skipped)');
+  // Validate the signed state parameter for CSRF protection. The state is
+  // HMAC-signed by /api/whatsapp/oauth/url, so a missing or tampered state is
+  // rejected (the orgId itself is read from the JWT, never from state).
+  if (!state) {
+    console.error('[OAuth Callback] Missing state parameter — rejecting');
+    return NextResponse.redirect(
+      new URL(buildErrorUrl('Missing OAuth state. Please start the connection again.', 'MISSING_STATE', false, isEmbedded), request.url)
+    );
+  }
+  try {
+    verifyOAuthState(state);
+  } catch (e: any) {
+    console.error('[OAuth Callback] State validation failed:', e.message);
+    return NextResponse.redirect(
+      new URL(buildErrorUrl(e.message || 'Invalid OAuth state. Please try again.', 'INVALID_STATE', false, isEmbedded), request.url)
+    );
   }
 
   if (!orgId) {
@@ -386,6 +387,13 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('[OAuth Callback] Successfully connected WABA:', wabaId, 'for org:', orgId);
+
+    try {
+      const { NotificationHelpers } = await import('@/lib/notifications');
+      await NotificationHelpers.whatsappConnected(orgId);
+    } catch (e) {
+      console.error('[OAuth Callback] whatsappConnected notification error:', e);
+    }
 
     const successUrl = `/dashboard/settings?tab=whatsapp&whatsapp=connected`;
     return NextResponse.redirect(new URL(successUrl, request.url));
