@@ -5,6 +5,10 @@ import { requireRole } from '@/lib/rbac'
 import { prisma } from '@/lib/prisma'
 import crypto from 'crypto'
 import bcrypt from 'bcrypt'
+import { createAuthToken } from '@/lib/auth-tokens'
+import { sendEmail, renderEmailLayout } from '@/lib/email'
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 // GET: Fetch team members
 export async function GET(request: NextRequest) {
@@ -92,6 +96,7 @@ export async function POST(request: NextRequest) {
 
     // Check if user already exists
     let user = await prisma.user.findUnique({ where: { email } })
+    let isNewUser = false
 
     if (!user) {
       const tempPassword = crypto.randomBytes(32).toString('hex')
@@ -104,6 +109,7 @@ export async function POST(request: NextRequest) {
           role: 'user',
         }
       })
+      isNewUser = true
     }
 
     // Check if user is already a member
@@ -140,6 +146,48 @@ export async function POST(request: NextRequest) {
         }
       }
     })
+
+    // Send the invitation email. New users get a "set your password"
+    // link (an invite token) so they can actually access the account;
+    // existing users get a notice with a sign-in link. Email failures
+    // must not fail the invite — the member row is already created.
+    try {
+      const org = await prisma.team.findUnique({
+        where: { id: orgId },
+        select: { name: true },
+      })
+      const orgName = org?.name || 'a ProDigiChat organization'
+
+      if (isNewUser) {
+        const rawToken = await createAuthToken(user.id, 'invite')
+        const setupUrl = `${APP_URL}/reset-password?token=${rawToken}`
+        await sendEmail({
+          to: user.email,
+          subject: `You've been invited to ${orgName} on ProDigiChat`,
+          html: renderEmailLayout({
+            heading: `Join ${orgName}`,
+            bodyHtml: `<p>You've been invited to join <strong>${orgName}</strong> on ProDigiChat as a <strong>${role}</strong>.</p>
+              <p>Set your password to activate your account and get started. This invite link expires in 7 days.</p>`,
+            ctaLabel: 'Set your password',
+            ctaUrl: setupUrl,
+            footnote: `If the button doesn't work, paste this link into your browser:<br>${setupUrl}`,
+          }),
+        })
+      } else {
+        await sendEmail({
+          to: user.email,
+          subject: `You've been added to ${orgName} on ProDigiChat`,
+          html: renderEmailLayout({
+            heading: `You're now part of ${orgName}`,
+            bodyHtml: `<p>You've been added to <strong>${orgName}</strong> on ProDigiChat as a <strong>${role}</strong>. Sign in with your existing ProDigiChat account to access it.</p>`,
+            ctaLabel: 'Sign in',
+            ctaUrl: `${APP_URL}/login`,
+          }),
+        })
+      }
+    } catch (emailError) {
+      console.error('[Team Invite] Failed to send invite email:', emailError)
+    }
 
     return NextResponse.json({
       message: "Invitation sent successfully",

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
 import { sendTextMessage } from "@/app/api/whatsapp/messages";
+import { sendMessageAck } from "@/lib/whatsapp-incoming-message";
 import { parseMessageContent, stringifyMessageContent, parseTags } from "@/types/common";
 import { broadcastToInbox } from "@/lib/websocket";
 import { evaluateOutboundPolicy } from "@/lib/messaging-policy";
@@ -320,6 +321,21 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Contact not found" }, { status: 404 });
     }
 
+    // Capture the most recent inbound message BEFORE flipping statuses so
+    // we can send a single read receipt to Meta. Marking the latest inbound
+    // message read marks the whole conversation read on WhatsApp.
+    const latestInbound = await prisma.message.findFirst({
+      where: {
+        contactId,
+        organizationId: orgId,
+        direction: "incoming",
+        status: "delivered",
+        whatsappMessageId: { not: null },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { whatsappMessageId: true },
+    });
+
     // Mark all incoming messages from this contact as read
     await prisma.message.updateMany({
       where: {
@@ -332,6 +348,16 @@ export async function PATCH(request: NextRequest) {
         status: "read",
       },
     });
+
+    // Send the read receipt (blue ticks) to Meta. Best-effort: never fail
+    // the request if Meta is unreachable.
+    if (latestInbound?.whatsappMessageId) {
+      try {
+        await sendMessageAck(latestInbound.whatsappMessageId, "read", String(orgId));
+      } catch (ackError) {
+        console.error("[Inbox] Failed to send read receipt to Meta:", ackError);
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

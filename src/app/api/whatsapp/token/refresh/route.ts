@@ -175,7 +175,21 @@ async function processOrganizationTokenRefresh(
           lastRefreshError: 'Meta API refresh failed'
         }
       });
-      
+
+      // The token is within the refresh window AND auto-refresh just
+      // failed — sending will break when it expires. Warn the org so an
+      // admin can reconnect before that happens.
+      try {
+        const msUntilExpiry = credential.tokenExpiresAt
+          ? new Date(credential.tokenExpiresAt).getTime() - Date.now()
+          : 0;
+        const daysUntilExpiry = Math.max(0, Math.ceil(msUntilExpiry / (24 * 60 * 60 * 1000)));
+        const { NotificationHelpers } = await import('@/lib/notifications');
+        await NotificationHelpers.tokenExpiring(orgId, daysUntilExpiry || 1);
+      } catch (e) {
+        console.error('[TokenRefresh] tokenExpiring notification error:', e);
+      }
+
       return {
         success: false,
         orgId,

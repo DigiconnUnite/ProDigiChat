@@ -215,10 +215,18 @@ ProDigiChat uses the manage_app_solution permission to manage WhatsApp Business 
 ---
 
 ## Contact Information
-**Developer Contact:** [Your email]
-**Business Contact:** [Your business email]
-**Support Email:** [Your support email]
+**Developer Contact:** development.dcu2026@gmail.com
+**Business Contact:** support@prodigichat.com
+**Support Email:** support@prodigichat.com
 **Website:** https://prodigichat.com
+
+## Required App Dashboard URLs
+**Privacy Policy URL:** https://prodigichat.com/privacy
+**Terms of Service URL:** https://prodigichat.com/terms
+**Data Deletion Instructions URL:** https://prodigichat.com/data-deletion
+**Data Deletion Request Callback URL:** https://prodigichat.com/api/meta/data-deletion
+**Webhook Callback URL:** https://prodigichat.com/api/whatsapp/webhooks
+**Valid OAuth Redirect URI:** https://prodigichat.com/api/whatsapp/oauth/callback
 
 ---
 

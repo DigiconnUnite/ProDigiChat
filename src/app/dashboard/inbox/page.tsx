@@ -88,14 +88,35 @@ function formatTime(date: Date): string {
   })
 }
 
+// Map raw API message rows into the UI Message shape. Shared by the
+// initial fetch and the polling fallback so both stay in sync.
+function transformApiMessages(apiMessages: any[]): Message[] {
+  return apiMessages.map((msg: any) => {
+    const rawContent =
+      typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content)
+    let parsed: ParsedContent | null = null
+    try {
+      parsed = parseContent(rawContent)
+    } catch {
+      parsed = null
+    }
+    return {
+      id: msg.id,
+      type: msg.direction === "outgoing" ? "sent" : "received",
+      parsed,
+      rawText: rawContent,
+      time: formatTime(new Date(msg.createdAt)),
+      status: msg.status,
+    }
+  })
+}
+
 // ─── Robust Content Parser ──────────────────────────────
 
 function parseContent(raw: string): ParsedContent {
-  console.log("parseContent - Raw Input:", raw);
   // Try the imported utility first
   try {
     const parsed = parseMessageContent(raw)
-    console.log("parseContent - Parsed using parseMessageContent:", parsed);
     if (parsed && (parsed.type || parsed.text)) {
       // Convert MessageContent to ParsedContent format
       return {
@@ -242,12 +263,10 @@ function parseContent(raw: string): ParsedContent {
 // ─── Message Bubble Renderer ──────────────────────────
 
 function MessageBubble({ message }: { message: Message }) {
-  console.log("MessageBubble - Message data:", message);
   const parsed = message.parsed
   const isSent = message.type === "sent"
 
   if (!parsed || !parsed.text) {
-    console.log("MessageBubble - No parsed text, using fallback");
     // Try to extract text from rawText if it's not JSON
     let displayText = message.rawText
     try {
@@ -565,31 +584,7 @@ export default function InboxPage() {
       const data = await response.json()
 
       if (data.messages && data.messages.length > 0 && isWhatsAppConnected) {
-        const transformedMessages: Message[] = data.messages.map((msg: any) => {
-          try {
-            const rawContent = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
-            const parsed = parseContent(rawContent)
-
-            return {
-              id: msg.id,
-              type: msg.direction === "outgoing" ? "sent" : "received",
-              parsed,
-              rawText: rawContent,
-              time: formatTime(new Date(msg.createdAt)),
-              status: msg.status,
-            }
-          } catch {
-            return {
-              id: msg.id,
-              type: msg.direction === "outgoing" ? "sent" : "received",
-              parsed: null,
-              rawText: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
-              time: formatTime(new Date(msg.createdAt)),
-              status: msg.status,
-            }
-          }
-        })
-        setMessages(transformedMessages)
+        setMessages(transformApiMessages(data.messages))
       } else if (isWhatsAppConnected) {
         setMessages([])
       }
@@ -612,6 +607,24 @@ export default function InboxPage() {
     }
   }, [isWhatsAppConnected])
 
+  // ─── Refresh messages (polling) ──────────────────────────────
+  // Reload the open conversation's messages without toggling the loading
+  // spinner and without marking them read (no PATCH). Used by the polling
+  // fallback so it doesn't flicker the UI or spam read receipts.
+  const refreshMessages = useCallback(async (contactId: string) => {
+    if (!isWhatsAppConnected) return
+    try {
+      const response = await fetch(`/api/inbox?contactId=${contactId}`)
+      if (!response.ok) return
+      const data = await response.json()
+      if (Array.isArray(data.messages)) {
+        setMessages(transformApiMessages(data.messages))
+      }
+    } catch {
+      // Silent: polling is best-effort.
+    }
+  }, [isWhatsAppConnected])
+
   // ─── Effects ──────────────────────────────
   useEffect(() => { checkWhatsAppConnection() }, [checkWhatsAppConnection])
   useEffect(() => { if (isWhatsAppConnected !== null) fetchConversations() }, [isWhatsAppConnected, fetchConversations])
@@ -626,7 +639,9 @@ export default function InboxPage() {
     const orgId = (session as any)?.orgId || (session as any)?.organizationId
     if (!orgId || !isWhatsAppConnected) return
 
-    const socketUrl = process.env.NODE_ENV === 'production' ? window.location.origin : 'http://localhost:3000'
+    const socketUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      (process.env.NODE_ENV === 'production' ? window.location.origin : 'http://localhost:3000')
 
     try {
       socketRef.current = io(socketUrl, { transports: ['websocket', 'polling'] })
@@ -663,6 +678,22 @@ export default function InboxPage() {
 
     return () => { if (socketRef.current) { socketRef.current.disconnect(); socketRef.current = null } }
   }, [session, isWhatsAppConnected, fetchConversations])
+
+  // ─── Polling fallback ──────────────────────────────
+  // When the realtime socket is NOT connected (e.g. the production Next
+  // standalone server runs without Socket.IO), poll so incoming messages
+  // and unread counts still update. Disabled while the socket is healthy.
+  useEffect(() => {
+    if (!isWhatsAppConnected || socketConnected) return
+
+    const interval = setInterval(() => {
+      fetchConversations()
+      const current = selectedConversationRef.current
+      if (current) refreshMessages(current.id)
+    }, 10000)
+
+    return () => clearInterval(interval)
+  }, [isWhatsAppConnected, socketConnected, fetchConversations, refreshMessages])
 
   // ─── Send message ──────────────────────────────
   const handleSendMessage = async () => {

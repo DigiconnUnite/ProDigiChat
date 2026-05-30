@@ -13,7 +13,6 @@ import {
   Settings,
   FileText,
   Layers,
-  TestTube,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -29,7 +28,6 @@ const navigation = [
   { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
   { name: "Inbox", href: "/dashboard/inbox", icon: MessageSquare },
   { name: "Templates", href: "/dashboard/templates", icon: FileText },
-  { name: "Testing", href: "/dashboard/testing", icon: TestTube },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ]
 

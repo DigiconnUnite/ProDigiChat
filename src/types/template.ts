@@ -1,4 +1,4 @@
-// Template Types for WhatsApp Marketing Tool
+// Template Types for ProDigiChat
 
 export type TemplateCategory = 'marketing' | 'utility' | 'authentication';
 export type TemplateStatus = 'draft' | 'pending' | 'approved' | 'rejected';

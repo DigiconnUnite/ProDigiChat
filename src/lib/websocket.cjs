@@ -14,6 +14,12 @@ function initializeWebSocket(server) {
     },
   });
 
+  // Expose the live Socket.IO instance on globalThis so that code running
+  // in the same Node process (Next.js API routes / webhooks, compiled from
+  // TypeScript) can broadcast through the real server rather than a
+  // disconnected in-memory EventEmitter. See src/lib/websocket.ts.
+  globalThis.__waSocketIO = io;
+
   io.on('connection', (socket) => {
     console.log('[WebSocket] Client connected:', socket.id);
 

@@ -166,11 +166,33 @@ export function getWebSocket() {
   return serverlessWebSocket;
 }
 
+/**
+ * Resolve the live Socket.IO server instance, if one is running in this
+ * process. The custom server (server.cjs) attaches it to globalThis so
+ * that API routes and webhooks broadcast through the real server that
+ * clients are connected to, instead of this in-memory EventEmitter.
+ */
+function getLiveSocketIO(): any | null {
+  return (globalThis as any).__waSocketIO || null;
+}
+
 export function broadcastToOrganization(organizationId: string, event: string, data: any) {
+  const io = getLiveSocketIO();
+  if (io) {
+    io.to(`org:${organizationId}`).emit(event, data);
+    return;
+  }
+  // Fallback: no live Socket.IO server (e.g. Next standalone). Clients use
+  // the inbox polling fallback to pick up changes in this case.
   serverlessWebSocket.broadcastToOrganization(organizationId, event, data);
 }
 
 export function broadcastToInbox(organizationId: string, event: string, data: any) {
+  const io = getLiveSocketIO();
+  if (io) {
+    io.to(`inbox:${organizationId}`).emit(event, data);
+    return;
+  }
   serverlessWebSocket.broadcastToInbox(organizationId, event, data);
 }
 

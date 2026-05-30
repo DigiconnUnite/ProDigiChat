@@ -564,6 +564,25 @@ model WhatsAppMessageQueue {
   @@map("whatsappMessageQueue")
 }
 
+// Password reset / invite set-password tokens.
+// A single-use token is emailed to the user; we store only its SHA-256
+// hash so a database leak cannot be used to reset accounts. `purpose`
+// distinguishes a self-service password reset from a team-invite
+// "set your password" link.
+model PasswordResetToken {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  tokenHash String   @unique // SHA-256 hash of the raw token
+  purpose   String   @default("reset") // "reset" | "invite"
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("passwordResetTokens")
+}
+
 // Contact import jobs for async CSV processing with progress polling
 model ContactImportJob {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId

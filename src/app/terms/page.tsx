@@ -3,7 +3,7 @@ import { Header } from "@/components/header";
 import { PublicFooter } from "@/components/public-footer";
 
 export const metadata: Metadata = {
-  title: "Terms of Service | WhatsApp Marketing Tool",
+  title: "Terms of Service | ProDigiChat",
   description: "Our Terms of Service outline the rules and guidelines for using our WhatsApp marketing platform.",
 };
 
@@ -27,7 +27,7 @@ export default function TermsPage() {
               <section>
                 <h2 className="text-2xl font-semibold text-gray-900 mb-4">1. Acceptance of Terms</h2>
                 <p className="text-gray-600 leading-relaxed">
-                  By accessing and using WhatsApp Marketing Tool ("the Service"), you accept and agree to be bound 
+                  By accessing and using ProDigiChat ("the Service"), you accept and agree to be bound 
                   by the terms and provision of this agreement. If you do not agree to abide by these terms, please 
                   do not use this Service.
                 </p>
@@ -36,7 +36,7 @@ export default function TermsPage() {
               <section>
                 <h2 className="text-2xl font-semibold text-gray-900 mb-4">2. Description of Service</h2>
                 <p className="text-gray-600 leading-relaxed">
-                  WhatsApp Marketing Tool is a powerful platform that enables businesses to manage WhatsApp marketing campaigns, 
+                  ProDigiChat is a powerful platform that enables businesses to manage WhatsApp marketing campaigns, 
                   automate messaging workflows, manage contacts, and analyze campaign performance through the WhatsApp Business API.
                 </p>
                 <p className="text-gray-600 leading-relaxed mt-4">
@@ -184,7 +184,7 @@ export default function TermsPage() {
               <section>
                 <h2 className="text-2xl font-semibold text-gray-900 mb-4">11. Indemnification</h2>
                 <p className="text-gray-600 leading-relaxed">
-                  You agree to defend, indemnify, and hold harmless WhatsApp Marketing Tool and its officers, 
+                  You agree to defend, indemnify, and hold harmless ProDigiChat and its officers, 
                   directors, employees, and agents from and against any claims, liabilities, damages, judgments, 
                   awards, losses, costs, expenses, or fees (including reasonable attorneys' fees) arising out 
                   of or relating to your violation of these Terms or your use of the Service.
@@ -230,8 +230,8 @@ export default function TermsPage() {
                   If you have any questions about these Terms, please contact us:
                 </p>
                 <ul className="list-disc pl-6 space-y-2 text-gray-600">
-                  <li>Email: support@whatsappmarketingtool.com</li>
-                  <li>Website: www.whatsappmarketingtool.com</li>
+                  <li>Email: support@prodigichat.com</li>
+                  <li>Website: https://prodigichat.com</li>
                 </ul>
               </section>
             </div>

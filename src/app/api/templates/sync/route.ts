@@ -78,6 +78,24 @@ export async function GET(request: NextRequest) {
             },
           });
 
+          // Notify the org when Meta's review outcome changes (pending
+          // -> approved / rejected). Best-effort; never fails the sync.
+          const prev = (template.status || '').toLowerCase();
+          const next = (metaStatus.status || '').toLowerCase();
+          if (orgId && prev !== next) {
+            const { NotificationHelpers } = await import('@/lib/notifications');
+            if (next === 'approved') {
+              await NotificationHelpers.templateApproved(orgId, template.name)
+                .catch((e) => console.error('[TemplateSync] approved notification error:', e));
+            } else if (next === 'rejected') {
+              await NotificationHelpers.templateRejected(
+                orgId,
+                template.name,
+                metaStatus.rejectionReason || 'No reason provided by Meta.',
+              ).catch((e) => console.error('[TemplateSync] rejected notification error:', e));
+            }
+          }
+
           return {
             id: template.id,
             name: template.name,

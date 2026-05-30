@@ -3,8 +3,8 @@ import { Header } from "@/components/header";
 import { PublicFooter } from "@/components/public-footer";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | WhatsApp Marketing Tool",
-  description: "Our Privacy Policy explains how we collect, use, and protect your personal information when using our WhatsApp marketing platform.",
+  title: "Privacy Policy | ProDigiChat",
+  description: "Our Privacy Policy explains how we collect, use, and protect your personal information when using the ProDigiChat platform.",
 };
 
 export default function PrivacyPage() {
@@ -36,10 +36,10 @@ export default function PrivacyPage() {
                   1. Introduction
                 </h2>
                 <p className="text-gray-600 leading-relaxed">
-                  Welcome to WhatsApp Marketing Tool ("we," "our," or "us"). We
+                  Welcome to ProDigiChat ("we," "our," or "us"). We
                   are fully committed to protecting your privacy and safeguarding your personal information. This Privacy Policy
                   explains how your personal information is collected, used, and
-                  disclosed by WhatsApp Marketing Tool when you use our website
+                  disclosed by ProDigiChat when you use our website
                   and services.
                 </p>
                 <p className="text-gray-600 leading-relaxed mt-4">
@@ -159,10 +159,70 @@ export default function PrivacyPage() {
                 </h2>
                 <p className="text-gray-600 leading-relaxed">
                   We retain your personal information for as long as your
-                  account is active or as needed to provide you services. We
-                  will retain and use your information as necessary to comply
-                  with our legal obligations, resolve disputes, and enforce our
+                  account is active or as needed to provide you services.
+                  Specifically, account and contact data is retained for the
+                  life of your account; WhatsApp message content and delivery
+                  metadata are retained for up to 24 months for analytics and
+                  compliance, after which they are deleted or anonymised. When
+                  you delete your account, or disconnect your WhatsApp Business
+                  account, we delete or de-identify the associated data within
+                  30 days, except where retention is required to comply with our
+                  legal obligations, resolve disputes, or enforce our
                   agreements.
+                </p>
+              </section>
+
+              <section>
+                <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                  6a. WhatsApp &amp; Meta Platform Data
+                </h2>
+                <p className="text-gray-600 leading-relaxed mb-4">
+                  ProDigiChat integrates with the WhatsApp Business Platform
+                  provided by Meta Platforms, Inc. When you connect your
+                  WhatsApp Business Account, we access and process the following
+                  data solely to provide the service:
+                </p>
+                <ul className="list-disc pl-6 space-y-2 text-gray-600">
+                  <li>
+                    WhatsApp Business Account ID, phone number IDs, display
+                    names, and quality ratings
+                  </li>
+                  <li>
+                    Message templates and their approval status
+                  </li>
+                  <li>
+                    Inbound and outbound message content and delivery status
+                    (sent, delivered, read, failed) needed to operate
+                    conversations and reporting
+                  </li>
+                  <li>
+                    Access tokens, which are stored encrypted at rest using
+                    AES-256-GCM and are never exposed to the browser
+                  </li>
+                </ul>
+                <p className="text-gray-600 leading-relaxed mt-4">
+                  We use this data exclusively to deliver the features you
+                  request and never sell it. Our use of information received
+                  from Meta APIs adheres to the{" "}
+                  <a
+                    href="https://developers.facebook.com/terms/"
+                    className="text-green-700 underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Meta Platform Terms
+                  </a>{" "}
+                  and the{" "}
+                  <a
+                    href="https://www.whatsapp.com/legal/business-policy/"
+                    className="text-green-700 underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    WhatsApp Business Messaging Policy
+                  </a>
+                  , including all applicable use, transfer, and storage
+                  limitations.
                 </p>
               </section>
 
@@ -185,7 +245,11 @@ export default function PrivacyPage() {
                   </li>
                   <li>
                     <strong className="text-green-800">Deletion:</strong>{" "}
-                    Request deletion of your personal information
+                    Request deletion of your personal information at any time —
+                    see our{" "}
+                    <a href="/data-deletion" className="text-green-700 underline">
+                      Data Deletion Instructions
+                    </a>
                   </li>
                   <li>
                     <strong className="text-green-800">
@@ -201,7 +265,7 @@ export default function PrivacyPage() {
                 </ul>
                 <p className="text-gray-600 mt-4">
                   To exercise these rights, please contact us at
-                  support@whatsappmarketingtool.com.
+                  support@prodigichat.com.
                 </p>
               </section>
 
@@ -252,8 +316,8 @@ export default function PrivacyPage() {
                   contact us:
                 </p>
                 <ul className="list-disc pl-6 space-y-2 text-gray-600">
-                  <li>Email: support@whatsappmarketingtool.com</li>
-                  <li>Website: www.whatsappmarketingtool.com</li>
+                  <li>Email: support@prodigichat.com</li>
+                  <li>Website: https://prodigichat.com</li>
                 </ul>
               </section>
             </div>

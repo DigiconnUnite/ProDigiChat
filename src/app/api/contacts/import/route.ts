@@ -338,6 +338,12 @@ export async function POST(request: NextRequest) {
             processedRows: Math.max(totalRows, 0),
             totalRows: Math.max(totalRows, 0),
           })
+
+          if (result.imported > 0) {
+            const { NotificationHelpers } = await import('@/lib/notifications')
+            await NotificationHelpers.contactsImported(userId, result.imported, organizationId)
+              .catch((e) => console.error('[Import] contactsImported notification error:', e))
+          }
         } catch (jobError: any) {
           await failContactImportJob(job.id, jobError?.message || 'Import failed')
         }
@@ -358,6 +364,12 @@ export async function POST(request: NextRequest) {
       userId,
       organizationId,
     })
+
+    if (result.imported > 0) {
+      const { NotificationHelpers } = await import('@/lib/notifications')
+      await NotificationHelpers.contactsImported(userId, result.imported, organizationId)
+        .catch((e) => console.error('[Import] contactsImported notification error:', e))
+    }
 
     return NextResponse.json({
       success: true,
