@@ -490,12 +490,12 @@ export default function CampaignReportPage() {
                 <p className="text-2xl font-bold text-green-700">{stats.delivered}</p>
                 <p className="text-xs text-muted-foreground">Delivered</p>
               </div>
-              <div className="text-center p-3 rounded-lg bg-blue-50">
-                <p className="text-2xl font-bold text-blue-700">{stats.read}</p>
+              <div className="text-center p-3 rounded-lg bg-slate-50">
+                <p className="text-2xl font-bold text-green-700">{stats.read}</p>
                 <p className="text-xs text-muted-foreground">Read</p>
               </div>
-              <div className="text-center p-3 rounded-lg bg-amber-50">
-                <p className="text-2xl font-bold text-amber-700">{stats.totalSent}</p>
+              <div className="text-center p-3 rounded-lg bg-slate-50">
+                <p className="text-2xl font-bold text-green-700">{stats.totalSent}</p>
                 <p className="text-xs text-muted-foreground">Sent (Not Yet Delivered)</p>
               </div>
               <div className="text-center p-3 rounded-lg bg-red-50">

@@ -27,8 +27,8 @@ export default function DashboardLayout({
         </ErrorBoundary>
       </main>
       <footer className="bg-green-950 h-auto  flex items-center justify-center text-white text-center text-sm  " style={{backgroundColor: '#072507'}}>
-        <div className="max-w-[1440px]  w-full bg-transparent px-2.5 lg:px-0">
-          <div className=" mx-auto py-3 relative border-l border-r border-green-800 px-5">
+        <div className="max-w-full  w-full bg-transparent px-2.5 lg:px-0">
+          <div className=" mx-auto py-3 relative  px-5">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-4">
             <p className="text-sm text-green-200">
               © {currentYear} <span className="text-orange-400 font-bold">Prodigichat</span>. All rights reserved.
